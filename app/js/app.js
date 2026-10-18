@@ -81,14 +81,15 @@ window.App=(function(){
     star.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 2c-.4 3.8-1.6 6.6-3.2 7.4C7.2 10.2 4.6 9.8 1.5 9c3.1 1.6 4.9 3 5.2 4.7.3 1.7-1 4-3 7 2.8-2.3 5.2-3.2 7-2.7 1.8.5 3.6 2.3 5.6 4.9-1.3-3.3-1.6-5.6-.7-7.1.9-1.5 3.2-2.4 6.9-3-3.9-.3-6.3-1.1-7.2-2.5C14.4 8.9 13.4 6.3 12 2z"/></svg>';
     const menu=document.createElement('div');menu.className='menu';menu.id='menu';
     menu.innerHTML=`<a href="#messages">Messages <small id="msg-count"></small></a><a href="#tribu">Ma tribu <small>les gens qui comptent</small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#portrait">Mon portrait</a><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
-    const tabs=document.createElement('nav');tabs.className='tabs';
-    tabs.innerHTML=`<a href="#portrait" data-tab="portrait">Portrait</a><a href="#resonances" data-tab="resonances">Résonances</a><a href="#now" data-tab="now">Maintenant</a>`;
+    const tabs=document.createElement('nav');tabs.className='tabs';tabs.setAttribute('aria-label','Menu principal');
+    tabs.innerHTML='<svg class="tabwave" viewBox="0 0 390 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10 L390 22 L0 22 Z" style="fill:var(--bar)"/><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10" fill="none" stroke="#e8456e" stroke-width="1.6" stroke-dasharray="14 4 3 4"/></svg>'+
+      [['now','now','Maintenant'],['resonances','res','Résonances'],['messages','msg','Messages'],['tribu','tribu','Ma tribu'],['portrait','port','Portrait']].map(([h,i,l])=>`<a href="#${h}" data-tab="${h}">${Plus.icon(i)}${h==='messages'?'<span class="tbadge" id="tab-badge" hidden></span>':''}<span>${l}</span></a>`).join('');
     phone.prepend(menu);phone.prepend(star);phone.append(tabs);
     star.addEventListener('click',()=>{menu.classList.toggle('on');star.classList.toggle('on');});
     document.querySelector('.screen').addEventListener('click',closeMenu);
   }
   function closeMenu(){const m=$('menu'),s=$('star');if(m){m.classList.remove('on');s.classList.remove('on');}}
-  async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';}
+  async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}}
 
   /* ---------- données ---------- */
   async function loadMe(){const me=await DB.get('profiles','me');const entries=await DB.where('entries','profileId','me');const qs=await DB.where('questions','profileId','me');return {me,entries,qs};}
@@ -238,22 +239,47 @@ window.App=(function(){
   const badge=p=>p&&p.verified&&p.verified.status==='verified'?'<span class="vbadge" title="Identité vérifiée">vérifié</span>':'';
   const isVerified=p=>!!(p&&p.verified&&p.verified.status==='verified');
   /* caméra en direct : pas d'import depuis la galerie. Retardateur pour une photo en pied. */
+  /* dessins de la photo, calculés sur le téléphone (rien n'est envoyé ailleurs) */
+  const STYLES=[['real','Ma vraie photo'],['crayon','Crayon'],['affiche','Affiche'],['aquarelle','Aquarelle'],['flou','Silhouette floue']];
+  function blur1(a,W,H,r){const t=new Float32Array(a.length),o=new Float32Array(a.length),n=2*r+1;
+    for(let y=0;y<H;y++){let s=0;const R=y*W;for(let x=-r;x<=r;x++)s+=a[R+Math.min(W-1,Math.max(0,x))];
+      for(let x=0;x<W;x++){t[R+x]=s/n;s+=a[R+Math.min(W-1,x+r+1)]-a[R+Math.max(0,x-r)];}}
+    for(let x=0;x<W;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[Math.min(H-1,Math.max(0,y))*W+x];
+      for(let y=0;y<H;y++){o[y*W+x]=s/n;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x];}}
+    return o;}
+  function stylize(url,style){return new Promise(res=>{const im=new Image();im.onload=()=>{
+    const W=im.naturalWidth,H=im.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);
+    const d=x.getImageData(0,0,W,H),p=d.data,N=W*H,g=new Float32Array(N),R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
+    for(let i=0;i<N;i++){R[i]=p[4*i];G[i]=p[4*i+1];B[i]=p[4*i+2];g[i]=.3*R[i]+.59*G[i]+.11*B[i];}
+    const sketch=()=>{const inv=new Float32Array(N);for(let i=0;i<N;i++)inv[i]=255-g[i];const b=blur1(inv,W,H,8),k=new Float32Array(N);
+      for(let i=0;i<N;i++)k[i]=Math.min(255,g[i]*255/(256-b[i]));return k;};
+    if(style==='crayon'){const k=sketch();for(let i=0;i<N;i++){const v=Math.pow(k[i]/255,2.2)*255;p[4*i]=Math.min(255,v*1.02+4);p[4*i+1]=v;p[4*i+2]=Math.max(0,v*.94);}}
+    else if(style==='affiche'){const pal=[[28,15,18],[122,31,58],[232,69,110],[255,106,42],[247,183,51],[251,234,219]];
+      const s=blur1(g,W,H,2);let lo=255,hi=0;for(let i=0;i<N;i+=7){lo=Math.min(lo,s[i]);hi=Math.max(hi,s[i]);}
+      for(let i=0;i<N;i++){const t=Math.max(0,Math.min(.999,(s[i]-lo)/Math.max(1,hi-lo)));const q=pal[Math.floor(t*pal.length)];p[4*i]=q[0];p[4*i+1]=q[1];p[4*i+2]=q[2];}}
+    else if(style==='aquarelle'){const k=sketch(),r=blur1(R,W,H,4),gg=blur1(G,W,H,4),b=blur1(B,W,H,4),L=42;
+      for(let i=0;i<N;i++){const m=.55+.45*Math.pow(k[i]/255,1.5),q=v=>Math.min(255,(Math.round(v/L)*L*.85+38)*m);p[4*i]=q(r[i]);p[4*i+1]=q(gg[i]);p[4*i+2]=q(b[i]);}}
+    else if(style==='flou'){let r=R,gg=G,b=B;for(let n=0;n<3;n++){r=blur1(r,W,H,14);gg=blur1(gg,W,H,14);b=blur1(b,W,H,14);}
+      for(let i=0;i<N;i++){p[4*i]=r[i]*.9+20;p[4*i+1]=gg[i]*.75;p[4*i+2]=b[i]*.7;}}
+    x.putImageData(d,0,0);res(c.toDataURL('image/jpeg',.85));};im.onerror=()=>res(url);im.src=url;});}
   function camera(opts={}){return new Promise(async resolve=>{
     const phone=document.querySelector('.phone');const o=document.createElement('div');o.className='cam';
     o.innerHTML=`<div class="cam-top"><b>${esc(opts.title||'Photo en direct')}</b><p>${esc(opts.hint||'')}</p></div><div class="cam-view"><video playsinline autoplay muted></video><div class="cam-count" hidden></div></div><canvas hidden></canvas>
       <div class="cam-bar"><button class="btn ghost" type="button" data-a="cancel">Annuler</button><button class="btn ghost" type="button" data-a="flip">Changer de caméra</button><button class="btn ghost" type="button" data-a="timer">Retardateur 10 s</button><button class="btn flame" type="button" data-a="shot">Prendre la photo</button></div>
-      <div class="cam-review" hidden><img alt=""><div class="cam-bar"><button class="btn ghost" type="button" data-a="again">Reprendre</button><button class="btn" type="button" data-a="use">Utiliser cette photo</button></div></div><p class="cam-err"></p>`;
-    phone.appendChild(o);const v=o.querySelector('video'),c=o.querySelector('canvas'),err=o.querySelector('.cam-err');let stream=null,facing='user',shot=null;
+      <div class="cam-review" hidden><img alt="">${opts.styles?`<div class="cam-styles" role="group" aria-label="Style de la photo">${STYLES.map((x,i)=>`<button class="chip${i?'':' on'}" type="button" data-s="${x[0]}">${x[1]}</button>`).join('')}</div><p class="cam-hint">Si tu choisis un dessin, seul le dessin est montré aux autres. Ta vraie photo reste privée (elle sert seulement à la vérification).</p>`:''}<div class="cam-bar"><button class="btn ghost" type="button" data-a="again">Reprendre</button><button class="btn" type="button" data-a="use">Utiliser cette photo</button></div></div><p class="cam-err"></p>`;
+    phone.appendChild(o);const v=o.querySelector('video'),c=o.querySelector('canvas'),err=o.querySelector('.cam-err');let stream=null,facing='user',shot=null,styled=null;
     async function start(){if(stream)stream.getTracks().forEach(t=>t.stop());
       try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:1280}},audio:false});v.srcObject=stream;err.textContent='';}
       catch(e){err.textContent='Caméra inaccessible. Autorise-la dans Firefox (icône à gauche de l\'adresse), puis réessaie.';}}
     const done=r=>{if(stream)stream.getTracks().forEach(t=>t.stop());o.remove();resolve(r);};
     function take(){const w=v.videoWidth,h=v.videoHeight;if(!w)return;const W=600,H=800;const ratio=W/H;let sw=w,sh=w/ratio;if(sh>h){sh=h;sw=h*ratio;}
       c.width=W;c.height=H;const ctx=c.getContext('2d');if(facing==='user'){ctx.translate(W,0);ctx.scale(-1,1);}ctx.drawImage(v,(w-sw)/2,(h-sh)/2,sw,sh,0,0,W,H);
-      shot=c.toDataURL('image/jpeg',.82);o.querySelector('.cam-review img').src=shot;o.querySelector('.cam-review').hidden=false;}
-    o.addEventListener('click',e=>{const a=e.target.dataset&&e.target.dataset.a;if(!a)return;
+      shot=c.toDataURL('image/jpeg',.82);styled=shot;o.querySelector('.cam-review img').src=shot;o.querySelectorAll('.cam-styles .chip').forEach((b,i)=>b.classList.toggle('on',!i));o.querySelector('.cam-review').hidden=false;}
+    o.addEventListener('click',async e=>{const st=e.target.dataset&&e.target.dataset.s;
+      if(st&&shot){o.querySelectorAll('.cam-styles .chip').forEach(b=>b.classList.toggle('on',b===e.target));styled=st==='real'?shot:await stylize(shot,st);if(e.target.classList.contains('on'))o.querySelector('.cam-review img').src=styled;return;}
+      const a=e.target.dataset&&e.target.dataset.a;if(!a)return;
       if(a==='cancel')done(null);if(a==='flip'){facing=facing==='user'?'environment':'user';start();}
-      if(a==='shot')take();if(a==='again'){o.querySelector('.cam-review').hidden=true;}if(a==='use')done(shot);
+      if(a==='shot')take();if(a==='again'){o.querySelector('.cam-review').hidden=true;}if(a==='use'){if(opts.out)opts.out.real=styled!==shot?shot:null;done(styled||shot);}
       if(a==='timer'){const cd=o.querySelector('.cam-count');let n=10;cd.hidden=false;cd.textContent=n;const iv=setInterval(()=>{n--;cd.textContent=n;if(n<=0){clearInterval(iv);cd.hidden=true;take();}},1000);}});
     start();});}
   async function sendTo(p,text,about){

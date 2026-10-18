@@ -4,7 +4,7 @@ Pages.messages=async function(S,id){
   /* version en ligne : la liste des conversations se met à jour toute seule (toutes les 10 secondes) */
   clearInterval(window.__fslList);
   if(!id&&DB.remote){const here=location.hash;const mk=async()=>(await DB.all('threads')).map(t=>t.id+t.status).join()+'|'+(await DB.all('messages')).length;let sig=await mk();
-    window.__fslList=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslList);return;}try{const s=await mk();if(s!==sig){sig=s;Router.route();}}catch(e){}},10000);}
+    window.__fslList=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslList);return;}if(document.hidden)return;try{const s=await mk();if(s!==sig){sig=s;Router.route();}}catch(e){}},10000);}
   if(!id){
     const people=await App.others();const byId=Object.fromEntries(people.map(p=>[p.id,p]));const threads=(await DB.all('threads')).filter(t=>byId[t.id]);const all=await DB.all('messages');
     const last=tid=>all.filter(m=>m.thread===tid).sort((a,b)=>b.ts-a.ts)[0];
@@ -79,6 +79,6 @@ Pages.messages=async function(S,id){
   await render();
   /* version en ligne : on regarde toutes les 8 secondes s'il y a du nouveau dans la conversation */
   if(DB.remote){clearInterval(window.__fslPoll);let last=null;const here=location.hash;
-    window.__fslPoll=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslPoll);return;}
-      const k=(await DB.where('messages','thread',p.id)).length+':'+(((await DB.get('threads',p.id))||{}).status);if(last!==null&&k!==last)render();last=k;},8000);}
+    window.__fslPoll=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslPoll);return;}if(document.hidden)return;
+      try{const k=(await DB.where('messages','thread',p.id)).length+':'+(((await DB.get('threads',p.id))||{}).status);if(last!==null&&k!==last)render();last=k;}catch(e){}},8000);}
 };

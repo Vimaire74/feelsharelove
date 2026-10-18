@@ -11,7 +11,8 @@
   /* lien d'invitation : feelsharelove.com/?invite=… ; gardé jusqu'à l'inscription */
   try{const inv=new URLSearchParams(location.search).get('invite');if(inv){store.set('fsl_invite',inv);history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
   /* erreurs de l'app envoyées au serveur pour le débogage */
-  const report=(msg,stack)=>{try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({msg:String(msg),stack:String(stack||''),url:location.hash})});}catch(e){}};
+  const NET=/failed to fetch|load failed|networkerror|network request failed/i;
+  const report=(msg,stack)=>{if(NET.test(String(msg)))return;try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({msg:String(msg),stack:String(stack||''),url:location.hash})}).catch(()=>{});}catch(e){}};
   window.addEventListener('error',e=>report(e.message,e.error&&e.error.stack));
   window.addEventListener('unhandledrejection',e=>report(e.reason&&e.reason.message||e.reason,e.reason&&e.reason.stack));
   const ME_FIELDS=['profileId','owner','by','author','from','to','startedBy','createdBy','target'];

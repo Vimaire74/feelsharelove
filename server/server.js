@@ -109,7 +109,7 @@ async function hiddenFor(me) {
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
 function publicProfile(p) {
-  const { name, lastName, npa, email, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
+  const { name, lastName, npa, email, photoReal, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
   if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v; rest.facts = f; }
   if (rest.verified) rest.verified = { status: rest.verified.status, at: rest.verified.status === 'verified' ? rest.verified.at : undefined };
   return rest;

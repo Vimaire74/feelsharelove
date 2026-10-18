@@ -30,6 +30,10 @@ Pages.portrait=async function(S){
   <p class="muted small" style="margin-bottom:10px">Chaque ligne a son bouton : visible pour les autres, ou gardée pour toi.</p>
   <div class="facts" id="facts"></div>
 
+  <h2>Ce qui me <em>représente</em></h2><div class="sec" id="rep-box"></div>
+  <h2>Si j'étais <em>un personnage</em></h2><div class="sec" id="pc-box"></div>
+  <h2>Ce dans quoi je <em>m'investis</em></h2><div class="sec" id="inv-box"></div>
+
   <h2>Ce qui me fait <em>vibrer</em></h2>
   <p class="muted small" style="margin-bottom:10px">Pour chaque chose : le titre, ce que ça te fait, et pourquoi. C'est de là que partent les résonances.</p>
   <div class="list" id="list"></div><div id="form-slot"></div>
@@ -43,7 +47,7 @@ Pages.portrait=async function(S){
   <div class="add" id="add-q" style="margin-top:12px">+ Ajouter ma propre question</div>
   <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div>`;
 
-  let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});},300);}
+  let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});},300);}
   $('f-name').value=me.name||'';$('f-place').value=me.city||'';$('f-last').value=me.lastName||'';$('f-npa').value=me.npa||'';
   $('f-last').addEventListener('input',e=>{me.lastName=e.target.value;saveMe();});$('f-npa').addEventListener('input',e=>{me.npa=e.target.value;saveMe();});$('f-now').value=me.now||'';grow($('f-now'));
   $('f-name').addEventListener('input',e=>{me.name=e.target.value;saveMe();});
@@ -54,8 +58,8 @@ Pages.portrait=async function(S){
   rules();
   $('pseudo-change').addEventListener('click',()=>{if(!App.pseudoRule(me).ok)return;const P=$('pseudo-pick');P.hidden=!P.hidden;if(!P.hidden){P.innerHTML='<p class="muted small" style="margin-top:8px">Attention : c\'est ton seul changement possible.</p>';P.appendChild(App.pseudoPicker(me,async ps=>{me.pseudo=ps;me.pseudoChangedAt=Date.now();await DB.put('profiles',me);$('pseudo-h').textContent=ps;P.hidden=true;rules();}));}});
   if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
-  $('photo-take').addEventListener('click',async()=>{if(!App.photoRule(me).ok)return;const url=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Pour une photo en pied, pose le téléphone et utilise le retardateur.'});
-    if(!url)return;const had=!!me.photo;me.photo=url;if(had)me.photoChangedAt=Date.now();me.photoAt=Date.now();await DB.put('profiles',me);$('photo').src=url;$('photo').hidden=false;rules();});
+  $('photo-take').addEventListener('click',async()=>{if(!App.photoRule(me).ok)return;const out={};const url=await App.camera({styles:true,out,title:'Ta photo de portrait',hint:'Visage reconnaissable. Pour une photo en pied, pose le téléphone et utilise le retardateur.'});
+    if(!url)return;const had=!!me.photo;me.photo=url;if(out.real)me.photoReal=out.real;else delete me.photoReal;if(had)me.photoChangedAt=Date.now();me.photoAt=Date.now();await DB.put('profiles',me);$('photo').src=url;$('photo').hidden=false;rules();});
   document.querySelectorAll('#intent .chip').forEach(c=>{c.classList.toggle('on',(me.intent||[]).includes(c.dataset.k));c.addEventListener('click',()=>{c.classList.toggle('on');me.intent=[...document.querySelectorAll('#intent .chip.on')].map(x=>x.dataset.k);saveMe();});});
 
   /* présentation vocale */
@@ -82,6 +86,7 @@ Pages.portrait=async function(S){
       const cb=d.querySelector('.sub input');if(cb)cb.addEventListener('change',()=>{s.year=cb.checked;saveMe();});
       F.appendChild(d);});}
   renderFacts();
+  Plus.editors(me,saveMe);
 
   /* œuvres et passions */
   function closeForm(){$('form-slot').innerHTML='';$('add').style.display='';}

@@ -1,20 +1,20 @@
-# FeelShareLove — lot 2
+# FeelShareLove — lot 3
 
-Version 1.2.0 (18/10/2026)
-- Nom FeelShareLove partout dans l'app (à la place de Connect)
-- Feuille de style renommée feelsharelove.css ; sauvegarde nommée feelsharelove-base.json
-- Résonances, Maintenant et portrait : le nombre de résonances est le même partout (types de fonctionnement compris)
-- « il » / « elle » : suit l'accord choisi par la personne au lieu de deviner d'après le prénom
-- Serveur : l'accord choisi est transmis aux autres (prénom, nom et code postal restent privés)
-- Cercles : cinq cercles de départ créés automatiquement en ligne ; le nombre de membres est le vrai nombre
-- Messages : la conversation ouverte et la liste se mettent à jour toutes seules
-- Menu : le compteur de demandes se met à jour toutes les 20 secondes
-- Notifications sur le téléphone : nouvelle demande, nouveau message, conversation ouverte, ami inscrit grâce à toi ; à activer dans Réglages
-- Installation sur l'écran d'accueil : icône provisoire C et nom FeelShareLove
-- Nouveau menu « Ma tribu » : liste privée des gens qui comptent
-- Portrait : bouton « Ajouter à ma tribu » / « retirer »
-- Ma tribu : suggestions des personnes rencontrées (conversation ouverte)
-- Ma tribu : invitation par lien personnel (partage, copie, carnet d'adresses sur Android)
-- Ma tribu : liste des amis inscrits grâce à ton lien ; l'invité a l'inviteur dans sa tribu
-- Erreurs de l'app envoyées au serveur pour le débogage
-- Outil de vérification /debug (protégé par DEBUG_KEY, à retirer avant l'ouverture au public)
+Version 1.3.0 (18/10/2026)
+- Menu du bas refait : Maintenant, Résonances, Messages, Ma tribu, Portrait
+- Icônes en peinture de points : porte ouverte, ondes, signaux de fumée, tribu autour du feu, girafe
+- Barre du bas lie-de-vin avec une vague et une ligne pointillée rose
+- Pastille du nombre de demandes sur l'icône Messages
+- Grande icône à côté du titre des cinq écrans du menu
+- Photo de portrait : choix d'un dessin (crayon, affiche, aquarelle, silhouette floue), calculé sur le téléphone
+- Si un dessin est choisi, la vraie photo reste privée (jamais envoyée aux autres)
+- Portrait : « Si j'étais un personnage », jusqu'à trois personnages historiques ou de fiction, et en quoi
+- Portrait chinois : choix guidé par domaine ou univers, ou recherche par nom, dans une liste fermée de 435 noms
+- Portrait chinois : bouton « Il manque quelqu'un ? » qui envoie la proposition dans l'admin (signalements)
+- Portrait : « Ce dans quoi je m'investis », 20 domaines et leurs sous-catégories
+- Les deux nouvelles rubriques peuvent être cachées ; elles s'affichent sur le portrait vu par les autres
+- Résonances : même personnage, même univers de fiction, même domaine d'investissement comptent dans le nombre et sont détaillés
+- Portrait : « Ce qui me représente », jusqu'à trois mots parmi 32 (artiste, rêveur, aventurier…), accordés au masculin ou au féminin
+- Résonances : le même mot dans « Ce qui me représente » compte aussi
+- La mise à jour automatique s'arrête quand l'app n'est pas à l'écran, et reprend tout de suite au retour
+- Les coupures de réseau ne sont plus enregistrées comme des erreurs (elles s'envoyaient en boucle)

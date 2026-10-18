@@ -9,13 +9,13 @@ Pages.resonances=async function(S,id){
     if(!entries.length)L.innerHTML='<div class="empty">Ton portrait n\'a pas encore de passions. Ajoute par exemple un film, ce qu\'il te fait et pourquoi, puis reviens ici.</div>';
     let onlyV=false;const all=people.map(p=>({p,r:App.resonance(entries,p.entries)})).sort((a,b)=>b.r.score-a.r.score);
     const draw=()=>{L.querySelectorAll('.person').forEach(x=>x.remove());all.filter(x=>!onlyV||App.isVerified(x.p)).forEach(({p,r})=>{
-      const ct=commonTypes(me,p);r.n=r.common.length+r.feels.length+ct.length;const parts=[];if(ct.length)parts.push('vous fonctionnez tous les deux '+ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et '));if(r.common.length)parts.push(r.common.map(c=>c.theirs.title).join(', '));if(r.feels.length)parts.push('vous cherchez '+r.feels.map(f=>f.feel.both).join(' et '));
+      const ct=commonTypes(me,p);const ex=Plus.extraCommon(me,p);r.n=r.common.length+r.feels.length+ct.length+ex.length;if(ex.length)parts.push(ex.map(x=>x.l.charAt(0).toLowerCase()+x.l.slice(1)).join(', '));const parts=[];if(ct.length)parts.push('vous fonctionnez tous les deux '+ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et '));if(r.common.length)parts.push(r.common.map(c=>c.theirs.title).join(', '));if(r.feels.length)parts.push('vous cherchez '+r.feels.map(f=>f.feel.both).join(' et '));
       const line=parts.length?parts.join(' · '):(r.echo.length?'Un écho : '+r.echo[0].theirs.title:'Rien en commun pour l\'instant');
       const d=App.personEl(p,r,`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">${esc(line)}</div>`);d.addEventListener('click',()=>location.hash='#resonances/'+p.id);L.appendChild(d);});};
     draw();$('r-verif').addEventListener('click',e=>{onlyV=!onlyV;e.target.classList.toggle('on',onlyV);draw();});
     return;}
   const p=await App.loadPerson(id);if(!p||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#resonances">← Toutes les résonances</a><div class="empty">Personne introuvable.</div>';return;}
-  const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const n=r.common.length+r.feels.length+commonTypes(me,p).length;
+  const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const ex=Plus.extraCommon(me,p);const n=r.common.length+r.feels.length+commonTypes(me,p).length+ex.length;
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
   <p class="muted" style="margin-top:6px">${esc(p.city)} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
@@ -23,6 +23,7 @@ Pages.resonances=async function(S,id){
   const B=$('body');
   const ct=commonTypes(me,p);
   if(ct.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Vous fonctionnez tous les deux ${ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et ')}</div><div class="types-show">${ct.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div></div>`);
+  if(ex.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Dans vos portraits</div>${ex.map(x=>`<p style="margin:6px 0">${esc(x.l)}${x.mine&&x.mine.id!==x.theirs.id?` <span class="muted">(toi : ${esc(x.mine.n)} · ${esc(dn(p))} : ${esc(x.theirs.n)})</span>`:''}${x.theirs&&x.theirs.why?`<br><span class="muted small">« ${esc(x.theirs.why)} »</span>`:''}</p>`).join('')}</div>`);
   const reply=e=>async txt=>App.sendResultText(p,await App.sendTo(p,txt,e));
   function pairBlock(title,c,sub){const d=document.createElement('div');d.className='res';
     d.innerHTML=`<div class="title">${title}</div>${sub?`<p class="muted small" style="margin:-6px 0 10px">${sub}</p>`:''}<div class="who"><div><div class="n">${esc(meName)}</div>${c.mine!==c.theirs&&c.mine.title!==c.theirs.title&&sub?`<b>${esc(c.mine.title)}</b><br>`:''}${App.feelTags(c.mine)}<p>${esc(c.mine.why)||'<span class="muted">(tu n\'as pas écrit pourquoi)</span>'}</p></div><div><div class="n b">${esc(dn(p))}</div>${sub?`<b>${esc(c.theirs.title)}</b><br>`:''}${App.feelTags(c.theirs)}<p>${esc(c.theirs.why)}</p></div></div>
