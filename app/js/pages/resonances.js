@@ -9,7 +9,7 @@ Pages.resonances=async function(S,id){
     if(!entries.length)L.innerHTML='<div class="empty">Ton portrait n\'a pas encore de passions. Ajoute par exemple un film, ce qu\'il te fait et pourquoi, puis reviens ici.</div>';
     let onlyV=false;const all=people.map(p=>({p,r:App.resonance(entries,p.entries)})).sort((a,b)=>b.r.score-a.r.score);
     const draw=()=>{L.querySelectorAll('.person').forEach(x=>x.remove());all.filter(x=>!onlyV||App.isVerified(x.p)).forEach(({p,r})=>{
-      const ct=commonTypes(me,p);const parts=[];if(ct.length)parts.push('vous fonctionnez tous les deux '+ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et '));if(r.common.length)parts.push(r.common.map(c=>c.theirs.title).join(', '));if(r.feels.length)parts.push('vous cherchez '+r.feels.map(f=>f.feel.both).join(' et '));
+      const ct=commonTypes(me,p);r.n=r.common.length+r.feels.length+ct.length;const parts=[];if(ct.length)parts.push('vous fonctionnez tous les deux '+ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et '));if(r.common.length)parts.push(r.common.map(c=>c.theirs.title).join(', '));if(r.feels.length)parts.push('vous cherchez '+r.feels.map(f=>f.feel.both).join(' et '));
       const line=parts.length?parts.join(' · '):(r.echo.length?'Un écho : '+r.echo[0].theirs.title:'Rien en commun pour l\'instant');
       const d=App.personEl(p,r,`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">${esc(line)}</div>`);d.addEventListener('click',()=>location.hash='#resonances/'+p.id);L.appendChild(d);});};
     draw();$('r-verif').addEventListener('click',e=>{onlyV=!onlyV;e.target.classList.toggle('on',onlyV);draw();});

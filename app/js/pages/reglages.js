@@ -9,6 +9,7 @@ Pages.reglages=async function(S){
   <div class="sec"><h3>Ce que les autres voient</h3><p class="exp">Ton prénom n'est jamais affiché : on voit ${esc(dn(me))}. <a href="#apercu" style="color:var(--saffron)">Voir mon portrait comme les autres</a></p><div class="vis" id="vis"></div></div>
   <div class="sec" id="verif"></div>
   <div class="sec"><h3>Écris-moi</h3><p class="exp">Pour les phrases de l'app qui s'accordent (par exemple les réponses de refus).</p><div class="intent" id="acc" style="margin-top:0"><button class="chip" type="button" data-a="m">au masculin</button><button class="chip" type="button" data-a="f">au féminin</button><button class="chip" type="button" data-a="n">de façon neutre</button></div></div>
+  ${DB.remote?'<div class="sec" id="notif"></div>':''}
   <div class="sec" id="pause"></div>
   <div class="sec"><h3>Signalements envoyés</h3><div class="names" id="reports"></div></div>
   <div class="sec"><h3>Compte</h3><p class="exp"><a href="#donnees" style="color:var(--saffron)">Mes données : sauvegarder, recharger, tout effacer</a> · <a href="#conditions" style="color:var(--saffron)">Conditions</a>${DB.remote?' · <a href="#" id="logout" style="color:var(--saffron)">Se déconnecter</a>':''}</p></div>`;
@@ -38,6 +39,14 @@ Pages.reglages=async function(S){
       :`<h3>Mettre mon portrait en pause</h3><p class="exp">Pour faire une pause sans tout effacer : ton portrait disparaît pour les autres et personne ne peut t'écrire, jusqu'à ce que tu reviennes.</p><button class="btn ghost" type="button" id="p-go">Mettre en pause</button>`;
     $('p-go').addEventListener('click',async()=>{const f=await DB.get('profiles','me');f.paused=f.paused?null:Date.now();if(f.paused)f.avail=null;await DB.put('profiles',f);renderPause();});}
   renderPause();
+  async function renderNotif(){const N=$('notif');if(!N)return;const st=await DB.pushState();
+    const txt={on:'Ce téléphone te prévient quand quelqu\'un t\'écrit ou ouvre une conversation. Le contenu des messages n\'apparaît jamais dans la notification.',
+      denied:'Les notifications sont bloquées pour ce site dans les réglages du navigateur ou du téléphone.',
+      unsupported:'Ce navigateur ne gère pas les notifications. Sur iPhone : touche Partager, puis « Sur l\'écran d\'accueil », ouvre FeelShareLove depuis l\'icône, puis reviens ici.',
+      off:'Être prévenu quand quelqu\'un t\'écrit ou ouvre une conversation, même quand l\'app est fermée. Le contenu des messages n\'apparaît jamais.'}[st];
+    N.innerHTML=`<h3>Notifications</h3><p class="exp">${txt}</p>${st==='on'?'<button class="btn ghost" type="button" id="n-go">Couper les notifications</button>':st==='off'?'<button class="btn flame" type="button" id="n-go">Activer les notifications</button>':''}<p class="muted small" id="n-err" style="margin-top:8px"></p>`;
+    const b=$('n-go');if(b)b.addEventListener('click',async()=>{b.disabled=true;try{st==='on'?await DB.pushOff():await DB.pushOn();renderNotif();}catch(e){$('n-err').textContent=e.message;b.disabled=false;}});}
+  if(DB.remote)renderNotif();
   if(DB.remote)$('logout').addEventListener('click',async e=>{e.preventDefault();await DB.logout();location.hash='';location.reload();});
   const profs=Object.fromEntries((await DB.all('profiles')).map(p=>[p.id,p]));
   const reps=await DB.all('reports');$('reports').innerHTML=reps.length?reps.map(r=>`<div class="nm-row"><span>${r.kind==='photo'?'Photo':r.kind==='block'?'Blocage':'Portrait'} · ${esc(dn(profs[r.target])||r.target)} <small>${esc(r.reason||'')} · ${r.status==='open'?'en cours':'traité'}</small></span></div>`).join(''):'<p class="muted small">Aucun.</p>';

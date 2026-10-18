@@ -34,6 +34,7 @@
   const blobCache=new Map();
   async function withBlob(v){if(!v||!v.url)return v;if(!blobCache.has(v.url)){const r=await fetch(v.url,{headers:{Authorization:'Bearer '+token}});blobCache.set(v.url,await r.blob());}return {...v,blob:blobCache.get(v.url)};}
   const enc=s=>encodeURIComponent(s);
+  const b64=s=>{const p='='.repeat((4-s.length%4)%4);const r=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));};
   const DB={
     remote:true,uid:LOCAL.uid,
     get token(){return token;},
@@ -56,7 +57,15 @@
     /* comptes */
     register:async(email,password)=>{const r=await call('POST','/api/auth/register',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     login:async(email,password)=>{const r=await call('POST','/api/auth/login',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
-    logout:async()=>{try{await call('POST','/api/auth/logout',{});}catch(e){}logoutLocal();},
+    logout:async()=>{try{await DB.pushOff();}catch(e){}try{await call('POST','/api/auth/logout',{});}catch(e){}logoutLocal();},
+    /* notifications sur ce téléphone (sur iPhone : seulement depuis l'icône ajoutée à l'écran d'accueil) */
+    pushState:async()=>{if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return 'unsupported';
+      const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();return s?'on':(Notification.permission==='denied'?'denied':'off');},
+    pushOn:async()=>{const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('Notifications refusées. On peut les autoriser dans les réglages du navigateur ou du téléphone.');
+      const reg=await navigator.serviceWorker.ready;const {key}=await call('GET','/api/push/key');
+      const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(key)});await call('POST','/api/push/subscribe',sub.toJSON());},
+    pushOff:async()=>{if(!('serviceWorker' in navigator))return;const reg=await navigator.serviceWorker.ready;const s=await reg.pushManager.getSubscription();
+      if(s){try{await call('POST','/api/push/unsubscribe',{endpoint:s.endpoint});}catch(e){}await s.unsubscribe();}},
     /* mes données : tout ce qui m'appartient */
     exportAll:async()=>{const out={format:'connect-db',version:2,exportedAt:new Date().toISOString(),data:{}};
       const me=await DB.get('profiles','me');out.data.profiles=me?[me]:[];
@@ -75,4 +84,5 @@
       if(!me)await call('PUT','/api/profiles/'+enc(myId),{id:myId,name:'',pseudo:'',city:'',intent:[],now:'',photo:'',facts:{},avail:null,circles:[],online:true});}
   };
   window.DB=DB;
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 })();

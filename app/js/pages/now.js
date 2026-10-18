@@ -44,7 +44,7 @@ Pages.now=async function(S){
   /* --- personnes --- */
   const fw=new Set(),ff={avail:true,reso:false,intent:false,verif:false};
   function render(){const P=$('people');P.innerHTML='';const qs=norm($('q-search').value);
-    let list=people.map(p=>({p,r:App.resonance(entries,p.entries)}));
+    let list=people.map(p=>{const r=App.resonance(entries,p.entries);r.n=r.common.length+r.feels.length+commonTypes(me,p).length;return {p,r};});
     if(qs){list=list.map(x=>({...x,hits:x.p.entries.filter(e=>norm(e.title).includes(qs)||norm(e.why).includes(qs)||norm(e.desc).includes(qs)),nameHit:norm(dn(x.p)).includes(qs)||norm(x.p.city).includes(qs)})).filter(x=>x.hits.length||x.nameHit);}
     else{if(ff.avail)list=list.filter(x=>App.isAvail(x.p));if(fw.size)list=list.filter(x=>App.isAvail(x.p)&&x.p.avail.wants.some(w=>fw.has(w)));
       if(ff.reso)list=list.filter(x=>x.r.common.length||x.r.feels.length);if(ff.intent)list=list.filter(x=>x.p.intent.some(i=>(me.intent||[]).includes(i)));if(ff.verif)list=list.filter(x=>App.isVerified(x.p));}

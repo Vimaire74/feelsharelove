@@ -1,6 +1,10 @@
 /* Connect — écran « Messages » : demandes reçues, conversations ouvertes, messages en attente ; puis une conversation */
 Pages.messages=async function(S,id){
   const {$,esc,fem,dn,localTime,hhmm}=App;
+  /* version en ligne : la liste des conversations se met à jour toute seule (toutes les 10 secondes) */
+  clearInterval(window.__fslList);
+  if(!id&&DB.remote){const here=location.hash;const mk=async()=>(await DB.all('threads')).map(t=>t.id+t.status).join()+'|'+(await DB.all('messages')).length;let sig=await mk();
+    window.__fslList=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslList);return;}try{const s=await mk();if(s!==sig){sig=s;Router.route();}}catch(e){}},10000);}
   if(!id){
     const people=await App.others();const byId=Object.fromEntries(people.map(p=>[p.id,p]));const threads=(await DB.all('threads')).filter(t=>byId[t.id]);const all=await DB.all('messages');
     const last=tid=>all.filter(m=>m.thread===tid).sort((a,b)=>b.ts-a.ts)[0];

@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Pool } = require('pg');
+const webpush = require('web-push');
 
 const PORT = +process.env.PORT || 8080;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
@@ -26,7 +27,33 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS docs (store text NOT NULL, id text NOT NULL, owner text, data jsonb NOT NULL, updated bigint NOT NULL, PRIMARY KEY (store, id));
     CREATE INDEX IF NOT EXISTS docs_owner ON docs (store, owner);
     CREATE TABLE IF NOT EXISTS files (id text PRIMARY KEY, owner text NOT NULL, mime text NOT NULL, data bytea NOT NULL, created bigint NOT NULL);
+    CREATE TABLE IF NOT EXISTS push_subs (endpoint text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, data jsonb NOT NULL, created bigint NOT NULL);
   `);
+  /* clés des notifications : créées une seule fois et gardées dans la base (rien à régler dans Coolify) */
+  let v = await getDoc('system', 'vapid');
+  if (!v) { const k = webpush.generateVAPIDKeys(); v = { publicKey: k.publicKey, privateKey: k.privateKey }; await putDoc('system', 'vapid', null, v); }
+  webpush.setVapidDetails('mailto:contact@feelsharelove.com', v.publicKey, v.privateKey);
+  VAPID_PUBLIC = v.publicKey;
+  /* cercles de départ, la première fois seulement */
+  for (const c of START_CIRCLES) if (!(await getDoc('circles', c.id))) await putDoc('circles', c.id, null, { ...c, __owner: 'system' });
+}
+let VAPID_PUBLIC = '';
+const START_CIRCLES = [
+  { id: 'c1', title: 'Ceux qui vivent loin de chez eux', about: 'Pour ceux qui ont changé de pays, de ville, de vie, et qui cherchent encore leurs repères.' },
+  { id: 'c2', title: "Légendes d'automne", about: 'Le film, Tristan, le Montana, et ce que ça remue.' },
+  { id: 'c3', title: 'Marcher seul', about: 'Montagne, ville, bord de lac. Ceux pour qui marcher est une manière de penser.' },
+  { id: 'c4', title: 'Les gens de la nuit', about: 'Infirmiers, insomniaques, travailleurs de nuit : ceux qui sont réveillés quand les autres dorment.' },
+  { id: 'c5', title: 'Cinema Paradiso', about: 'Ceux qui pleurent à la fin, et ceux qui pleurent avant.' }
+];
+/* notification sur le téléphone : jamais le contenu du message, seulement qui et quoi */
+async function pseudoOf(id) { const p = await getDoc('profiles', id); return (p && p.pseudo) || 'Quelqu\'un'; }
+async function notify(userId, title, url) {
+  if (!VAPID_PUBLIC) return;
+  const subs = (await q('SELECT endpoint, data FROM push_subs WHERE user_id=$1', [userId])).rows;
+  for (const s of subs) {
+    try { await webpush.sendNotification(s.data, JSON.stringify({ title, body: 'Ouvre FeelShareLove pour lire.', url })); }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await q('DELETE FROM push_subs WHERE endpoint=$1', [s.endpoint]); }
+  }
 }
 const q = (sql, args) => pool.query(sql, args);
 const uid = () => crypto.randomBytes(9).toString('base64url');
@@ -77,7 +104,7 @@ async function hiddenFor(me) {
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
 function publicProfile(p) {
-  const { name, lastName, npa, email, accord, ...rest } = p;
+  const { name, lastName, npa, email, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
   if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v; rest.facts = f; }
   if (rest.verified) rest.verified = { status: rest.verified.status, at: rest.verified.status === 'verified' ? rest.verified.at : undefined };
   return rest;
@@ -103,12 +130,15 @@ async function putThread(me, other, body) {
     const mineToday = (await listDocs('threads', 'AND data->>\'a\'=$2', [me])).filter(x => new Date(x.firstAt).toISOString().slice(0, 10) === day).length;
     if (mineToday >= FIRST_PER_DAY) throw err(429, 'Limite de trois premiers messages par jour atteinte.');
     const n = { a: me, b: other, state: 'pending', firstAt: Date.now() };
-    await putDoc('threads', id, null, n); return threadView(n, me);
+    await putDoc('threads', id, null, n);
+    notify(other, (await pseudoOf(me)) + ' a répondu à ton portrait', '/#messages/' + me);
+    return threadView(n, me);
   }
   if (!t) throw err(404, 'conversation');
   if (s === 'open') { if (t.state === 'pending' && t.b !== me) throw err(403, 'Seule la personne qui reçoit peut ouvrir.'); if (t.state === 'declined') throw err(409, 'Conversation close.'); t.state = 'open'; }
   else if (s === 'declined') { t.state = 'declined'; t.decliner = me; }
   else throw err(400, 'statut');
+  if (s === 'open' && t.a !== me) notify(t.a, (await pseudoOf(me)) + ' a ouvert la conversation', '/#messages/' + me);
   await putDoc('threads', id, null, t); return threadView(t, me);
 }
 async function myThreads(me) { return (await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).map(t => threadView(t, me)); }
@@ -124,7 +154,9 @@ async function putMessage(me, id, body, old) {
   const ok = t.state === 'open' || (t.state === 'pending' && t.a === me) || (body.kind === 'decline' && (t.decliner === me || (t.state === 'pending' && t.b === me)));
   if (!ok) throw err(403, 'Conversation fermée.');
   const m = { ...body, id, pairId: pair(me, other), ts: Date.now() };
-  delete m.thread; await putDoc('messages', id, me, m); return msgView(m, me);
+  delete m.thread; await putDoc('messages', id, me, m);
+  if (!(t.state === 'pending' && t.a === me)) notify(other, (body.kind === 'decline' ? 'Réponse de ' : 'Nouveau message de ') + (await pseudoOf(me)), '/#messages/' + me);
+  return msgView(m, me);
 }
 
 /* ---------- API générique ---------- */
@@ -139,6 +171,7 @@ async function readList(store, me, query) {
   if (PRIVATE.has(store)) { let rows = await listDocs(store, 'AND owner=$2', [me]); for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v); return rows; }
   let rows = await listDocs(store);
   for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v);
+  if (store === 'circles') { const profs = await listDocs('profiles'); rows = rows.map(c => ({ ...c, members: profs.filter(p => (p.circles || []).includes(c.id)).length })); }
   if (['profiles', 'entries', 'questions', 'circlePosts', 'voices'].includes(store)) {
     const { hidden } = await hiddenFor(me);
     const ownerOf = r => store === 'profiles' ? r.id : store === 'circlePosts' ? r.author : r.profileId || r.owner;
@@ -238,6 +271,14 @@ async function api(req, res, url) {
   const me = await userFromReq(req);
   if (!me) throw err(401, 'Connexion nécessaire.');
   if (parts[0] === 'me' && req.method === 'DELETE') { await wipeUser(me); return send(res, 200, { ok: true }); }
+  /* notifications : la clé publique, puis l'abonnement de ce téléphone */
+  if (parts[0] === 'push') {
+    if (parts[1] === 'key') return send(res, 200, { key: VAPID_PUBLIC });
+    const sub = await json(req);
+    if (parts[1] === 'subscribe' && sub && sub.endpoint) { await q('INSERT INTO push_subs (endpoint,user_id,data,created) VALUES ($1,$2,$3,$4) ON CONFLICT (endpoint) DO UPDATE SET user_id=$2, data=$3', [sub.endpoint, me, sub, Date.now()]); return send(res, 200, { ok: true }); }
+    if (parts[1] === 'unsubscribe' && sub && sub.endpoint) { await q('DELETE FROM push_subs WHERE endpoint=$1 AND user_id=$2', [sub.endpoint, me]); return send(res, 200, { ok: true }); }
+    throw err(400, 'push');
+  }
   /* fichiers (voix, photos) */
   if (parts[0] === 'files') {
     if (req.method === 'POST') { const b = await readBody(req); const id = uid(); await q('INSERT INTO files (id,owner,mime,data,created) VALUES ($1,$2,$3,$4,$5)', [id, me, req.headers['content-type'] || 'application/octet-stream', b, Date.now()]); return send(res, 200, { id, url: '/api/files/' + id }); }

@@ -69,7 +69,7 @@ window.App=(function(){
   function chinese(d){if(!d)return'';let [y,m,day]=d.split('-').map(Number);if(m<2||(m===2&&day<5))y--;const el=['Bois','Feu','Terre','Métal','Eau'];return chineseAnimal(d)+' de '+el[Math.floor((((y-4)%10+10)%10)/2)];}
   function localTime(p){const d=new Date(Date.now()+(p.tz||0)*3600e3);return d.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});}
   const hhmm=ts=>new Date(ts).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
-  const fem=p=>p.g?p.g==='f':/a$/i.test(norm(p.name));
+  const fem=p=>p.g?p.g==='f':(p.accord==='f'||p.accord==='m')?p.accord==='f':/a$/i.test(norm(p.name)); // accord choisi par la personne, sinon son prénom (version locale)
   const dn=p=>p?(p.pseudo||p.name||'Toi'):'';                 // nom affiché : toujours le pseudo
   const isAvail=p=>!!(p&&p.avail&&p.avail.until>Date.now());
   const today=()=>new Date().toISOString().slice(0,10);
@@ -127,7 +127,7 @@ window.App=(function(){
   function avatarHtml(p,cls=''){return `<div class="avatar ${p.av||''} ${cls}" aria-hidden="true">${p.photo?`<img src="${p.photo}" alt="">`:''}</div>`;}
   function personEl(p,r,sub){const d=document.createElement('div');d.className='person';
     const wants=isAvail(p)?`<div class="wants">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').filter(Boolean).join(' · ')}</div>`:'';
-    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(p.city)} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?`<div class="r"><b>${r.common.length+r.feels.length}</b><span>résonne</span></div>`:'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
+    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(p.city)} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`:'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
     return d;}
 
   /* ---------- catalogue (Wikipédia, gratuit, sans inscription) ---------- */

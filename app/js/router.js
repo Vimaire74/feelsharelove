@@ -26,5 +26,7 @@
   }
   window.addEventListener('hashchange',route);
   window.Router={route};
+  /* version en ligne : le compteur de demandes se met à jour toutes les 20 secondes */
+  if(DB.remote)setInterval(()=>{App.refreshMsgCount().catch(()=>{});},20000);
   route();
 })();
