@@ -357,3 +357,24 @@ details.others summary{cursor:pointer;color:var(--saffron);font-size:14px;margin
 .pc-miss{margin-top:12px}.pc-miss>div{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.pc-miss .in{flex:1 1 100%}
 #pc-pick{background:var(--card2);border-radius:14px;padding:12px;margin-top:8px}
 .screen{padding-bottom:44px}
+
+/* v1.3.0 — sur téléphone : l'app prend tout l'écran (plus de cadre) et les noms du menu ne se chevauchent plus */
+.tabs a span:not(.tbadge){display:block;max-width:100%;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(10px,3.1vw,12px);letter-spacing:-.01em}
+@media (max-width:520px){
+  body{padding:0;gap:0;display:block;height:100%}
+  .note{display:none}
+  .phone{max-width:none;width:100%;height:100vh;height:100dvh;min-height:0;border:0;border-radius:0;box-shadow:none}
+  .screen{padding-top:calc(18px + env(safe-area-inset-top,0px))}
+  .star{top:calc(10px + env(safe-area-inset-top,0px))}
+  .tabs a svg{width:27px;height:27px}
+}
+.dob{display:inline-flex;align-items:center;gap:4px}
+.dob .in{border-bottom:1px dashed #7a4a50;width:3.2em;text-align:center;padding-left:4px;padding-right:4px}
+.dob .in.yy{width:4.6em}
+.dob span{color:var(--muted)}
+/* titres plus petits, coupés proprement s'ils sont trop longs */
+h1{font-size:27px;line-height:1.1;overflow-wrap:anywhere;hyphens:auto}
+h1 .in{font-size:27px}
+.titled .ticon{width:46px;height:46px}
+.titled.small .ticon{width:36px;height:36px}
+@media (max-width:380px){h1,h1 .in{font-size:24px}.titled .ticon{width:40px;height:40px}}

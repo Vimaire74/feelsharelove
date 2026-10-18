@@ -18,3 +18,7 @@ Version 1.3.0 (18/10/2026)
 - Résonances : le même mot dans « Ce qui me représente » compte aussi
 - La mise à jour automatique s'arrête quand l'app n'est pas à l'écran, et reprend tout de suite au retour
 - Les coupures de réseau ne sont plus enregistrées comme des erreurs (elles s'envoyaient en boucle)
+- Sur téléphone : l'app prend tout l'écran (plus de cadre ni de marges) et les noms du menu du bas ne se chevauchent plus
+- Date de naissance : trois cases à taper (jour, mois, année) au lieu du calendrier du téléphone ; le signe se met à jour tout de suite
+- Titres en haut des pages plus petits (27 px, 24 px sur petit téléphone), coupés proprement s'ils sont trop longs
+- Résonances : correction de l'erreur « can't access lexical declaration 'parts' before initialization »

@@ -77,14 +77,25 @@ Pages.portrait=async function(S){
   renderTypes();
   function renderFacts(){const F=$('facts');F.innerHTML='';
     FACTS.forEach(f=>{const s=me.facts[f.id];const d=document.createElement('div');d.className='fact'+(s.show?'':' hidden-f');let v='';
-      if(f.type==='date')v=`<input class="in" type="date" value="${esc(s.v)}">`;
-      else if(f.type==='auto'){const z=zodiac(me.facts.birth.v),c=chinese(me.facts.birth.v);v=`<span style="${z?'':'color:#8a6a60'}">${z?z+' · '+c:esc(f.ph)}</span>`;}
+      if(f.type==='date'){const [yy,mm,dd]=(s.v||'').split('-');v=`<span class="dob"><input class="in dd" type="text" inputmode="numeric" maxlength="2" placeholder="JJ" aria-label="Jour" value="${esc(dd||'')}"><span>.</span><input class="in mm" type="text" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Mois" value="${esc(mm||'')}"><span>.</span><input class="in yy" type="text" inputmode="numeric" maxlength="4" placeholder="AAAA" aria-label="Année" value="${esc(yy||'')}"></span>`;}
+      else if(f.type==='auto'){const z=zodiac(me.facts.birth.v),c=chinese(me.facts.birth.v);v=`<span id="sign-v" style="${z?'':'color:#8a6a60'}">${z?z+' · '+c:esc(f.ph)}</span>`;}
       else v=`<input class="in" value="${esc(s.v)}" placeholder="${esc(f.ph)}">`;
       d.innerHTML=`<div class="k">${f.k}</div><div class="v">${v}</div><button class="eye ${s.show?'on':''}" type="button">${s.show?'Visible':'Caché'}</button>`+(f.sub==='year'?`<div class="sub"><label><input type="checkbox" ${s.year?'checked':''}> montrer l'année (sinon seulement jour et mois, pour l'anniversaire)</label></div>`:'');
-      const inp=d.querySelector('.v input');if(inp)inp.addEventListener('input',()=>{s.v=inp.value;saveMe();if(f.id==='birth')renderFacts();});
+      if(f.type==='date')dob(d,s,f);
+      else{const inp=d.querySelector('.v input');if(inp)inp.addEventListener('input',()=>{s.v=inp.value;saveMe();});}
       d.querySelector('.eye').addEventListener('click',()=>{s.show=!s.show;saveMe();renderFacts();});
       const cb=d.querySelector('.sub input');if(cb)cb.addEventListener('change',()=>{s.year=cb.checked;saveMe();});
       F.appendChild(d);});}
+  /* date de naissance : trois cases à taper (jour, mois, année), sans le calendrier du téléphone */
+  function dob(d,s,f){const [D,M,Y]=['.dd','.mm','.yy'].map(c=>d.querySelector(c));const all=[D,M,Y];
+    const sign=()=>{const el=$('sign-v');if(!el)return;const z=zodiac(s.v),c=chinese(s.v);el.textContent=z?z+' · '+c:'Calculé depuis ta date de naissance';el.style.color=z?'':'#8a6a60';};
+    const commit=()=>{const dd=+D.value,mm=+M.value,yy=+Y.value,now=new Date().getFullYear();
+      if(!D.value&&!M.value&&!Y.value){s.v='';saveMe();sign();return;}
+      if(Y.value.length!==4||yy<1900||yy>now||mm<1||mm>12||dd<1)return;const t=new Date(yy,mm-1,dd);if(t.getMonth()!==mm-1)return;
+      s.v=yy+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');saveMe();sign();};
+    all.forEach((el,i)=>{el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'');if(el.value.length>=el.maxLength&&all[i+1])all[i+1].focus();commit();});
+      el.addEventListener('keydown',k=>{if(k.key==='Backspace'&&!el.value&&all[i-1]){all[i-1].focus();}});
+      el.addEventListener('blur',()=>{if(el!==Y&&el.value.length===1)el.value='0'+el.value;});});}
   renderFacts();
   Plus.editors(me,saveMe);
 
