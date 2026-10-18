@@ -8,6 +8,12 @@
   const T='fsl_token',U='fsl_uid';
   const store={get:k=>{try{return localStorage.getItem(k);}catch(e){return null;}},set:(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}}};
   let token=store.get(T),myId=store.get(U);
+  /* lien d'invitation : feelsharelove.com/?invite=… ; gardé jusqu'à l'inscription */
+  try{const inv=new URLSearchParams(location.search).get('invite');if(inv){store.set('fsl_invite',inv);history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
+  /* erreurs de l'app envoyées au serveur pour le débogage */
+  const report=(msg,stack)=>{try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({msg:String(msg),stack:String(stack||''),url:location.hash})});}catch(e){}};
+  window.addEventListener('error',e=>report(e.message,e.error&&e.error.stack));
+  window.addEventListener('unhandledrejection',e=>report(e.reason&&e.reason.message||e.reason,e.reason&&e.reason.stack));
   const ME_FIELDS=['profileId','owner','by','author','from','to','startedBy','createdBy','target'];
   function toServer(name,o){if(!o||typeof o!=='object')return o;const r={...o};
     if(name==='profiles'&&r.id==='me')r.id=myId;
@@ -55,8 +61,10 @@
     clear:async()=>{},
     setting:async(key,value)=>{if(value===undefined){const r=await call('GET','/api/settings/'+enc(key));return r&&r.value;}return call('PUT','/api/settings/'+enc(key),{value});},
     /* comptes */
-    register:async(email,password)=>{const r=await call('POST','/api/auth/register',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
+    register:async(email,password)=>{const r=await call('POST','/api/auth/register',{email,password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     login:async(email,password)=>{const r=await call('POST','/api/auth/login',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
+    inviteLink:()=>location.origin+'/?invite='+encodeURIComponent(myId),
+    invited:()=>call('GET','/api/invited'),
     logout:async()=>{try{await DB.pushOff();}catch(e){}try{await call('POST','/api/auth/logout',{});}catch(e){}logoutLocal();},
     /* notifications sur ce téléphone (sur iPhone : seulement depuis l'icône ajoutée à l'écran d'accueil) */
     pushState:async()=>{if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return 'unsupported';

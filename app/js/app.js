@@ -80,7 +80,7 @@ window.App=(function(){
     const star=document.createElement('button');star.className='star';star.type='button';star.id='star';star.setAttribute('aria-label','Menu');
     star.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 2c-.4 3.8-1.6 6.6-3.2 7.4C7.2 10.2 4.6 9.8 1.5 9c3.1 1.6 4.9 3 5.2 4.7.3 1.7-1 4-3 7 2.8-2.3 5.2-3.2 7-2.7 1.8.5 3.6 2.3 5.6 4.9-1.3-3.3-1.6-5.6-.7-7.1.9-1.5 3.2-2.4 6.9-3-3.9-.3-6.3-1.1-7.2-2.5C14.4 8.9 13.4 6.3 12 2z"/></svg>';
     const menu=document.createElement('div');menu.className='menu';menu.id='menu';
-    menu.innerHTML=`<a href="#messages">Messages <small id="msg-count"></small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#portrait">Mon portrait</a><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
+    menu.innerHTML=`<a href="#messages">Messages <small id="msg-count"></small></a><a href="#tribu">Ma tribu <small>les gens qui comptent</small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#portrait">Mon portrait</a><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
     const tabs=document.createElement('nav');tabs.className='tabs';
     tabs.innerHTML=`<a href="#portrait" data-tab="portrait">Portrait</a><a href="#resonances" data-tab="resonances">Résonances</a><a href="#now" data-tab="now">Maintenant</a>`;
     phone.prepend(menu);phone.prepend(star);phone.append(tabs);
@@ -94,7 +94,11 @@ window.App=(function(){
   async function loadMe(){const me=await DB.get('profiles','me');const entries=await DB.where('entries','profileId','me');const qs=await DB.where('questions','profileId','me');return {me,entries,qs};}
   async function loadPerson(id){const p=await DB.get('profiles',id);if(!p)return null;p.entries=await DB.where('entries','profileId',id);p.qs=await DB.where('questions','profileId',id);return p;}
   async function blockedNames(){const lists=await DB.where('lists','owner','me');return lists;}
-  function isListed(p,lists){return lists.some(l=>{if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
+  function isListed(p,lists){return lists.some(l=>{if(l.type!=='red'&&l.type!=='black')return false;if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
+  /* ma tribu : liste privée des gens qui comptent */
+  async function tribeOf(){return (await DB.where('lists','owner','me')).filter(l=>l.type==='tribe');}
+  async function inTribe(p){return (await tribeOf()).find(l=>l.target===p.id)||null;}
+  async function tribeAdd(p){if(await inTribe(p))return;await DB.put('lists',{owner:'me',type:'tribe',target:p.id,name:p.pseudo||p.name});}
   async function others(){const all=await DB.all('profiles');const lists=await blockedNames();return all.filter(p=>!p.isMe&&!isListed(p,lists));}
   async function isBlocked(p){return isListed(p,await blockedNames());}
 
@@ -269,7 +273,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,refreshMsgCount,tribeOf,inTribe,tribeAdd,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,prefixes,pseudoProposals,recorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

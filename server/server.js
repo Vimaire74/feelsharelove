@@ -13,6 +13,9 @@ const webpush = require('web-push');
 
 const PORT = +process.env.PORT || 8080;
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const DEBUG_KEY = process.env.DEBUG_KEY || ''; // outil de vérification pendant les tests ; à retirer de Coolify avant l'ouverture au public
+const LOG = []; // dernières erreurs (serveur et téléphones), pour le débogage
+function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), where, msg: String(msg).slice(0, 2000), extra }); if (LOG.length > 200) LOG.shift(); }
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
@@ -27,6 +30,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS docs (store text NOT NULL, id text NOT NULL, owner text, data jsonb NOT NULL, updated bigint NOT NULL, PRIMARY KEY (store, id));
     CREATE INDEX IF NOT EXISTS docs_owner ON docs (store, owner);
     CREATE TABLE IF NOT EXISTS files (id text PRIMARY KEY, owner text NOT NULL, mime text NOT NULL, data bytea NOT NULL, created bigint NOT NULL);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by text;
     CREATE TABLE IF NOT EXISTS push_subs (endpoint text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, data jsonb NOT NULL, created bigint NOT NULL);
   `);
   /* clés des notifications : créées une seule fois et gardées dans la base (rien à régler dans Coolify) */
@@ -96,6 +100,7 @@ async function hiddenFor(me) {
   const hidden = new Set();
   const mine = byId[me];
   for (const l of lists) {
+    if (l.type !== 'red' && l.type !== 'black') continue;
     if (l.owner === me) { for (const p of profiles) if (p.id !== me && listHits(l, p)) hidden.add(p.id); }
     else if (mine && listHits(l, mine)) hidden.add(l.owner);
   }
@@ -251,13 +256,19 @@ async function api(req, res, url) {
     if (req.method !== 'POST') throw err(405, 'méthode');
     if (parts[1] === 'logout') { const t = (req.headers.authorization || '').replace(/^Bearer /, ''); await q('DELETE FROM sessions WHERE token=$1', [t]); return send(res, 200, { ok: true }); }
     if (tooMany(ip)) throw err(429, 'Trop d\'essais. Réessaie dans un quart d\'heure.');
-    const { email, password } = await json(req); const e = norm(email);
+    const { email, password, invite } = await json(req); const e = norm(email);
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw err(400, 'Adresse e-mail invalide.');
     if (!password || password.length < 8) throw err(400, 'Le mot de passe doit avoir au moins 8 caractères.');
     let id;
     if (parts[1] === 'register') {
       const r = await q('SELECT 1 FROM users WHERE email=$1', [e]); if (r.rowCount) throw err(409, 'Un compte existe déjà avec cette adresse.');
-      id = uid(); await q('INSERT INTO users (id,email,pass,created) VALUES ($1,$2,$3,$4)', [id, e, hashPass(password), Date.now()]);
+      id = uid();
+      const inviter = invite ? (await q('SELECT id FROM users WHERE id=$1', [String(invite)])).rows[0] : null;
+      await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(password), Date.now(), inviter ? inviter.id : null]);
+      if (inviter) { // la personne qui invite entre directement dans la tribu de la nouvelle, et elle est prévenue
+        const lid = uid(); await putDoc('lists', lid, id, { id: lid, owner: id, type: 'tribe', target: inviter.id, name: await pseudoOf(inviter.id), __owner: id });
+        notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/#tribu');
+      }
     } else if (parts[1] === 'login') {
       const r = await q('SELECT id, pass, banned FROM users WHERE email=$1', [e]);
       if (!r.rowCount || !checkPass(password, r.rows[0].pass)) throw err(401, 'Adresse ou mot de passe incorrect.');
@@ -268,9 +279,12 @@ async function api(req, res, url) {
     await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, id, Date.now()]);
     return send(res, 200, { token, id });
   }
+  if (parts[0] === 'log' && req.method === 'POST') { const b = await json(req).catch(() => ({})); logErr('app', b.msg, { url: b.url, stack: String(b.stack || '').slice(0, 1500), ua: String(req.headers['user-agent'] || '').slice(0, 120), user: await userFromReq(req) }); return send(res, 200, { ok: true }); }
   const me = await userFromReq(req);
   if (!me) throw err(401, 'Connexion nécessaire.');
   if (parts[0] === 'me' && req.method === 'DELETE') { await wipeUser(me); return send(res, 200, { ok: true }); }
+  /* ma tribu : les personnes qui ont rejoint grâce à mon invitation */
+  if (parts[0] === 'invited') { const r = await q('SELECT id FROM users WHERE invited_by=$1 AND NOT banned', [me]); const out = []; for (const u of r.rows) { const p = await getDoc('profiles', u.id); if (p && p.pseudo) out.push({ id: u.id, pseudo: p.pseudo }); } return send(res, 200, out); }
   /* notifications : la clé publique, puis l'abonnement de ce téléphone */
   if (parts[0] === 'push') {
     if (parts[1] === 'key') return send(res, 200, { key: VAPID_PUBLIC });
@@ -330,16 +344,43 @@ async function admin(req, res, url) {
   send(res, 200, html, 'text/html; charset=utf-8');
 }
 
+/* ---------- outil de vérification (débogage) : /debug?key=DEBUG_KEY ----------
+   Actif seulement si DEBUG_KEY est réglée dans Coolify. Donne une vue complète de la base et des erreurs,
+   et permet d'ouvrir l'app « comme » un compte pour vérifier ce qu'il voit. À désactiver avant l'ouverture au public. */
+async function debug(req, res, url) {
+  const key = url.searchParams.get('key') || '';
+  if (!DEBUG_KEY || key.length !== DEBUG_KEY.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(DEBUG_KEY))) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
+  logErr('debug', 'accès ' + url.pathname, { ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress });
+  if (url.pathname === '/debug/as') { // ouvrir l'app comme ce compte (id, e-mail ou pseudo)
+    const w = url.searchParams.get('user') || '';
+    const r = await q("SELECT u.id FROM users u LEFT JOIN docs d ON d.store='profiles' AND d.id=u.id WHERE u.id=$1 OR u.email=lower($1) OR lower(d.data->>'pseudo')=lower($1) LIMIT 1", [w]);
+    if (!r.rowCount) return send(res, 404, { error: 'compte introuvable' });
+    const token = crypto.randomBytes(32).toString('hex'); await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, r.rows[0].id, Date.now()]);
+    return send(res, 200, `<!doctype html><meta charset="utf-8"><script>localStorage.setItem('fsl_token',${JSON.stringify(token)});localStorage.setItem('fsl_uid',${JSON.stringify(r.rows[0].id)});location.href='/#now';</script>`, 'text/html; charset=utf-8');
+  }
+  const full = url.searchParams.get('full') === '1';
+  const users = (await q('SELECT id, email, created, banned, invited_by FROM users ORDER BY created')).rows;
+  const docs = (await q('SELECT store, id, owner, data, updated FROM docs ORDER BY store, updated')).rows;
+  const by = {}; for (const d of docs) { (by[d.store] = by[d.store] || []).push(d.data); }
+  if (by.profiles) by.profiles = by.profiles.map(p => full ? p : { ...p, photo: p.photo ? '(photo ' + Math.round(p.photo.length / 1024) + ' Ko)' : '' });
+  if (by.settings) by.settings = by.settings.map(x => x.key === 'idcheck' ? { key: x.key, value: '(photo de carte)' } : x);
+  delete by.system; // jamais les clés des notifications
+  const subs = (await q('SELECT user_id, created FROM push_subs')).rows;
+  const files = (await q('SELECT id, owner, mime, length(data) taille, created FROM files')).rows;
+  send(res, 200, { now: new Date().toISOString(), version: require('./package.json').version, users, data: by, push_subs: subs, files, errors: LOG });
+}
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
     if (url.pathname === '/health') return send(res, 200, { ok: true });
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (url.pathname === '/admin') return await admin(req, res, url);
+    if (url.pathname === '/debug' || url.pathname === '/debug/as') return await debug(req, res, url);
     if (req.method !== 'GET') return send(res, 405, { error: 'méthode' });
     serveStatic(req, res, url.pathname);
   } catch (e) {
-    if (!e.code || typeof e.code !== 'number') console.error(e);
+    if (!e.code || typeof e.code !== 'number') { console.error(e); logErr('serveur', e.message, { url: req.url, stack: String(e.stack || '').slice(0, 1500) }); }
     send(res, typeof e.code === 'number' ? e.code : 500, { error: typeof e.code === 'number' ? e.message : 'Erreur du serveur.' });
   }
 }).listen(PORT, async () => {
