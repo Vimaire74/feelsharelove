@@ -1,4 +1,4 @@
-/* Connect — écrans « Cercles » (la liste) et « Cercle » (un thème : on lit, on écrit à tous, sans viser quelqu'un) */
+/* FeelShareLove — écrans « Cercles » (la liste) et « Cercle » (un thème : on lit, on écrit à tous, sans viser quelqu'un) */
 Pages.cercles=async function(S){
   const {$,esc}=App;const {me}=await App.loadMe();const mine=me.circles||[];
   const circles=await DB.all('circles');const posts=await DB.all('circlePosts');

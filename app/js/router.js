@@ -1,4 +1,4 @@
-/* Connect — routeur : une seule page, l'écran change selon l'adresse.
+/* FeelShareLove — routeur : une seule page, l'écran change selon l'adresse.
    #now  #portrait  #apercu  #personne/<id>  #resonances  #resonances/<id>  #messages  #messages/<id>
    #cercles  #cercle/<id>  #reglages  #donnees  #conditions  #accueil */
 (async()=>{

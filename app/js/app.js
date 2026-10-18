@@ -1,4 +1,4 @@
-/* Connect — logique commune : constantes, coque (étoile, barre du bas), résonances, catalogue, pseudo, voix, porte des messages */
+/* FeelShareLove — logique commune : constantes, coque (étoile, barre du bas), résonances, catalogue, pseudo, voix, porte des messages */
 window.App=(function(){
   const $=id=>document.getElementById(id);
 
@@ -202,7 +202,7 @@ window.App=(function(){
   const REPLY={tomas:'Ah, celui-là. Je pleure à la fin, et au milieu aussi.',kenji:'Merci d\'avoir écrit. Il est tôt ici, je marche, je vous réponds en marchant.',aicha:'Ça me fait plaisir. Je rentre de garde, je lis ça au chaud.',lucia:'Je lis ça et je souris. Raconte-moi la suite.'};
   const ACCEPT={tomas:'J\'ouvre volontiers. Racontez-moi.',kenji:'Bonne idée de commencer par là. J\'accepte avec plaisir.',aicha:'Oui ! Ça fait du bien de lire ça.',lucia:'J\'ai ouvert. Tu as visé juste avec ce que tu as écrit.'};
   /* simulation : les personnes fictives acceptent quelques secondes après */
-  /* vérification d'identité : contrôle à la main côté Connect ; en local, simulé après quelques secondes. La photo de la carte est supprimée ensuite. */
+  /* vérification d'identité : contrôle à la main côté FeelShareLove ; en local, simulé après quelques secondes. La photo de la carte est supprimée ensuite. */
   async function tickVerify(){const me=await DB.get('profiles','me');if(!me||!me.verified||me.verified.status!=='pending'||Date.now()<me.verified.at+8000)return false;
     me.verified={status:'verified',at:Date.now()};await DB.put('profiles',me);await DB.del('settings','idcheck');return true;}
   async function tickThreads(){if(DB.remote)return false;let changed=await tickVerify();for(const t of await DB.all('threads')){if(t.status==='pending-out'&&t.acceptAt&&t.acceptAt<Date.now()){

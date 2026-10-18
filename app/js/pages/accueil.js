@@ -1,4 +1,4 @@
-/* Connect — accueil à la première ouverture (5 étapes) et choix du pseudo */
+/* FeelShareLove — accueil à la première ouverture (5 étapes) et choix du pseudo */
 App.pseudoPicker=function(me,onPick){
   const {esc,FAMILIES}=App;const w=document.createElement('div');w.className='pseudo-pick';
   const first=(me.name||'').trim().split(/[\s-]+/)[0]||'';
@@ -34,7 +34,7 @@ Pages.accueil=async function(S){
   const save=()=>DB.put('profiles',me);
   async function render(){S.scrollTop=0;
     const head=`<div class="steps"><span>Étape ${step} sur ${N}</span><div class="bar-p"><i style="width:${step/N*100}%"></i></div></div>`;
-    if(step===1){S.innerHTML=head+`<p class="eyebrow">Bienvenue</p><h1>Connect relie les gens par ce qui les touche.</h1>
+    if(step===1){S.innerHTML=head+`<p class="eyebrow">Bienvenue</p><h1>FeelShareLove relie les gens par ce qui les touche.</h1>
       <p class="muted" style="margin:12px 0 18px">Pas de photos à faire défiler. Tu te présentes par ce que tu aimes, et pourquoi.</p>
       <div class="fact"><div class="k">Ton prénom <span class="muted" style="text-transform:none;letter-spacing:0">(il reste privé)</span></div><div class="v"><input class="in" id="a-name" placeholder="Prénom"></div></div>
       <div class="fact" style="margin-top:8px"><div class="k">Ton nom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à la vérification)</span></div><div class="v"><input class="in" id="a-last" placeholder="Nom de famille"></div></div>
@@ -43,7 +43,7 @@ Pages.accueil=async function(S){
       <div class="row"><button class="btn" type="button" id="next">Continuer</button></div><p class="muted small" id="err"></p>`;
       $('a-name').value=me.name||'';
       const accs=S.querySelectorAll('#a-acc .chip');accs.forEach(c=>{c.classList.toggle('on',me.accord===c.dataset.a);c.addEventListener('click',()=>{me.accord=c.dataset.a;accs.forEach(x=>x.classList.toggle('on',x===c));});});$('a-last').value=me.lastName||'';$('a-18').checked=!!me.adultAt;
-      $('next').addEventListener('click',async()=>{const n=$('a-name').value.trim();const ln=$('a-last').value.trim();if(!n||!ln){$('err').textContent='Prénom et nom sont nécessaires. Ils restent privés.';return;}me.lastName=ln;if(!$('a-18').checked){$('err').textContent='Connect est réservé aux adultes.';return;}
+      $('next').addEventListener('click',async()=>{const n=$('a-name').value.trim();const ln=$('a-last').value.trim();if(!n||!ln){$('err').textContent='Prénom et nom sont nécessaires. Ils restent privés.';return;}me.lastName=ln;if(!$('a-18').checked){$('err').textContent='FeelShareLove est réservé aux adultes.';return;}
         me.name=n;me.adultAt=me.adultAt||Date.now();await save();step=2;render();});return;}
     if(step===2){S.innerHTML=head+`<p class="eyebrow">Ton pseudo</p><h1>Comment les autres te verront</h1><p class="muted" style="margin:10px 0">Ton prénom reste privé. Les autres voient un pseudo composé à partir de ton prénom et d'un mot qui dit un petit quelque chose de toi.</p><div id="pp"></div><div class="row" style="justify-content:flex-start"><button class="linkbtn" type="button" id="back">← Retour</button></div>`;
       $('pp').appendChild(App.pseudoPicker(me,async ps=>{me.pseudo=ps;await save();step=3;render();}));$('back').addEventListener('click',()=>{step=1;render();});return;}
@@ -62,13 +62,13 @@ Pages.accueil=async function(S){
       const L=$('l');entries.forEach((e,i)=>L.appendChild(App.entryEl(e,{edit:()=>{$('fs').innerHTML='';$('fs').appendChild(App.entryForm(e,async ne=>{entries[i]=await DB.put('entries',{...ne,profileId:'me'});render();},()=>render()));}})));
       $('add').addEventListener('click',()=>{$('add').hidden=true;$('fs').innerHTML='';$('fs').appendChild(App.entryForm({},async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));render();},()=>render()));});
       $('back').addEventListener('click',()=>{step=3;render();});$('next').addEventListener('click',()=>{step=5;render();});return;}
-    if(step===5){S.innerHTML=head+`<p class="eyebrow">Presque fini</p><h1>Ta photo, prise maintenant</h1><p class="muted" style="margin:10px 0">Sur Connect, la photo est prise en direct avec la caméra : pas d'import, pas de vieille photo retouchée. Le visage doit être reconnaissable. Une photo en pied est possible : pose le téléphone et utilise le retardateur.</p>
+    if(step===5){S.innerHTML=head+`<p class="eyebrow">Presque fini</p><h1>Ta photo, prise maintenant</h1><p class="muted" style="margin:10px 0">Sur FeelShareLove, la photo est prise en direct avec la caméra : pas d'import, pas de vieille photo retouchée. Le visage doit être reconnaissable. Une photo en pied est possible : pose le téléphone et utilise le retardateur.</p>
       <div class="hero"><div class="avatar"><img id="photo" alt="" hidden></div><div><h1>${esc(me.pseudo)}</h1><p class="muted">${esc([me.npa,me.city].filter(Boolean).join(' '))}</p></div></div>
       <div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn ghost" type="button" id="take">${me.photo?'Reprendre ma photo':'Prendre ma photo'}</button></div>
       <h2>Ce que les autres <em>verront</em></h2>
       <div class="sec"><p><b>${esc(me.pseudo)}</b>${me.city?' · '+esc(me.city):''}</p><p class="muted small">${(me.intent||[]).map(i=>INTENT_LABEL[i]).join(' · ')||'Intention non précisée'}</p>${me.now?`<p class="txt" style="margin-top:6px">${esc(me.now)}</p>`:''}<p class="muted small" style="margin-top:6px">${entries.length} chose${entries.length>1?'s':''} qui te ${entries.length>1?'font':'fait'} vibrer · ni ton prénom ni ton nom n'apparaissent</p></div>
       <p class="muted small" style="margin-top:10px">Tu pourras changer ta photo librement pendant un mois, puis une fois par an. Tu pourras aussi faire vérifier ton profil avec ta carte d'identité, dans Réglages.</p>
-      <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn flame" type="button" id="go">Entrer dans Connect</button></div><p class="muted small" id="err"></p>`;
+      <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn flame" type="button" id="go">Entrer dans FeelShareLove</button></div><p class="muted small" id="err"></p>`;
       if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
       $('take').addEventListener('click',async()=>{const url=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Retardateur pour une photo en pied.'});if(!url)return;me.photo=url;me.photoAt=Date.now();await save();render();});
       $('back').addEventListener('click',()=>{step=4;render();});

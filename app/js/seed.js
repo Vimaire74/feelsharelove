@@ -1,8 +1,8 @@
-/* Connect — données de départ (version 2) : quatre personnes fictives, cercles et leurs messages, premières conversations.
+/* FeelShareLove — données de départ (version 2) : quatre personnes fictives, cercles et leurs messages, premières conversations.
    workId = identifiant de l'œuvre dans le catalogue (Wikipédia), écrit sans accents ni majuscules. */
 (function(){
 const LATER=Date.now()+864e5*30; // personnes fictives : disponibles en permanence pour la démo
-window.CONNECT_SEED={
+window.FSL_SEED={
  profiles:[
   {id:'lucia',name:'Lucía',pseudo:'LuciAmbre',g:'f',types:{list:['emo','sens'],show:true},verified:{status:'verified',at:Date.now()-864e5*20},av:'b',city:'Séville',tz:0,online:true,intent:['amis','amour'],
    avail:{wants:['parler','decouvrir'],note:'Un film en même temps, chacun chez soi ?',until:LATER},

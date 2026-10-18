@@ -1,4 +1,4 @@
-/* Connect — les quatre types de fonctionnement (textes de Marc) et le questionnaire.
+/* FeelShareLove — les quatre types de fonctionnement (textes de Marc) et le questionnaire.
    Les textes s'affichent à la fin du test ; Marc les retouchera. */
 window.TYPES={
  list:[

@@ -1,4 +1,4 @@
--- Connect — même structure que la base locale, pour le futur serveur (PostgreSQL / Supabase)
+-- FeelShareLove — même structure que la base locale, pour le futur serveur (PostgreSQL / Supabase)
 create table profiles (
   id uuid primary key,
   name text not null, city text, tz smallint default 0, online boolean default false,

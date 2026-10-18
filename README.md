@@ -1,6 +1,8 @@
 # FeelShareLove — lot 2
 
 Version 1.1.0 (18/10/2026)
+- Nom FeelShareLove partout dans l'app (à la place de Connect)
+- Feuille de style renommée feelsharelove.css ; sauvegarde nommée feelsharelove-base.json
 - Résonances et Maintenant : le nombre de résonances de la liste est le même que dans le détail (types de fonctionnement compris)
 - « il » / « elle » : suit l'accord choisi par la personne au lieu de deviner d'après le prénom
 - Serveur : l'accord choisi est transmis aux autres (prénom, nom et code postal restent privés)

@@ -1,4 +1,4 @@
-/* Connect — écran « Résonances » : la liste des personnes qui résonnent, puis le détail avec une personne */
+/* FeelShareLove — écran « Résonances » : la liste des personnes qui résonnent, puis le détail avec une personne */
 const commonTypes=(a,b)=>{const ta=a.types&&a.types.list||[],tb=b.types&&b.types.show!==false&&b.types.list||[];return ta.filter(k=>tb.includes(k));};
 Pages.resonances=async function(S,id){
   const {$,esc,fem,dn,INTENT_LABEL}=App;

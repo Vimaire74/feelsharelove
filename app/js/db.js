@@ -1,4 +1,4 @@
-/* Connect — couche base de données locale (IndexedDB, dans le navigateur)
+/* FeelShareLove — couche base de données locale (IndexedDB, dans le navigateur)
    Tables : voir docs/schema.md. Même structure que la future base serveur (docs/schema.sql).
    Version 2 : ajoute threads (porte des premiers messages), voices (enregistrements), circlePosts (messages des cercles). */
 (function(){
@@ -54,8 +54,8 @@
       let me=await DB.get('profiles','me');
       if(!me)me=await DB.put('profiles',{id:'me',name:'',pseudo:'',city:'',intent:[],now:'',photo:'',facts:{},avail:null,circles:[],online:true,isMe:true});
       const v=(await DB.setting('seedVersion'))||((await DB.setting('seeded'))?1:0);
-      if(v>=4||!window.CONNECT_SEED)return;
-      const S=CONNECT_SEED;
+      if(v>=4||!window.FSL_SEED)return;
+      const S=FSL_SEED;
       if(v>=2){/* mises à jour légères des personnes fictives, sans toucher à « me » */
         for(const sp of S.profiles){const p=await DB.get('profiles',sp.id);if(!p)continue;
           if(v<3&&sp.verified)p.verified=sp.verified;

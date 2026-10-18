@@ -1,4 +1,4 @@
-/* Connect — écran « Mon portrait » : tout s'enregistre dans la base locale à chaque modification */
+/* FeelShareLove — écran « Mon portrait » : tout s'enregistre dans la base locale à chaque modification */
 Pages.portrait=async function(S){
   const {$,esc,grow,FACTS,zodiac,chinese}=App;
   let {me,entries,qs}=await App.loadMe();

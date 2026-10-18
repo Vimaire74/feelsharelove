@@ -1,4 +1,4 @@
-/* Connect — test « Mon fonctionnement » : 12 questions, résultat, textes de Marc, validation et choix d'affichage */
+/* FeelShareLove — test « Mon fonctionnement » : 12 questions, résultat, textes de Marc, validation et choix d'affichage */
 Pages.test=async function(S){
   const {$,esc}=App;const T=TYPES;let me=await DB.get('profiles','me');
   const shuffle=a=>{a=a.slice();for(let j=a.length-1;j>0;j--){const r=Math.floor(Math.random()*(j+1));[a[j],a[r]]=[a[r],a[j]];}return a;};

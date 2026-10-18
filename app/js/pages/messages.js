@@ -1,4 +1,4 @@
-/* Connect — écran « Messages » : demandes reçues, conversations ouvertes, messages en attente ; puis une conversation */
+/* FeelShareLove — écran « Messages » : demandes reçues, conversations ouvertes, messages en attente ; puis une conversation */
 Pages.messages=async function(S,id){
   const {$,esc,fem,dn,localTime,hhmm}=App;
   /* version en ligne : la liste des conversations se met à jour toute seule (toutes les 10 secondes) */
@@ -10,7 +10,7 @@ Pages.messages=async function(S,id){
     const last=tid=>all.filter(m=>m.thread===tid).sort((a,b)=>b.ts-a.ts)[0];
     const left=await App.firstLeft();
     const waiting=threads.filter(t=>t.status==='pending-in');
-    if(waiting.length){S.innerHTML=`<p class="eyebrow">Messages</p><h1>Quelqu'un attend ta réponse</h1><p class="muted small" style="margin:8px 0 4px">Sur Connect, personne ne reste sans réponse. Ouvre la conversation ou réponds non gentiment : tes autres messages s'affichent ensuite.</p><div id="t-in"></div>`;
+    if(waiting.length){S.innerHTML=`<p class="eyebrow">Messages</p><h1>Quelqu'un attend ta réponse</h1><p class="muted small" style="margin:8px 0 4px">Sur FeelShareLove, personne ne reste sans réponse. Ouvre la conversation ou réponds non gentiment : tes autres messages s'affichent ensuite.</p><div id="t-in"></div>`;
       waiting.forEach(t=>{const p=byId[t.id];const m=last(t.id);const d=App.personEl(p,null,`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">Te répond${m&&m.aboutTitle?' sur « '+esc(m.aboutTitle)+' »':''} · à toi de répondre</div>`);d.addEventListener('click',()=>location.hash='#messages/'+p.id);$('t-in').appendChild(d);});return;}
     S.innerHTML=`<p class="eyebrow">Messages</p><h1>Conversations</h1><p class="muted small" style="margin:8px 0 4px">Il te reste ${left} premier${left>1?'s':''} message${left>1?'s':''} aujourd'hui. On écrit à quelqu'un en répondant à une entrée de son portrait.</p><div id="t-in"></div><div id="t-open"></div><div id="t-out"></div><div id="t-end"></div>`;
     const sect=(el,title,list,sub)=>{if(!list.length)return;el.innerHTML=`<h2>${title}</h2>`;list.sort((a,b)=>((last(b.id)||{}).ts||0)-((last(a.id)||{}).ts||0)).forEach(t=>{const p=byId[t.id];const m=last(t.id);
@@ -34,7 +34,7 @@ Pages.messages=async function(S,id){
   function addMsg(m){
     if(m.kind==='ephemeral'&&m.from!=='me'){const d=document.createElement('div');d.className='eph'+(m.seen?' gone':'');
       d.innerHTML=`<div class="lbl">Photo éphémère · ${m.seconds} secondes · vue une fois</div><div class="pic">${m.seen?'Photo vue. Elle n\'est plus sur ton téléphone.':esc(m.text)}</div><div class="timer"></div><div class="actions"><button class="btn" type="button" ${m.seen?'disabled':''}>Voir</button><button class="btn ghost" type="button">Signaler</button></div>
-      <div class="report"><div class="k">Pourquoi tu signales cette photo ? Elle sera transmise à l'équipe Connect même si elle a disparu de ton écran.</div><div class="opts"><button class="chip" type="button">Nudité</button><button class="chip" type="button">Violence</button><button class="chip" type="button">Pas la bonne personne</button><button class="chip" type="button">Autre</button></div><div class="ok">Transmis. On regarde dans les 24 h et ${esc(dn(p))} ne saura pas que ça vient de toi.</div></div>`;
+      <div class="report"><div class="k">Pourquoi tu signales cette photo ? Elle sera transmise à l'équipe FeelShareLove même si elle a disparu de ton écran.</div><div class="opts"><button class="chip" type="button">Nudité</button><button class="chip" type="button">Violence</button><button class="chip" type="button">Pas la bonne personne</button><button class="chip" type="button">Autre</button></div><div class="ok">Transmis. On regarde dans les 24 h et ${esc(dn(p))} ne saura pas que ça vient de toi.</div></div>`;
       const [see,flag]=d.querySelectorAll('.actions button');const t=d.querySelector('.timer');
       see.addEventListener('click',async()=>{if(m.seen)return;m.seen=true;await DB.put('messages',m);d.classList.add('seen');see.disabled=true;let n=m.seconds;t.style.display='block';
         const tick=()=>{t.textContent='Disparaît dans '+n+' s';if(n--<=0){d.classList.remove('seen');d.classList.add('gone');d.querySelector('.pic').textContent='Photo vue. Elle n\'est plus sur ton téléphone.';t.style.display='none';return;}setTimeout(tick,1000);};tick();});
@@ -54,7 +54,7 @@ Pages.messages=async function(S,id){
     if(th.status==='pending-out'){Bo.innerHTML=`<div class="empty">En attente : ${esc(dn(p))} va lire ta réponse et choisir d'ouvrir la conversation.</div>`;
       const wait=Math.max(500,th.acceptAt-Date.now()+300);setTimeout(async()=>{if(location.hash!=='#messages/'+p.id)return;if(await App.tickThreads())render();},wait);return;}
     if(th.status==='pending-in'){const opts=App.declineChoices(p,await DB.get('profiles','me'));
-      Bo.innerHTML=`<div class="gate"><p>${esc(dn(p))} t'a écrit. Sur Connect, on répond toujours : tu ouvres la conversation, ou tu dis non gentiment.</p>
+      Bo.innerHTML=`<div class="gate"><p>${esc(dn(p))} t'a écrit. Sur FeelShareLove, on répond toujours : tu ouvres la conversation, ou tu dis non gentiment.</p>
         <div class="row" style="justify-content:flex-start"><button class="btn" type="button" id="acc">Ouvrir la conversation</button><button class="btn ghost" type="button" id="no">Répondre non, gentiment</button></div>
         <div id="dec" hidden><p class="muted small" style="margin:12px 0 8px">Choisis une phrase. Elle sera envoyée telle quelle.</p>${opts.map((o,i)=>`<label class="dopt"><input type="radio" name="dch" value="${i}"><span>${esc(o.t)}</span></label>`).join('')}
           <div class="row" style="margin-top:10px"><button class="btn" type="button" id="dsend" disabled>Envoyer cette réponse</button></div></div>

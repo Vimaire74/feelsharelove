@@ -1,4 +1,4 @@
-# Connect — structure de la base de données
+# FeelShareLove — structure de la base de données
 
 La même structure sert en local (IndexedDB dans le navigateur, fichier js/db.js) et servira plus tard sur le serveur (schema.sql, Supabase/PostgreSQL). Une table = un « store » local.
 
