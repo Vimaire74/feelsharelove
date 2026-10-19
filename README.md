@@ -1,24 +1,22 @@
-# FeelShareLove — lot 3
+# FeelShareLove — lot 4 (seulement les fichiers modifiés, à mettre aux mêmes endroits)
 
-Version 1.3.0 (18/10/2026)
-- Menu du bas refait : Maintenant, Résonances, Messages, Ma tribu, Portrait
-- Icônes en peinture de points : porte ouverte, ondes, signaux de fumée, tribu autour du feu, girafe
-- Barre du bas lie-de-vin avec une vague et une ligne pointillée rose
-- Pastille du nombre de demandes sur l'icône Messages
-- Grande icône à côté du titre des cinq écrans du menu
-- Photo de portrait : choix d'un dessin (crayon, affiche, aquarelle, silhouette floue), calculé sur le téléphone
-- Si un dessin est choisi, la vraie photo reste privée (jamais envoyée aux autres)
-- Portrait : « Si j'étais un personnage », jusqu'à trois personnages historiques ou de fiction, et en quoi
-- Portrait chinois : choix guidé par domaine ou univers, ou recherche par nom, dans une liste fermée de 435 noms
-- Portrait chinois : bouton « Il manque quelqu'un ? » qui envoie la proposition dans l'admin (signalements)
-- Portrait : « Ce dans quoi je m'investis », 20 domaines et leurs sous-catégories
-- Les deux nouvelles rubriques peuvent être cachées ; elles s'affichent sur le portrait vu par les autres
-- Résonances : même personnage, même univers de fiction, même domaine d'investissement comptent dans le nombre et sont détaillés
-- Portrait : « Ce qui me représente », jusqu'à trois mots parmi 32 (artiste, rêveur, aventurier…), accordés au masculin ou au féminin
-- Résonances : le même mot dans « Ce qui me représente » compte aussi
-- La mise à jour automatique s'arrête quand l'app n'est pas à l'écran, et reprend tout de suite au retour
-- Les coupures de réseau ne sont plus enregistrées comme des erreurs (elles s'envoyaient en boucle)
-- Sur téléphone : l'app prend tout l'écran (plus de cadre ni de marges) et les noms du menu du bas ne se chevauchent plus
-- Date de naissance : trois cases à taper (jour, mois, année) au lieu du calendrier du téléphone ; le signe se met à jour tout de suite
-- Titres en haut des pages plus petits (27 px, 24 px sur petit téléphone), coupés proprement s'ils sont trop longs
-- Résonances : correction de l'erreur « can't access lexical declaration 'parts' before initialization »
+Version 1.3.1 (19/10/2026)
+- Portrait d'une personne : « Qui il est » affichait [object Object] et des noms techniques (birth) ; corrigé
+- Signe astrologique : enregistré en texte, visible par les autres même quand l'année de naissance est cachée
+- Année de naissance cachée : elle n'est plus envoyée aux autres par le serveur
+- Boutons « Nos résonances », « Conversation », « Ma tribu » : plus de grosses bulles soulignées
+- Menu du bas : noms en entier (plus de « Mainten… »)
+- Titres : plus de coupure au milieu des mots (« Quel-qu'un »), 23 px sur téléphone
+- Maintenant : le titre change selon le moment de la journée (nuit, matin, midi, après-midi, soir, tard), une phrase différente chaque jour ; l'heure, la ville et le nombre de personnes disponibles passent dessous en petit
+- Résonances : « Qui résonne avec moi ? » au lieu du pseudo ; dans le détail, « Toi & … »
+- Maintenant : les filtres choisis (envies, disponibles, vérifiés…) sont gardés quand on quitte la page et qu'on revient
+- Résonances : champ « Je cherche… » par mots-clés (passions, œuvres, personnages, investissements, ville, pseudo)
+- Résonances : « ou » un menu de critères à cocher, combinables : envie du moment, ce qu'on cherche (amis, amour…), proche de chez moi, dans mon pays, disponible, vérifiés, au moins un point commun
+- Résonances : critères gardés en mémoire sur le téléphone
+- Pourcentage de similitude (œuvres, ressentis, fonctionnement, personnages, investissements, ce qui représente, intention) ; classement du plus fort au plus faible
+- Le pourcentage s'affiche aussi dans Maintenant et dans le détail d'une résonance, avec le nombre de points communs
+- Photo : après la prise, éditeur pour la placer soi-même (glisser, zoom à la barre ou à deux doigts) dans le rond que les autres verront ; centrage automatique sur le visage quand le navigateur le permet
+- Photo : bouton « Recadrer ou dessiner » sous la photo dans Mon portrait (vraie photo, crayon, affiche, aquarelle, silhouette floue) ; ne compte pas comme un changement de photo
+- La photo d'origine et la vraie photo restent privées (le serveur ne les envoie jamais aux autres)
+- Mode voyage (Mon portrait, sous la ville) : se localiser avec le téléphone ou écrire la ville, pour 3 jours, 1 semaine, 2 semaines, 1 mois ou jusqu'au retour ; « en voyage » s'affiche à côté de la ville ; retour automatique à la date choisie, ou bouton « Je suis rentré »
+- « Ce qui me représente » : jusqu'à six mots au lieu de trois

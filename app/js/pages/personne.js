@@ -4,12 +4,15 @@ Pages._view=async function(S,p,preview){
   const {me,entries}=await App.loadMe();const r=preview?{common:[],feels:[]}:App.resonance(entries,p.entries);const nres=preview?0:r.common.length+r.feels.length+commonTypes(me,p).length+Plus.extraCommon(me,p).length;
   const commons=new Set(r.common.map(c=>c.theirs.id));const f=fem(p);const il=f?'elle':'il';
   /* faits visibles : pour moi, uniquement ceux que j'ai laissés visibles */
-  let facts=[];
-  if(preview){const F=p.facts||{};FACTS.forEach(x=>{const s=F[x.id];if(x.id==='sign'){const b=F.birth;if(b&&b.v&&s&&s.show)facts.push([x.k,zodiac(b.v)+' · '+chinese(b.v)]);return;}
-      if(!s||!s.show||!s.v)return;if(x.id==='birth'){const [y,m,d]=s.v.split('-');facts.push(['Anniversaire',new Date(+y,+m-1,+d).toLocaleDateString('fr-CH',s.year?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})]);return;}facts.push([x.k,s.v]);});}
-  else facts=Object.entries(p.facts||{}).map(([k,v])=>[FACT_LABEL[k]||k,v]);
+  let facts=[];const F=p.facts||{};
+  /* faits d'un portrait : objets {v, show, year} (version en ligne) ou simple texte (anciennes données) */
+  FACTS.forEach(x=>{let s=F[x.id];if(s==null)return;if(typeof s!=='object')s={v:s,show:true};if(!s.show)return;
+    if(x.id==='sign'){const b=F.birth;let v=s.v;if(!v&&b&&b.v)v=(b.year||preview)?zodiac(b.v)+' · '+chinese(b.v):zodiac(b.v);if(v)facts.push([x.k,v]);return;}
+    if(!s.v)return;if(x.id==='birth'){const [y,m,d]=s.v.split('-');facts.push(['Anniversaire',new Date(+y,+m-1,+d).toLocaleDateString('fr-CH',s.year?{day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'long'})]);return;}
+    facts.push([x.k,s.v]);});
+  Object.entries(F).forEach(([k,v])=>{if(typeof v==='string'&&v&&!FACTS.some(x=>x.id===k))facts.push([FACT_LABEL[k]||k,v]);});
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
-  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}<p class="muted">${esc(p.city||'')}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
+  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}<p class="muted">${esc(p.city||'')}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
   <div class="intent">${(p.intent||[]).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}

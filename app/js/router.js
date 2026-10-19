@@ -7,6 +7,7 @@
     const S0=document.getElementById('screen');const show=()=>{if(location.hash==='#conditions')Pages.conditions(S0);else Pages.connexion(S0);};
     window.addEventListener('hashchange',show);show();return;}
   if(DB.remote){const n=document.getElementById('note');if(n)n.innerHTML='<b>FeelShareLove</b> · version en ligne.';}
+  if(window.Photo)await Photo.check();
   App.shell();
   const TAB={now:'now',personne:'now',cercle:'now',cercles:'now',portrait:'portrait',apercu:'portrait',test:'portrait',resonances:'resonances',messages:'messages',tribu:'tribu'};
   const HEAD={now:'now',resonances:'res',messages:'msg',tribu:'tribu',portrait:'port'};

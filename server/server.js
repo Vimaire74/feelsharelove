@@ -109,8 +109,10 @@ async function hiddenFor(me) {
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
 function publicProfile(p) {
-  const { name, lastName, npa, email, photoReal, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
-  if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v; rest.facts = f; }
+  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
+  if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v;
+    if (f.birth && f.birth.v && !f.birth.year) f.birth = { ...f.birth, v: '2000' + String(f.birth.v).slice(4) }; // année cachée : elle ne quitte pas le serveur
+    rest.facts = f; }
   if (rest.verified) rest.verified = { status: rest.verified.status, at: rest.verified.status === 'verified' ? rest.verified.at : undefined };
   return rest;
 }

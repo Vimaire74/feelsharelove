@@ -378,3 +378,24 @@ h1 .in{font-size:27px}
 .titled .ticon{width:46px;height:46px}
 .titled.small .ticon{width:36px;height:36px}
 @media (max-width:380px){h1,h1 .in{font-size:24px}.titled .ticon{width:40px;height:40px}}
+/* v1.3.1 — boutons du portrait d'une personne, noms du menu, titres */
+.actions2 .btn{flex:1 1 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border-radius:999px;text-decoration:none;white-space:nowrap;line-height:1.2}
+.actions2 a.btn{text-decoration:none}
+.tabs a span:not(.tbadge){padding:0;font-size:clamp(9px,2.75vw,12px);letter-spacing:-.02em}
+h1{hyphens:manual}
+@media (max-width:430px){h1,h1 .in{font-size:23px}.titled .ticon{width:38px;height:38px}}
+/* Résonances : « Je cherche… » ou des critères */
+.finder .or{text-align:center;font:italic 500 15px var(--display);color:var(--muted);margin:8px 0}
+.crit-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:46px;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);font:15px var(--body);text-align:left;cursor:pointer}
+.crit-btn.on{border-color:var(--rose);color:var(--fg)}
+.crit-btn span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crit-panel{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-top:8px}
+.crit-g{font:600 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--saffron);margin:10px 0 8px}
+.crit-o{display:flex;flex-wrap:wrap;gap:8px}.crit-o .chip{min-height:40px}
+.person .r b{white-space:nowrap}
+/* éditeur de photo */
+.cam.pe{overflow-y:auto}
+.pe-frame{position:relative;width:min(74vw,280px);aspect-ratio:1;margin:6px auto 4px;border-radius:50%;overflow:hidden;touch-action:none;cursor:grab;box-shadow:0 0 0 3px var(--saffron);background:#000}
+.pe-frame img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.pe-zoom{display:flex;align-items:center;gap:10px;justify-content:center;color:var(--muted);font-size:13px;margin:8px 0}
+.pe-zoom input{width:min(60vw,220px);accent-color:var(--flame)}

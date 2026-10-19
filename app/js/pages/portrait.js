@@ -11,13 +11,14 @@ Pages.portrait=async function(S){
   </div>
   <p class="muted small" id="pseudo-rule" style="margin-top:8px"></p>
   <div id="pseudo-pick" hidden></div>
-  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="photo-take">Prendre ma photo</button></div>
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="photo-take">Prendre ma photo</button><button class="btn ghost" type="button" id="photo-edit" hidden>Recadrer ou dessiner</button></div>
   <p class="muted small" id="photo-rule" style="margin-top:6px"></p>
   <div class="facts" style="margin-top:14px">
     <div class="fact"><div class="k">Prénom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à ton pseudo et à la liste rouge)</span></div><div class="v"><input class="in" id="f-name" placeholder="Prénom"></div></div>
     <div class="fact"><div class="k">Nom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à la vérification)</span></div><div class="v"><input class="in" id="f-last" placeholder="Nom de famille"></div></div>
     <div class="fact"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="f-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="f-place" placeholder="Ville"></div></div>
   </div>
+  <div id="travel-box" style="margin:8px 4px 0"></div>
   <div class="intent" id="intent">
     <button class="chip" type="button" data-k="parler">Quelqu'un à qui parler</button><button class="chip" type="button" data-k="amis">Des amis</button><button class="chip" type="button" data-k="amour">L'amour</button>
   </div>
@@ -48,18 +49,24 @@ Pages.portrait=async function(S){
   <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div>`;
 
   let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});},300);}
-  $('f-name').value=me.name||'';$('f-place').value=me.city||'';$('f-last').value=me.lastName||'';$('f-npa').value=me.npa||'';
+  $('f-name').value=me.name||'';$('f-place').value=(me.travel?me.travel.homeCity:me.city)||'';$('f-last').value=me.lastName||'';$('f-npa').value=me.npa||'';
   $('f-last').addEventListener('input',e=>{me.lastName=e.target.value;saveMe();});$('f-npa').addEventListener('input',e=>{me.npa=e.target.value;saveMe();});$('f-now').value=me.now||'';grow($('f-now'));
   $('f-name').addEventListener('input',e=>{me.name=e.target.value;saveMe();});
-  $('f-place').addEventListener('input',e=>{me.city=e.target.value;saveMe();});
+  $('f-place').addEventListener('input',e=>{if(me.travel)me.travel.homeCity=e.target.value;else me.city=e.target.value;saveMe();});
+  const tvBox=()=>Photo.travelBox($('travel-box'),me,saveMe,tvBox);tvBox();
   $('f-now').addEventListener('input',e=>{me.now=e.target.value;grow(e.target);saveMe();});
   function rules(){const pr=App.pseudoRule(me);$('pseudo-rule').textContent=pr.msg;$('pseudo-change').disabled=!pr.ok;$('pseudo-change').style.opacity=pr.ok?1:.4;
     const ph=App.photoRule(me);$('photo-rule').textContent=ph.msg||'Ta photo est prise en direct avec la caméra, pas importée. Le visage doit être reconnaissable ; une photo en pied est possible avec le retardateur.';$('photo-take').disabled=!ph.ok;$('photo-take').style.opacity=ph.ok?1:.4;$('photo-take').textContent=me.photo?'Changer ma photo':'Prendre ma photo';}
   rules();
   $('pseudo-change').addEventListener('click',()=>{if(!App.pseudoRule(me).ok)return;const P=$('pseudo-pick');P.hidden=!P.hidden;if(!P.hidden){P.innerHTML='<p class="muted small" style="margin-top:8px">Attention : c\'est ton seul changement possible.</p>';P.appendChild(App.pseudoPicker(me,async ps=>{me.pseudo=ps;me.pseudoChangedAt=Date.now();await DB.put('profiles',me);$('pseudo-h').textContent=ps;P.hidden=true;rules();}));}});
-  if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
-  $('photo-take').addEventListener('click',async()=>{if(!App.photoRule(me).ok)return;const out={};const url=await App.camera({styles:true,out,title:'Ta photo de portrait',hint:'Visage reconnaissable. Pour une photo en pied, pose le téléphone et utilise le retardateur.'});
-    if(!url)return;const had=!!me.photo;me.photo=url;if(out.real)me.photoReal=out.real;else delete me.photoReal;if(had)me.photoChangedAt=Date.now();me.photoAt=Date.now();await DB.put('profiles',me);$('photo').src=url;$('photo').hidden=false;rules();});
+  const showPhoto=()=>{if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}$('photo-edit').hidden=!me.photo;};showPhoto();
+  /* applique le résultat de l'éditeur : la vraie photo et l'original restent privés */
+  const applyPhoto=(src,r)=>{me.photoSrc=src;me.photoCrop=r.crop;me.photoStyle=r.style;me.photo=r.photo;if(r.style==='real')delete me.photoReal;else me.photoReal=r.real;};
+  $('photo-take').addEventListener('click',async()=>{if(!App.photoRule(me).ok)return;const shot=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Pour une photo en pied, pose le téléphone et utilise le retardateur.'});
+    if(!shot)return;const r=await Photo.edit(shot);if(!r)return;const had=!!me.photo;applyPhoto(shot,r);if(had)me.photoChangedAt=Date.now();me.photoAt=Date.now();await DB.put('profiles',me);showPhoto();rules();});
+  /* recadrer ou passer en dessin : ne compte pas comme un changement de photo */
+  $('photo-edit').addEventListener('click',async()=>{const src=me.photoSrc||me.photoReal||me.photo;if(!src)return;
+    const r=await Photo.edit(src,me.photoSrc?{crop:me.photoCrop,style:me.photoStyle}:{});if(!r)return;applyPhoto(src,r);await DB.put('profiles',me);showPhoto();});
   document.querySelectorAll('#intent .chip').forEach(c=>{c.classList.toggle('on',(me.intent||[]).includes(c.dataset.k));c.addEventListener('click',()=>{c.classList.toggle('on');me.intent=[...document.querySelectorAll('#intent .chip.on')].map(x=>x.dataset.k);saveMe();});});
 
   /* présentation vocale */
@@ -88,7 +95,7 @@ Pages.portrait=async function(S){
       F.appendChild(d);});}
   /* date de naissance : trois cases à taper (jour, mois, année), sans le calendrier du téléphone */
   function dob(d,s,f){const [D,M,Y]=['.dd','.mm','.yy'].map(c=>d.querySelector(c));const all=[D,M,Y];
-    const sign=()=>{const el=$('sign-v');if(!el)return;const z=zodiac(s.v),c=chinese(s.v);el.textContent=z?z+' · '+c:'Calculé depuis ta date de naissance';el.style.color=z?'':'#8a6a60';};
+    const sign=()=>{const z=zodiac(s.v),c=chinese(s.v);me.facts.sign.v=z?z+' · '+c:'';saveMe();const el=$('sign-v');if(!el)return;el.textContent=z?z+' · '+c:'Calculé depuis ta date de naissance';el.style.color=z?'':'#8a6a60';};
     const commit=()=>{const dd=+D.value,mm=+M.value,yy=+Y.value,now=new Date().getFullYear();
       if(!D.value&&!M.value&&!Y.value){s.v='';saveMe();sign();return;}
       if(Y.value.length!==4||yy<1900||yy>now||mm<1||mm>12||dd<1)return;const t=new Date(yy,mm-1,dd);if(t.getMonth()!==mm-1)return;
@@ -96,6 +103,8 @@ Pages.portrait=async function(S){
     all.forEach((el,i)=>{el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'');if(el.value.length>=el.maxLength&&all[i+1])all[i+1].focus();commit();});
       el.addEventListener('keydown',k=>{if(k.key==='Backspace'&&!el.value&&all[i-1]){all[i-1].focus();}});
       el.addEventListener('blur',()=>{if(el!==Y&&el.value.length===1)el.value='0'+el.value;});});}
+  /* le signe est enregistré en texte : les autres le voient même si l'année reste cachée */
+  {const b=me.facts.birth.v,z=b?zodiac(b)+' · '+chinese(b):'';if(me.facts.sign.v!==z&&(z||me.facts.sign.v)){me.facts.sign.v=z;saveMe();}}
   renderFacts();
   Plus.editors(me,saveMe);
 

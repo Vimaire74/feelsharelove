@@ -13,7 +13,18 @@ Pages.now=async function(S){
     <div id="people"></div>
     <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a>`;
   const h=new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
-  $('now-title').textContent='Il est '+h+(me.city?' à '+me.city.replace(/\s+CH$/,''):'')+'. Quelqu\'un est éveillé.';
+  /* phrase du titre selon le moment de la journée ; elle change chaque jour, pas à chaque visite */
+  const f=App.fem(me),seul=f?'seule':'seul',hr=new Date().getHours(),day=Math.floor(Date.now()/864e5);
+  const T=hr<5?['La nuit est longue. Ailleurs dans le monde, d\'autres sont éveillés.','Tu ne dors pas ? D\'autres non plus.','Au cœur de la nuit, quelqu\'un a peut-être envie de parler.']
+    :hr<9?['Bonjour. La journée commence, pour d\'autres aussi.','Le café fume. Qui est déjà debout ?','Un nouveau jour. Quelqu\'un pense peut-être à la même chose que toi.']
+    :hr<12?['Belle matinée. Qui a envie d\'échanger ?','La matinée avance. Un mot peut changer une journée.','Ce matin, quelqu\'un aimerait te lire.']
+    :hr<14?['C\'est l\'heure de la pause. Pas besoin de la passer '+seul+'.','Midi. Le bon moment pour un mot gentil.','À table ou en pause : qui est là ?']
+    :hr<18?['L\'après-midi file. Quelqu\'un a envie de parler.','Un creux dans l\'après-midi ? D\'autres aussi.','Cet après-midi, une rencontre est peut-être à un message.']
+    :hr<22?['Le soir tombe. C\'est souvent là qu\'on a envie de parler.','La journée se termine. Raconte-la à quelqu\'un.','Ce soir, tu n\'es pas '+seul+'.']
+    :['Il est tard. Tu n\'es pas '+seul+' à veiller.','La nuit commence. Quelqu\'un est encore là.','Avant de dormir, un dernier mot à quelqu\'un ?'];
+  $('now-title').textContent=T[day%T.length];
+  const nAv=people.filter(isAvail).length;
+  $('now-title').insertAdjacentHTML('afterend',`<p class="muted small" style="margin:6px 0 4px">${esc(h)}${me.city?' à '+esc(me.city.replace(/\s+CH$/,'')):''}${nAv?' · '+nAv+' personne'+(nAv>1?'s':'')+' disponible'+(nAv>1?'s':'')+' maintenant':''}</p>`);
 
   /* --- ma disponibilité --- */
   let draft={wants:[],note:'',dur:1};
@@ -42,9 +53,14 @@ Pages.now=async function(S){
   $('qdj').innerHTML=`<p class="eyebrow">Question du jour</p><p class="qq">${esc(q.q)}</p>${posts.slice(0,2).map(p=>`<p class="qa"><b>${esc(dn(profs[p.author]))}</b> ${esc(p.text)}</p>`).join('')}<a class="more" href="#cercle/${q.id}">Lire les ${posts.length} réponses et répondre</a>`;
 
   /* --- personnes --- */
-  const fw=new Set(),ff={avail:true,reso:false,intent:false,verif:false};
+  /* filtres gardés en mémoire sur cet appareil : on les retrouve en revenant sur la page */
+  const KEY='fsl_now_filters';let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
+  const fw=new Set(saved.fw||[]),ff={avail:true,reso:false,intent:false,verif:false,...(saved.ff||{})};
+  const keep=()=>{try{localStorage.setItem(KEY,JSON.stringify({fw:[...fw],ff}));}catch(e){}};
+  $('f-wants').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',fw.has(c.dataset.w)));
+  $('f-more').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',!!ff[c.dataset.f]));
   function render(){const P=$('people');P.innerHTML='';const qs=norm($('q-search').value);
-    let list=people.map(p=>{const r=App.resonance(entries,p.entries);r.n=r.common.length+r.feels.length+commonTypes(me,p).length+Plus.extraCommon(me,p).length;return {p,r};});
+    let list=people.map(p=>{const r=App.resonance(entries,p.entries);r.n=r.common.length+r.feels.length+commonTypes(me,p).length+Plus.extraCommon(me,p).length;r.pct=Plus.similarity(me,p,entries,p.entries);return {p,r};});
     if(qs){list=list.map(x=>({...x,hits:x.p.entries.filter(e=>norm(e.title).includes(qs)||norm(e.why).includes(qs)||norm(e.desc).includes(qs)),nameHit:norm(dn(x.p)).includes(qs)||norm(x.p.city).includes(qs)})).filter(x=>x.hits.length||x.nameHit);}
     else{if(ff.avail)list=list.filter(x=>App.isAvail(x.p));if(fw.size)list=list.filter(x=>App.isAvail(x.p)&&x.p.avail.wants.some(w=>fw.has(w)));
       if(ff.reso)list=list.filter(x=>x.r.common.length||x.r.feels.length);if(ff.intent)list=list.filter(x=>x.p.intent.some(i=>(me.intent||[]).includes(i)));if(ff.verif)list=list.filter(x=>App.isVerified(x.p));}
@@ -54,8 +70,8 @@ Pages.now=async function(S){
       const d=App.personEl(p,r,sub);d.addEventListener('click',()=>location.hash='#personne/'+p.id);P.appendChild(d);});}
   render();
   $('q-search').addEventListener('input',render);
-  $('f-wants').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');c.classList.contains('on')?fw.add(c.dataset.w):fw.delete(c.dataset.w);render();}));
-  $('f-more').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');ff[c.dataset.f]=c.classList.contains('on');render();}));
+  $('f-wants').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');c.classList.contains('on')?fw.add(c.dataset.w):fw.delete(c.dataset.w);keep();render();}));
+  $('f-more').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');ff[c.dataset.f]=c.classList.contains('on');keep();render();}));
 
   /* --- cercles --- */
   const circles=(await DB.all('circles')).sort((a,b)=>((me.circles||[]).includes(b.id))-((me.circles||[]).includes(a.id))).slice(0,3);

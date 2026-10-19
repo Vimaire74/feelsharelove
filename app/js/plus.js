@@ -43,11 +43,11 @@ window.Plus=(function(){
     me.chinois=me.chinois||[];me.invest=me.invest||[];me.rep=me.rep||[];
     /* ce qui me représente : 1 à 3 choix */
     const RB=$('rep-box');
-    function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à trois mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
+    function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à six mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
         ${me.rep.length?`<label class="check" style="margin-top:10px"><input type="checkbox" id="rep-show" ${me.repShow!==false?'checked':''}> Afficher sur mon portrait</label>`:''}`;
       const W=RB.querySelector('.inv-cats');
       C.REP.forEach(r=>{const on=me.rep.includes(r[0]);const b=document.createElement('button');b.type='button';b.className='chip'+(on?' on':'');b.textContent=repLabel(r[0],me);
-        b.addEventListener('click',()=>{if(on)me.rep=me.rep.filter(k=>k!==r[0]);else{if(me.rep.length>=3){$('rep-max').textContent='Trois au maximum : retire d\'abord un mot.';return;}me.rep.push(r[0]);}save();renderRep();});W.appendChild(b);});
+        b.addEventListener('click',()=>{if(on)me.rep=me.rep.filter(k=>k!==r[0]);else{if(me.rep.length>=6){$('rep-max').textContent='Six au maximum : retire d\'abord un mot.';return;}me.rep.push(r[0]);}save();renderRep();});W.appendChild(b);});
       const SH=$('rep-show');if(SH)SH.addEventListener('change',e=>{me.repShow=e.target.checked;save();});}
     renderRep();
     /* portrait chinois */
@@ -116,5 +116,19 @@ window.Plus=(function(){
       const SH=$('inv-show');if(SH)SH.addEventListener('change',e=>{me.investShow=e.target.checked;save();});}
     renderInv();}
 
-  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel};
+  /* pourcentage de similitude : pour chaque rubrique remplie des deux côtés, la part de ce qui est commun
+     (rapportée au plus petit des deux, pour ne pas pénaliser un portrait plus riche), puis moyenne pondérée */
+  function similarity(me,p,mine,theirs){
+    const wk=e=>e.workId||('t:'+App.norm(e.title));
+    const dims=[
+      [3,new Set((mine||[]).map(wk)),new Set((theirs||[]).map(wk))],
+      [2,new Set((mine||[]).flatMap(e=>e.feel||[])),new Set((theirs||[]).flatMap(e=>e.feel||[]))],
+      [1,new Set(me.types&&me.types.list||[]),new Set(p.types&&p.types.show!==false&&p.types.list||[])],
+      [2,new Set((me.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean))),new Set(p.chinoisShow===false?[]:(p.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean)))],
+      [2,new Set((me.invest||[]).flatMap(k=>[k,k.split(':')[0]])),new Set(p.investShow===false?[]:(p.invest||[]).flatMap(k=>[k,k.split(':')[0]]))],
+      [1,new Set(me.rep||[]),new Set(p.repShow===false?[]:(p.rep||[]))],
+      [1,new Set(me.intent||[]),new Set(p.intent||[])]];
+    let tot=0,sum=0;dims.forEach(([w,a,b])=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;});
+    return tot?Math.round(100*sum/tot):null;}
+  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel,similarity};
 })();
