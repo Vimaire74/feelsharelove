@@ -9,10 +9,12 @@ Pages.reglages=async function(S){
   <div class="sec"><h3>Ce que les autres voient</h3><p class="exp">Ton prénom n'est jamais affiché : on voit ${esc(dn(me))}. <a href="#apercu" style="color:var(--saffron)">Voir mon portrait comme les autres</a></p><div class="vis" id="vis"></div></div>
   <div class="sec" id="verif"></div>
   <div class="sec"><h3>Écris-moi</h3><p class="exp">Pour les phrases de l'app qui s'accordent (par exemple les réponses de refus).</p><div class="intent" id="acc" style="margin-top:0"><button class="chip" type="button" data-a="m">au masculin</button><button class="chip" type="button" data-a="f">au féminin</button><button class="chip" type="button" data-a="n">de façon neutre</button></div></div>
+  <div class="sec"><h3>Langue de l'app</h3><p class="exp">Par défaut, l'app parle la langue de ton téléphone.</p><div class="intent" id="ui-lang" style="margin-top:0"><button class="chip" type="button" data-l="">Langue du téléphone</button>${I18N.available().map(c=>`<button class="chip" type="button" data-l="${c}">${esc(I18N.name(c,c))}</button>`).join('')}</div></div>
   ${DB.remote?'<div class="sec" id="notif"></div>':''}
   <div class="sec" id="pause"></div>
   <div class="sec"><h3>Signalements envoyés</h3><div class="names" id="reports"></div></div>
   <div class="sec"><h3>Compte</h3><p class="exp"><a href="#donnees" style="color:var(--saffron)">Mes données : sauvegarder, recharger, tout effacer</a> · <a href="#conditions" style="color:var(--saffron)">Conditions</a>${DB.remote?' · <a href="#" id="logout" style="color:var(--saffron)">Se déconnecter</a>':''}</p></div>`;
+  document.querySelectorAll('#ui-lang .chip').forEach(b=>{b.classList.toggle('on',b.dataset.l===I18N.choice);b.addEventListener('click',()=>{I18N.set(b.dataset.l);location.reload();});});
   async function renderLists(){const lists=await DB.where('lists','owner','me');
     for(const [id,type,extra] of [['red-list','red',''],['black-list','black',' · signalé à FeelShareLove']]){const el=$(id);const arr=lists.filter(l=>l.type===type);el.innerHTML='';
       if(!arr.length){el.innerHTML='<p class="muted small">Personne pour l\'instant.</p>';continue;}

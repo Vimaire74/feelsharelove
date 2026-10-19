@@ -88,13 +88,25 @@ Pages.portrait=async function(S){
     FACTS.forEach(f=>{const s=me.facts[f.id];const d=document.createElement('div');d.className='fact'+(s.show?'':' hidden-f');let v='';
       if(f.type==='date'){const [yy,mm,dd]=(s.v||'').split('-');v=`<span class="dob"><input class="in dd" type="text" inputmode="numeric" maxlength="2" placeholder="JJ" aria-label="Jour" value="${esc(dd||'')}"><span>.</span><input class="in mm" type="text" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Mois" value="${esc(mm||'')}"><span>.</span><input class="in yy" type="text" inputmode="numeric" maxlength="4" placeholder="AAAA" aria-label="Année" value="${esc(yy||'')}"></span>`;}
       else if(f.type==='auto'){const z=zodiac(me.facts.birth.v),c=chinese(me.facts.birth.v);v=`<span id="sign-v" style="${z?'':'color:#8a6a60'}">${z?z+' · '+c:esc(f.ph)}</span>`;}
+      else if(f.id==='langs')v=`<div class="lang-pick"><span class="lang-chips"></span><input class="in lang-in" placeholder="Tape : fran, angl…" autocomplete="off" aria-label="Ajouter une langue"></div><div class="lang-sug"></div>`;
       else v=`<input class="in" value="${esc(s.v)}" placeholder="${esc(f.ph)}">`;
       d.innerHTML=`<div class="k">${f.k}</div><div class="v">${v}</div><button class="eye ${s.show?'on':''}" type="button">${s.show?'Visible':'Caché'}</button>`+(f.sub==='year'?`<div class="sub"><label><input type="checkbox" ${s.year?'checked':''}> montrer l'année (sinon seulement jour et mois, pour l'anniversaire)</label></div>`:'');
       if(f.type==='date')dob(d,s,f);
+      else if(f.id==='langs')langPick(d,s);
       else{const inp=d.querySelector('.v input');if(inp)inp.addEventListener('input',()=>{s.v=inp.value;saveMe();});}
       d.querySelector('.eye').addEventListener('click',()=>{s.show=!s.show;saveMe();renderFacts();});
       const cb=d.querySelector('.sub input');if(cb)cb.addEventListener('change',()=>{s.year=cb.checked;saveMe();});
       F.appendChild(d);});}
+  /* langues parlées : on tape le début, l'app propose, on touche pour choisir ; enregistrées en codes (fr, en…) */
+  function langPick(d,s){if(!me.langs){me.langs=[];String(s.v||'').split(/[,;\/]+/).forEach(w=>{const r=I18N.search(w.trim(),me.langs)[0];if(r)me.langs.push(r.code);});}
+    const C=d.querySelector('.lang-chips'),I=d.querySelector('.lang-in'),S=d.querySelector('.lang-sug');
+    const sync=()=>{s.v=me.langs.map(c=>I18N.name(c)).join(', ');saveMe();};
+    const chips=()=>{C.innerHTML=me.langs.map((c,i)=>`<button class="chip on lang-chip" type="button" data-i="${i}" aria-label="Retirer ${esc(I18N.name(c))}">${esc(I18N.name(c))} ×</button>`).join('');};
+    C.addEventListener('click',e=>{const i=e.target.dataset&&e.target.dataset.i;if(i==null)return;me.langs.splice(+i,1);chips();sync();});
+    I.addEventListener('input',()=>{const r=I18N.search(I.value,me.langs);S.innerHTML=r.map(x=>`<button class="chip" type="button" data-c="${x.code}">${esc(x.label)}${x.native&&x.native!==x.label?` <span class="muted">${esc(x.native)}</span>`:''}</button>`).join('');});
+    S.addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;me.langs.push(b.dataset.c);I.value='';S.innerHTML='';chips();sync();I.focus();});
+    I.addEventListener('keydown',e=>{if(e.key==='Enter'){const b=S.querySelector('[data-c]');if(b){e.preventDefault();b.click();}}});
+    chips();}
   /* date de naissance : trois cases à taper (jour, mois, année), sans le calendrier du téléphone */
   function dob(d,s,f){const [D,M,Y]=['.dd','.mm','.yy'].map(c=>d.querySelector(c));const all=[D,M,Y];
     const sign=()=>{const z=zodiac(s.v),c=chinese(s.v);me.facts.sign.v=z?z+' · '+c:'';saveMe();const el=$('sign-v');if(!el)return;el.textContent=z?z+' · '+c:'Calculé depuis ta date de naissance';el.style.color=z?'':'#8a6a60';};

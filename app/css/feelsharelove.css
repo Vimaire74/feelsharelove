@@ -418,3 +418,18 @@ h1{hyphens:manual}
 .backbtn:active{background:var(--card2)}
 .navnext{flex:1;min-height:52px;font-size:16px}
 .navnext:disabled{opacity:.4}
+/* langues parlées : choix pendant la frappe */
+.lang-pick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lang-chips{display:contents}
+.lang-in{flex:1;min-width:120px}
+.lang-sug{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.lang-sug:empty{display:none}
+.lang-sug .chip{min-height:40px}.lang-sug .muted{font-size:12px}
+/* toutes les langues : mots longs (allemand), langues sans espaces (thaï), écriture de droite à gauche (arabe, hébreu) */
+body{overflow-wrap:break-word}
+h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
+.person .i{min-width:0}
+:lang(de) :is(h1,h2,p,.exp),:lang(nl) :is(h1,h2,p,.exp),:lang(sv) :is(h1,h2,p,.exp),:lang(da) :is(h1,h2,p,.exp),:lang(nb) :is(h1,h2,p,.exp),:lang(fi) :is(h1,h2,p,.exp),:lang(ru) :is(h1,h2,p,.exp){hyphens:auto}
+.banner{padding-right:60px}
+[dir=rtl] .banner{padding-right:60px;padding-left:16px}
+.tabs a span:not(.tbadge){white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.05;text-align:center;overflow-wrap:anywhere}
+[dir=rtl] .tabs .tbadge{margin-left:0;margin-right:8px;left:auto;right:50%}

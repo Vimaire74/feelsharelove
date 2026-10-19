@@ -29,3 +29,6 @@ Version 1.3.1 (19/10/2026)
 - Photo en dessin : option « Montrer ma vraie photo à mon cercle intime » (désactivée par défaut) ; le serveur n'envoie la vraie photo qu'au cercle intime
 - Ma tribu : texte mis à jour (la tribu reste privée, sauf le choix réciproque)
 - Test du fonctionnement : flèche ronde pour la question précédente, grand bouton pour la suivante
+- Langues : base multilingue (langue du téléphone par défaut, choix « Langue de l'app » dans Réglages)
+- Portrait, « Langues » : on tape le début (fran, angl, jap…), l'app propose, on touche pour choisir ; 97 langues ; les autres les voient dans leur propre langue
+- Mise en page testée avec 8 écritures (allemand, russe, arabe de droite à gauche, hindi, japonais, chinois, coréen, thaï) : mots longs coupés proprement, noms du menu sur deux lignes si besoin
