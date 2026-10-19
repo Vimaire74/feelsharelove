@@ -12,7 +12,7 @@ Pages._view=async function(S,p,preview){
     facts.push([x.k,s.v]);});
   Object.entries(F).forEach(([k,v])=>{if(typeof v==='string'&&v&&!FACTS.some(x=>x.id===k))facts.push([FACT_LABEL[k]||k,v]);});
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
-  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}<p class="muted">${esc(p.city||'')}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
+  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Cercle intime</span>':''}<p class="muted">${esc(p.city||'')}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
   <div class="intent">${(p.intent||[]).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}

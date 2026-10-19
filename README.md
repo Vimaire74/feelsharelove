@@ -24,3 +24,8 @@ Version 1.3.1 (19/10/2026)
 - Une couleur fixe par catégorie : passion (orange), ressenti (rose), fonctionnement (violet), personnage (or), investissement (vert), ce qui représente (bleu) ; légende en haut de la liste
 - Les pastilles s'affichent aussi en haut du détail d'une résonance
 - Photo : « Silhouette floue » remplacée par « Peinture de points » (points ronds aux couleurs de l'app, plus gros dans la lumière, comme les icônes du menu)
+- Cercle intime : deux personnes qui se sont mises mutuellement dans leur tribu ; mention « Cercle intime » sur le portrait et en tête de Ma tribu
+- Notification aux deux quand le cercle intime se forme
+- Photo en dessin : option « Montrer ma vraie photo à mon cercle intime » (désactivée par défaut) ; le serveur n'envoie la vraie photo qu'au cercle intime
+- Ma tribu : texte mis à jour (la tribu reste privée, sauf le choix réciproque)
+- Test du fonctionnement : flèche ronde pour la question précédente, grand bouton pour la suivante

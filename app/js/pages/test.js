@@ -11,7 +11,7 @@ Pages.test=async function(S){
       <p class="eyebrow">Mon fonctionnement</p><h1 style="font-size:28px">${esc(q.q)}</h1><p class="muted small" style="margin:8px 0 14px">Choisis la réponse la plus proche de toi, ou deux si les deux te ressemblent autant.</p>
       <div class="list" id="ans">${orders[qi].map(k=>`<button type="button" class="tans ${sel.includes(k)?'on':''}" data-k="${k}">${esc(q.a[k])}</button>`).join('')}</div>
       <p class="muted small" id="hint" style="margin-top:8px"></p>
-      <div class="row" style="justify-content:space-between;margin-top:14px">${i?'<button class="linkbtn" type="button" id="prev">← Question précédente</button>':'<span></span>'}<button class="btn" type="button" id="next" ${sel.length?'':'disabled'}>${i<T.questions.length-1?'Question suivante':'Voir mon résultat'}</button></div>`;
+      <div class="navrow">${i?'<button class="backbtn" type="button" id="prev" aria-label="Question précédente">←</button>':''}<button class="btn flame navnext" type="button" id="next" ${sel.length?'':'disabled'}>${i<T.questions.length-1?'Question suivante':'Voir mon résultat'}</button></div>`;
     S.querySelectorAll('.tans').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k;
       if(sel.includes(k))sel.splice(sel.indexOf(k),1);else{if(sel.length>=2){$('hint').textContent='Deux réponses au plus. Retire-en une pour en choisir une autre.';return;}sel.push(k);}
       $('hint').textContent='';S.querySelectorAll('.tans').forEach(x=>x.classList.toggle('on',sel.includes(x.dataset.k)));$('next').disabled=!sel.length;}));

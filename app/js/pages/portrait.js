@@ -12,6 +12,7 @@ Pages.portrait=async function(S){
   <p class="muted small" id="pseudo-rule" style="margin-top:8px"></p>
   <div id="pseudo-pick" hidden></div>
   <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="photo-take">Prendre ma photo</button><button class="btn ghost" type="button" id="photo-edit" hidden>Recadrer ou dessiner</button></div>
+  <label class="check" id="photo-int-l" style="margin-top:8px" hidden><input type="checkbox" id="photo-int"> Montrer ma vraie photo à mon cercle intime</label>
   <p class="muted small" id="photo-rule" style="margin-top:6px"></p>
   <div class="facts" style="margin-top:14px">
     <div class="fact"><div class="k">Prénom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à ton pseudo et à la liste rouge)</span></div><div class="v"><input class="in" id="f-name" placeholder="Prénom"></div></div>
@@ -59,7 +60,8 @@ Pages.portrait=async function(S){
     const ph=App.photoRule(me);$('photo-rule').textContent=ph.msg||'Ta photo est prise en direct avec la caméra, pas importée. Le visage doit être reconnaissable ; une photo en pied est possible avec le retardateur.';$('photo-take').disabled=!ph.ok;$('photo-take').style.opacity=ph.ok?1:.4;$('photo-take').textContent=me.photo?'Changer ma photo':'Prendre ma photo';}
   rules();
   $('pseudo-change').addEventListener('click',()=>{if(!App.pseudoRule(me).ok)return;const P=$('pseudo-pick');P.hidden=!P.hidden;if(!P.hidden){P.innerHTML='<p class="muted small" style="margin-top:8px">Attention : c\'est ton seul changement possible.</p>';P.appendChild(App.pseudoPicker(me,async ps=>{me.pseudo=ps;me.pseudoChangedAt=Date.now();await DB.put('profiles',me);$('pseudo-h').textContent=ps;P.hidden=true;rules();}));}});
-  const showPhoto=()=>{if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}$('photo-edit').hidden=!me.photo;};showPhoto();
+  const showPhoto=()=>{if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}$('photo-edit').hidden=!me.photo;$('photo-int-l').hidden=!(me.photoReal&&me.photoStyle&&me.photoStyle!=='real');$('photo-int').checked=me.photoIntimate===true;};showPhoto();
+  $('photo-int').addEventListener('change',e=>{me.photoIntimate=e.target.checked;saveMe();});
   /* applique le résultat de l'éditeur : la vraie photo et l'original restent privés */
   const applyPhoto=(src,r)=>{me.photoSrc=src;me.photoCrop=r.crop;me.photoStyle=r.style;me.photo=r.photo;if(r.style==='real')delete me.photoReal;else me.photoReal=r.real;};
   $('photo-take').addEventListener('click',async()=>{if(!App.photoRule(me).ok)return;const shot=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Pour une photo en pied, pose le téléphone et utilise le retardateur.'});

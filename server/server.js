@@ -105,11 +105,16 @@ async function hiddenFor(me) {
     else if (mine && listHits(l, mine)) hidden.add(l.owner);
   }
   for (const p of profiles) if (p.paused && p.id !== me) hidden.add(p.id);
-  return { hidden, byId };
+  /* cercle intime : les personnes qui m'ont mis dans leur tribu et que j'ai mises dans la mienne */
+  const iChose = new Set(lists.filter(l => l.type === 'tribe' && l.owner === me).map(l => l.target));
+  const intimate = new Set(lists.filter(l => l.type === 'tribe' && l.target === me && iChose.has(l.owner)).map(l => l.owner));
+  return { hidden, byId, intimate };
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
-function publicProfile(p) {
-  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, ...rest } = p; // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
+function publicProfile(p, intimate) {
+  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, ...rest } = p;
+  rest.intimate = !!(intimate && intimate.has(p.id));
+  if (rest.intimate && photoReal && p.photoIntimate === true) rest.photo = photoReal; // vraie photo seulement pour le cercle intime // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
   if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v;
     if (f.birth && f.birth.v && !f.birth.year) f.birth = { ...f.birth, v: '2000' + String(f.birth.v).slice(4) }; // année cachée : elle ne quitte pas le serveur
     rest.facts = f; }
@@ -180,12 +185,12 @@ async function readList(store, me, query) {
   for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v);
   if (store === 'circles') { const profs = await listDocs('profiles'); rows = rows.map(c => ({ ...c, members: profs.filter(p => (p.circles || []).includes(c.id)).length })); }
   if (['profiles', 'entries', 'questions', 'circlePosts', 'voices'].includes(store)) {
-    const { hidden } = await hiddenFor(me);
+    const { hidden, intimate } = await hiddenFor(me);
     const ownerOf = r => store === 'profiles' ? r.id : store === 'circlePosts' ? r.author : r.profileId || r.owner;
     rows = rows.filter(r => !hidden.has(ownerOf(r)));
     if (store === 'profiles') rows = rows.filter(p => p.id === me || p.pseudo);
     if (store === 'voices') rows = rows.filter(v => v.owner === me || v.kind === 'presentation');
-    if (store === 'profiles') rows = rows.map(p => p.id === me ? p : publicProfile(p));
+    if (store === 'profiles') rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate));
   }
   return rows;
 }
@@ -195,7 +200,7 @@ async function readOne(store, me, id) {
   const d = await getDoc(store, id); if (!d) return null;
   if (store === 'messages') return d.from === me || d.to === me ? msgView(d, me) : null;
   if (PRIVATE.has(store)) return d.owner === me ? d : null;
-  if (store === 'profiles' && d.id !== me) { const { hidden } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d); }
+  if (store === 'profiles' && d.id !== me) { const { hidden, intimate } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate); }
   return d;
 }
 async function writeOne(store, me, id, body) {
@@ -216,7 +221,13 @@ async function writeOne(store, me, id, body) {
   if (data[ownerField] !== me) throw err(403, 'propriétaire');
   if (store === 'reports') data.status = old ? old.status : 'open';
   data.__owner = me;
-  return putDoc(store, id, me, data);
+  const saved = await putDoc(store, id, me, data);
+  /* cercle intime : quand l'autre m'avait déjà mis dans sa tribu, on le dit à tous les deux */
+  if (store === 'lists' && data.type === 'tribe' && data.target && !old) {
+    try { const back = (await listDocs('lists')).some(l => l.type === 'tribe' && l.owner === data.target && l.target === me);
+      if (back) { notify(data.target, (await pseudoOf(me)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); notify(me, (await pseudoOf(data.target)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); } } catch (e) {}
+  }
+  return saved;
 }
 async function deleteOne(store, me, id) {
   if (store === 'settings') return q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', me + ':' + id]);

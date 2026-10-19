@@ -410,3 +410,11 @@ h1{hyphens:manual}
 .rtag.t-rep{color:#9fd3f5;border-color:#3a93d1;background:rgba(58,147,209,.14)}
 .rtag.t-echo,.rtag.t-more{color:var(--muted);border-color:var(--line);background:transparent}
 .rlegend{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 12px}.rlegend .rtag{font-size:11px;padding:3px 8px}
+.rtag.t-int{color:#ffe1ea;border-color:#e8456e;background:linear-gradient(90deg,rgba(232,69,110,.35),rgba(255,106,42,.3))}
+.int-head{font:italic 600 16px var(--display);color:var(--rose);margin:4px 0 10px}
+/* boutons de navigation : flèche ronde pour revenir, gros bouton pour avancer */
+.navrow{display:flex;align-items:center;gap:12px;margin-top:16px}
+.backbtn{flex:none;width:52px;height:52px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--saffron);font:600 24px/1 var(--body);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.backbtn:active{background:var(--card2)}
+.navnext{flex:1;min-height:52px;font-size:16px}
+.navnext:disabled{opacity:.4}

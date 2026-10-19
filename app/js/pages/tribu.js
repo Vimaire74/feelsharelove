@@ -12,7 +12,7 @@ Pages.tribu=async function(S){
   const link=DB.remote&&DB.inviteLink?DB.inviteLink():'https://feelsharelove.com';
   const msg=`Je t'invite sur FeelShareLove : on s'y rencontre par ce qui nous fait vibrer, sans publicité. ${link}`;
   S.innerHTML=`<p class="eyebrow">Ma tribu</p><h1>Les gens qui <span style="color:var(--flame)">comptent</span></h1>
-  <p class="muted small" style="margin:8px 0 14px">Ta tribu est privée : personne ne voit qui y est, ni que tu l'y as mis.</p>
+  <p class="muted small" style="margin:8px 0 14px">Ta tribu est privée : personne ne voit qui y est. Seule exception : si quelqu'un t'a aussi mis dans la sienne, vous êtes dans le cercle intime l'un de l'autre, et vous le voyez tous les deux.</p>
   <div id="t-list"></div>
   <div id="t-inv"></div>
   <div id="t-met"></div>
@@ -27,9 +27,13 @@ Pages.tribu=async function(S){
     <p class="muted small" style="margin-top:8px">Sur iPhone, « Envoyer mon invitation » ouvre Messages, WhatsApp ou Mail : tu choisis la personne dans tes contacts à ce moment-là.</p></div>`;
   /* ma tribu */
   const T=$('t-list');
+  /* cercle intime : choisis des deux côtés ; en premier dans la liste */
+  lists.sort((a,b)=>((byId[b.target]||{}).intimate?1:0)-((byId[a.target]||{}).intimate?1:0));
+  const nInt=lists.filter(l=>(byId[l.target]||{}).intimate).length;
+  if(nInt)T.insertAdjacentHTML('beforebegin',`<p class="int-head">Cercle intime · ${nInt} personne${nInt>1?'s':''} qui t'${nInt>1?'ont':'a'} aussi choisi${App.fem(me)?'e':''}</p>`);
   if(!lists.length)T.innerHTML='<div class="empty">Personne pour l\'instant. Ajoute quelqu\'un depuis son portrait (« Ajouter à ma tribu ») ou depuis les suggestions plus bas.</div>';
   for(const l of lists){const p=byId[l.target]||null;
-    const d=p?App.personEl(p,null,''):Object.assign(document.createElement('div'),{className:'person',innerHTML:`<div class="i"><div class="nm">${esc(l.name||'Ancien membre')}</div><div class="st muted">n'est plus visible</div></div>`});
+    const d=p?App.personEl(p,null,p.intimate?'<span class="rtag t-int">Cercle intime</span>':''):Object.assign(document.createElement('div'),{className:'person',innerHTML:`<div class="i"><div class="nm">${esc(l.name||'Ancien membre')}</div><div class="st muted">n'est plus visible</div></div>`});
     const b=document.createElement('button');b.className='linkbtn';b.type='button';b.textContent='Retirer';b.style.marginLeft='auto';
     b.addEventListener('click',async ev=>{ev.stopPropagation();await DB.del('lists',l.id);Router.route();});d.appendChild(b);
     if(p)d.addEventListener('click',()=>location.hash='#personne/'+p.id);T.appendChild(d);}
