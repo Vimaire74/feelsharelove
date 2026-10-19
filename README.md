@@ -20,3 +20,7 @@ Version 1.3.1 (19/10/2026)
 - La photo d'origine et la vraie photo restent privées (le serveur ne les envoie jamais aux autres)
 - Mode voyage (Mon portrait, sous la ville) : se localiser avec le téléphone ou écrire la ville, pour 3 jours, 1 semaine, 2 semaines, 1 mois ou jusqu'au retour ; « en voyage » s'affiche à côté de la ville ; retour automatique à la date choisie, ou bouton « Je suis rentré »
 - « Ce qui me représente » : jusqu'à six mots au lieu de trois
+- Résonances : le texte d'explication est remplacé par les mots-clés en commun, en pastilles de couleur
+- Une couleur fixe par catégorie : passion (orange), ressenti (rose), fonctionnement (violet), personnage (or), investissement (vert), ce qui représente (bleu) ; légende en haut de la liste
+- Les pastilles s'affichent aussi en haut du détail d'une résonance
+- Photo : « Silhouette floue » remplacée par « Peinture de points » (points ronds aux couleurs de l'app, plus gros dans la lumière, comme les icônes du menu)

@@ -240,7 +240,7 @@ window.App=(function(){
   const isVerified=p=>!!(p&&p.verified&&p.verified.status==='verified');
   /* caméra en direct : pas d'import depuis la galerie. Retardateur pour une photo en pied. */
   /* dessins de la photo, calculés sur le téléphone (rien n'est envoyé ailleurs) */
-  const STYLES=[['real','Ma vraie photo'],['crayon','Crayon'],['affiche','Affiche'],['aquarelle','Aquarelle'],['flou','Silhouette floue']];
+  const STYLES=[['real','Ma vraie photo'],['crayon','Crayon'],['affiche','Affiche'],['aquarelle','Aquarelle'],['points','Peinture de points']];
   function blur1(a,W,H,r){const t=new Float32Array(a.length),o=new Float32Array(a.length),n=2*r+1;
     for(let y=0;y<H;y++){let s=0;const R=y*W;for(let x=-r;x<=r;x++)s+=a[R+Math.min(W-1,Math.max(0,x))];
       for(let x=0;x<W;x++){t[R+x]=s/n;s+=a[R+Math.min(W-1,x+r+1)]-a[R+Math.max(0,x-r)];}}
@@ -261,6 +261,12 @@ window.App=(function(){
       for(let i=0;i<N;i++){const m=.55+.45*Math.pow(k[i]/255,1.5),q=v=>Math.min(255,(Math.round(v/L)*L*.85+38)*m);p[4*i]=q(r[i]);p[4*i+1]=q(gg[i]);p[4*i+2]=q(b[i]);}}
     else if(style==='flou'){let r=R,gg=G,b=B;for(let n=0;n<3;n++){r=blur1(r,W,H,14);gg=blur1(gg,W,H,14);b=blur1(b,W,H,14);}
       for(let i=0;i<N;i++){p[4*i]=r[i]*.9+20;p[4*i+1]=gg[i]*.75;p[4*i+2]=b[i]*.7;}}
+    if(style==='points'){/* peinture de points, comme le menu : des points ronds aux couleurs de l'app, plus gros dans la lumière */
+      const sm=blur1(g,W,H,3),st=Math.max(6,Math.round(W/64));let lo=255,hi=0;for(let i=0;i<N;i+=5){lo=Math.min(lo,sm[i]);hi=Math.max(hi,sm[i]);}
+      const pal=['#7a1f3a','#b8324f','#e8456e','#ff6a2a','#f7b733','#fbeadb'];x.fillStyle='#1c0f12';x.fillRect(0,0,W,H);
+      for(let row=0,y=st/2;y<H;row++,y+=st*.87)for(let xx=(row%2?st:st/2);xx<W;xx+=st){const i=Math.min(N-1,Math.round(y)*W+Math.round(xx));const t=Math.max(0,Math.min(.999,(sm[i]-lo)/Math.max(1,hi-lo)));
+        x.fillStyle=pal[Math.floor(t*pal.length)];x.beginPath();x.arc(xx,y,st*(.22+.26*t),0,7);x.fill();}
+      res(c.toDataURL('image/jpeg',.88));return;}
     x.putImageData(d,0,0);res(c.toDataURL('image/jpeg',.85));};im.onerror=()=>res(url);im.src=url;});}
   function camera(opts={}){return new Promise(async resolve=>{
     const phone=document.querySelector('.phone');const o=document.createElement('div');o.className='cam';

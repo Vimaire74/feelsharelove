@@ -10,16 +10,16 @@ window.Plus=(function(){
   function repLabel(k,p){const r=C.REPK[k];if(!r)return k;const a=p&&p.accord;if(r[1]===r[2])return r[1];
     if(a==='f')return r[2];if(a==='m')return r[1];if(a)return r[1]+' / '+r[2].toLowerCase();return App.fem(p)?r[2]:r[1];}
   function extraCommon(me,p){const out=[];if(!me||!p)return out;
-    const pr=p.repShow===false?[]:(p.rep||[]);pr.filter(k=>(me.rep||[]).includes(k)).forEach(k=>out.push({k:'rep',l:'Vous vous voyez tous les deux '+repLabel(k,p).toLowerCase()}));
+    const pr=p.repShow===false?[]:(p.rep||[]);pr.filter(k=>(me.rep||[]).includes(k)).forEach(k=>out.push({k:'rep',kw:repLabel(k,p),l:'Vous vous voyez tous les deux '+repLabel(k,p).toLowerCase()}));
     const mc=me.chinois||[],pc=p.chinoisShow===false?[]:(p.chinois||[]);
     const seenW=new Set();
     pc.forEach(x=>{const same=mc.find(y=>y.id===x.id);
-      if(same){out.push({k:'pc',l:'Vous vous voyez tous les deux en '+x.n,mine:same,theirs:x});seenW.add(x.wid||x.id);return;}
-      if(x.wid&&!seenW.has(x.wid)){const w=mc.find(y=>y.wid===x.wid);if(w){out.push({k:'pcw',l:'Le même univers : '+x.w,mine:w,theirs:x});seenW.add(x.wid);}}});
+      if(same){out.push({k:'pc',kw:x.n,l:'Vous vous voyez tous les deux en '+x.n,mine:same,theirs:x});seenW.add(x.wid||x.id);return;}
+      if(x.wid&&!seenW.has(x.wid)){const w=mc.find(y=>y.wid===x.wid);if(w){out.push({k:'pcw',kw:x.w,l:'Le même univers : '+x.w,mine:w,theirs:x});seenW.add(x.wid);}}});
     const mi=new Set(me.invest||[]),pi=p.investShow===false?[]:(p.invest||[]);
     const subs=pi.filter(k=>k.includes(':')&&mi.has(k));const cats=new Set(subs.map(k=>k.split(':')[0]));
-    subs.forEach(k=>out.push({k:'inv',l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
-    pi.filter(k=>!k.includes(':')&&mi.has(k)&&!cats.has(k)).forEach(k=>out.push({k:'inv',l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
+    subs.forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
+    pi.filter(k=>!k.includes(':')&&mi.has(k)&&!cats.has(k)).forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
     return out;}
 
   /* ---------- affichage sur un portrait ---------- */
@@ -130,5 +130,16 @@ window.Plus=(function(){
       [1,new Set(me.intent||[]),new Set(p.intent||[])]];
     let tot=0,sum=0;dims.forEach(([w,a,b])=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;});
     return tot?Math.round(100*sum/tot):null;}
-  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel,similarity};
+  /* mots-clés en commun, une couleur par catégorie (toujours la même) */
+  const CAT={oeuvre:'Même passion',feel:'Même ressenti',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
+  function tagList(r,ct,ex){const t=[];
+    (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
+    (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on) /,'')]));
+    (ct||[]).forEach(k=>t.push(['type',window.TYPES?TYPES.name(k):k]));
+    (ex||[]).forEach(x=>t.push([x.k==='pc'||x.k==='pcw'?'perso':x.k,x.kw||x.l]));
+    return t;}
+  function tagsHtml(r,ct,ex,max=8){const t=tagList(r,ct,ex);if(!t.length)return (r.echo&&r.echo.length)?`<div class="rtags"><span class="rtag t-echo">${esc(r.echo[0].theirs.title)}</span></div>`:'<div class="st muted" style="font-style:normal;font-family:var(--body)">Rien en commun pour l\'instant</div>';
+    return `<div class="rtags">${t.slice(0,max).map(([c,w])=>`<span class="rtag t-${c}" title="${esc(CAT[c]||'')}">${esc(w)}</span>`).join('')}${t.length>max?`<span class="rtag t-more">+${t.length-max}</span>`:''}</div>`;}
+  const legendHtml=()=>`<div class="rlegend">${Object.entries(CAT).map(([c,l])=>`<span class="rtag t-${c}">${l}</span>`).join('')}</div>`;
+  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel,similarity,tagsHtml,legendHtml};
 })();
