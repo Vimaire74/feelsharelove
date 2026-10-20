@@ -120,10 +120,11 @@ window.App=(function(){
   function entryEl(e,opts={}){const d=document.createElement('div');d.className='entry'+(opts.hit?' hit':'');d.tabIndex=0;
     d.innerHTML=`<div class="t"><span class="title">${esc(e.title)}</span><span class="kind">${esc(e.kind)}</span></div>`+(e.desc?`<div class="desc">${esc(e.desc)}</div>`:'')+(e.feel&&e.feel.length?`<div class="feels">${feelTags(e)}</div>`:'')+
       `<div class="hint">Touche pour lire pourquoi</div><div class="why">${esc(e.why)||'<span class="muted">(pas de pourquoi)</span>'}</div>`+(opts.hit?'<div class="tag">En commun avec toi</div>':'')+
-      `<div class="ent-act">`+(opts.reply?'<button class="btn flame small-btn" type="button" data-a="reply">Répondre à cette entrée</button>':'')+(opts.edit?'<button class="btn ghost small-btn" type="button" data-a="edit">Modifier</button>':'')+(opts.del?'<button class="del" type="button" data-a="del">Retirer</button>':'')+`</div>`+
+      `<div class="ent-act">`+(opts.reply?'<button class="btn flame small-btn" type="button" data-a="reply">Répondre à cette entrée</button>':'')+(opts.metoo?'<button class="btn ghost small-btn" type="button" data-a="metoo">Moi aussi</button>':'')+(opts.mine?'<span class="tag" style="margin:0">Aussi dans ton portrait</span>':'')+(opts.edit?'<button class="btn ghost small-btn" type="button" data-a="edit">Modifier</button>':'')+(opts.del?'<button class="del" type="button" data-a="del">Retirer</button>':'')+`</div>`+
       (opts.reply?`<div class="compose"><label>Ton message part de cette entrée</label><textarea placeholder="Réagis à ce qui est écrit…"></textarea><button class="btn" type="button" data-a="send" style="margin-top:8px">Envoyer</button><div class="sent"></div></div>`:'');
     d.addEventListener('click',async ev=>{const a=ev.target.dataset&&ev.target.dataset.a;
-      if(ev.target.closest('.compose')&&a!=='send')return;
+      if((ev.target.closest('.compose')||ev.target.closest('.metoo-f')||ev.target.closest('.nods'))&&a!=='send')return;
+      if(a==='metoo'){opts.metoo(d);return;}
       if(a==='del'){opts.del();return;} if(a==='edit'){opts.edit();return;}
       if(a==='reply'){d.querySelector('.compose').classList.toggle('on');d.querySelector('textarea').focus();return;}
       if(a==='send'){const txt=d.querySelector('textarea').value.trim();if(!txt)return;const r=await opts.reply(txt);const s=d.querySelector('.sent');s.style.display='block';s.innerHTML=r;if(!/^Il te reste|^Ta limite|^Attends/.test(r))d.querySelector('textarea').value='';return;}
@@ -203,7 +204,7 @@ window.App=(function(){
      - l'autre choisit d'ouvrir la conversation ou non
      - trois premiers messages par jour */
   const FIRST_PER_DAY=3;
-  async function firstLeft(){const th=await DB.all('threads');const n=th.filter(t=>t.startedBy==='me'&&t.firstAt&&new Date(t.firstAt).toISOString().slice(0,10)===today()).length;return Math.max(0,FIRST_PER_DAY-n);}
+  async function firstLeft(){const th=await DB.all('threads');const n=th.filter(t=>t.startedBy==='me'&&!t.free&&t.firstAt&&new Date(t.firstAt).toISOString().slice(0,10)===today()).length;return Math.max(0,FIRST_PER_DAY-n);}
   const REPLY={tomas:'Ah, celui-là. Je pleure à la fin, et au milieu aussi.',kenji:'Merci d\'avoir écrit. Il est tôt ici, je marche, je vous réponds en marchant.',aicha:'Ça me fait plaisir. Je rentre de garde, je lis ça au chaud.',lucia:'Je lis ça et je souris. Raconte-moi la suite.'};
   const ACCEPT={tomas:'J\'ouvre volontiers. Racontez-moi.',kenji:'Bonne idée de commencer par là. J\'accepte avec plaisir.',aicha:'Oui ! Ça fait du bien de lire ça.',lucia:'J\'ai ouvert. Tu as visé juste avec ce que tu as écrit.'};
   /* simulation : les personnes fictives acceptent quelques secondes après */
@@ -288,14 +289,14 @@ window.App=(function(){
       if(a==='shot')take();if(a==='again'){o.querySelector('.cam-review').hidden=true;}if(a==='use'){if(opts.out)opts.out.real=styled!==shot?shot:null;done(styled||shot);}
       if(a==='timer'){const cd=o.querySelector('.cam-count');let n=10;cd.hidden=false;cd.textContent=n;const iv=setInterval(()=>{n--;cd.textContent=n;if(n<=0){clearInterval(iv);cd.hidden=true;take();}},1000);}});
     start();});}
-  async function sendTo(p,text,about){
+  async function sendTo(p,text,about,o={}){
     if(await isBlocked(p))return {error:'Cette personne est sur une de tes listes.'};
     let th=await DB.get('threads',p.id);
     if(th&&th.status==='declined-by-them')return {error:dn(p)+' a répondu ne pas souhaiter commencer de conversation.'};
     if(!th||th.status==='declined'){
       if(!about)return {error:'Le premier message part d\'une entrée de son portrait.'};
-      const left=await firstLeft();if(left<=0)return {error:'Ta limite de trois premiers messages pour aujourd\'hui est atteinte. Elle revient demain.'};
-      th={id:p.id,status:'pending-out',startedBy:'me',firstAt:Date.now(),acceptAt:Date.now()+6000};await DB.put('threads',th);
+      const left=o.free?1:await firstLeft();if(left<=0)return {error:'Ta limite de trois premiers messages pour aujourd\'hui est atteinte. Elle revient demain.'};
+      th={id:p.id,status:'pending-out',startedBy:'me',firstAt:o.free?null:Date.now(),acceptAt:Date.now()+6000,viaNod:o.nod||undefined};await DB.put('threads',th);
     }else if(th.status==='pending-out'){return {error:'Attends que '+dn(p)+' ouvre la conversation.'};}
     else if(th.status==='pending-in'){th.status='open';await DB.put('threads',th);}
     const msg=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'text',text,about:about&&about.id,aboutTitle:about&&about.title,ts:Date.now()});

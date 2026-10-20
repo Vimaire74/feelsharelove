@@ -433,3 +433,12 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 [dir=rtl] .banner{padding-right:60px;padding-left:16px}
 .tabs a span:not(.tbadge){white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.05;text-align:center;overflow-wrap:anywhere}
 [dir=rtl] .tabs .tbadge{margin-left:0;margin-right:8px;left:auto;right:50%}
+/* « moi aussi » */
+.metoo-f{border-top:1px dashed var(--line);margin-top:10px}
+.feels-pick{display:flex;flex-wrap:wrap;gap:6px}.feels-pick .chip{font-size:12px;min-height:36px}
+.nods{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(232,69,110,.10);border:1px solid rgba(232,69,110,.35)}
+.nods-h{font:600 10px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--rose);margin:0 0 8px}
+.nod+.nod{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.nod p{font-size:14px;margin:0 0 6px}.nod a{color:var(--saffron)}
+.nod .compose{display:none;margin-top:8px}.nod .compose.on{display:block}
+.nod .compose textarea{width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:8px;font:14px var(--body)}

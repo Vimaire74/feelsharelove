@@ -26,7 +26,7 @@ Pages._view=async function(S,p,preview){
   ${p.qs.filter(q=>q.a).length?`<h2>Questions <em>ouvertes</em></h2>${p.qs.filter(q=>q.a).map(q=>`<div class="q ro"><div class="k">${esc(q.k)}</div><div class="a">${esc(q.a)}</div></div>`).join('')}`:''}
   ${preview?'':`<div class="actions2"><button class="btn ghost" type="button" id="red">Ajouter à ma liste rouge</button><button class="btn ghost" type="button" id="rep">Signaler ce portrait</button></div><p class="muted small" id="done" style="margin-top:8px"></p>`}`;
   const L=$('v-list');if(!p.entries.length)L.innerHTML='<p class="muted small">Rien pour l\'instant.</p>';
-  p.entries.forEach(e=>L.appendChild(App.entryEl(e,{hit:commons.has(e.id),reply:preview?null:async txt=>App.sendResultText(p,await App.sendTo(p,txt,e))})));
+  p.entries.forEach(e=>L.appendChild(App.entryEl(e,{hit:commons.has(e.id),reply:preview?null:async txt=>App.sendResultText(p,await App.sendTo(p,txt,e)),metoo:preview||commons.has(e.id)?null:d=>Plus.meToo(d,e,p)})));
   /* voix */
   const V=$('voice');const v=await DB.get('voices',preview?'pres-me':'pres-'+p.id);
   if(v)V.appendChild(App.audioEl(v.blob));

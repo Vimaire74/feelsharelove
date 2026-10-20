@@ -141,5 +141,33 @@ window.Plus=(function(){
   function tagsHtml(r,ct,ex,max=8){const t=tagList(r,ct,ex);if(!t.length)return (r.echo&&r.echo.length)?`<div class="rtags"><span class="rtag t-echo">${esc(r.echo[0].theirs.title)}</span></div>`:'<div class="st muted" style="font-style:normal;font-family:var(--body)">Rien en commun pour l\'instant</div>';
     return `<div class="rtags">${t.slice(0,max).map(([c,w])=>`<span class="rtag t-${c}" title="${esc(CAT[c]||'')}">${esc(w)}</span>`).join('')}${t.length>max?`<span class="rtag t-more">+${t.length-max}</span>`:''}</div>`;}
   const legendHtml=()=>`<div class="rlegend">${Object.entries(CAT).map(([c,l])=>`<span class="rtag t-${c}">${l}</span>`).join('')}</div>`;
-  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel,similarity,tagsHtml,legendHtml};
+  /* ---------- « moi aussi » : reprendre la passion de quelqu'un dans son propre portrait ---------- */
+  function meToo(d,e,p,done){if(d.querySelector('.metoo-f'))return;d.classList.add('open');
+    const f=document.createElement('div');f.className='metoo-f';
+    f.innerHTML=`<p class="small" style="margin:10px 0 6px"><b>${esc(e.title)}</b> rejoint ton portrait. Ce que ça te fait :</p>
+      <div class="feels-pick">${App.FEELS.map(x=>`<button class="chip" type="button" data-f="${x.k}">${esc(x.l)}</button>`).join('')}</div>
+      <textarea class="ta" rows="2" placeholder="Pourquoi, pour toi ? ${esc(App.dn(p))} lira ce mot." style="margin-top:8px"></textarea>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><button class="btn flame small-btn" type="button" data-m="ok">Ajouter à mon portrait</button><button class="linkbtn" type="button" data-m="no">Annuler</button></div><p class="muted small" data-m="msg"></p>`;
+    d.appendChild(f);const feel=new Set();
+    f.addEventListener('click',async ev=>{ev.stopPropagation();const b=ev.target;
+      if(b.dataset.f){feel.has(b.dataset.f)?feel.delete(b.dataset.f):feel.add(b.dataset.f);b.classList.toggle('on');return;}
+      if(b.dataset.m==='no'){f.remove();return;}
+      if(b.dataset.m==='ok'){b.disabled=true;const why=f.querySelector('textarea').value.trim();
+        try{const mine=await DB.put('entries',{profileId:'me',title:e.title,kind:e.kind,desc:'',why,feel:[...feel],workId:e.workId||('wp:'+App.norm(e.title)),via:p.id});
+          await DB.put('nods',{owner:'me',target:p.id,entry:e.id,title:e.title,why,myEntry:mine.id,ts:Date.now()});
+          f.innerHTML=`<p class="small" style="margin-top:10px;color:var(--saffron)">Ajouté à ton portrait. ${esc(App.dn(p))} est prévenu${App.fem(p)?'e':''} et peut te répondre.</p>`;if(done)done();}
+        catch(x){b.disabled=false;f.querySelector('[data-m=msg]').textContent='Impossible pour le moment : '+x.message;}}});}
+  /* sous mes passions : les « moi aussi » reçus, que je suis seul·e à voir, avec la possibilité de répondre */
+  async function nodsFor(entryEl,e,nods){const mine=nods.filter(n=>n.entry===e.id&&n.target==='me');if(!mine.length)return;
+    const box=document.createElement('div');box.className='nods';
+    for(const n of mine){const p=await DB.get('profiles',n.owner);if(!p)continue;const row=document.createElement('div');row.className='nod';
+      row.innerHTML=`<p><b><a href="#personne/${p.id}">${esc(App.dn(p))}</a></b> aime aussi${n.why?` : « ${esc(n.why)} »`:'.'}</p>
+        <button class="btn ghost small-btn" type="button" data-n="r">Répondre</button><div class="compose"><textarea placeholder="Ta réponse à ${esc(App.dn(p))}…"></textarea><button class="btn small-btn" type="button" data-n="s" style="margin-top:6px">Envoyer</button><div class="sent"></div></div>`;
+      row.addEventListener('click',async ev=>{ev.stopPropagation();const a=ev.target.dataset&&ev.target.dataset.n;
+        if(a==='r'){row.querySelector('.compose').classList.toggle('on');row.querySelector('textarea').focus();}
+        if(a==='s'){const t=row.querySelector('textarea').value.trim();if(!t)return;const r=await App.sendTo(p,t,{id:n.myEntry,title:n.title},{free:true,nod:n.id});
+          const s=row.querySelector('.sent');s.style.display='block';s.innerHTML=App.sendResultText(p,r).replace(/Il te reste[^.]*\./,'');if(!r.error)row.querySelector('textarea').value='';}});
+      box.appendChild(row);}
+    if(box.children.length){box.insertAdjacentHTML('afterbegin','<p class="nods-h">Seul·e toi vois ces mots</p>');entryEl.appendChild(box);}}
+  return {ICONS,icon,extraCommon,viewHtml,editors,repLabel,similarity,tagsHtml,legendHtml,meToo,nodsFor};
 })();

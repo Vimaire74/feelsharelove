@@ -2,7 +2,7 @@
    Tables : voir docs/schema.md. Même structure que la future base serveur (docs/schema.sql).
    Version 2 : ajoute threads (porte des premiers messages), voices (enregistrements), circlePosts (messages des cercles). */
 (function(){
-  const NAME='connect', VERSION=2;
+  const NAME='connect', VERSION=3;
   const STORES={
     profiles:{keyPath:'id',indexes:[]},
     entries:{keyPath:'id',indexes:[['profileId','profileId']]},
@@ -14,7 +14,8 @@
     reports:{keyPath:'id',indexes:[]},                    // signalements
     circles:{keyPath:'id',indexes:[]},
     circlePosts:{keyPath:'id',indexes:[['circleId','circleId']]},
-    settings:{keyPath:'key',indexes:[]}
+    settings:{keyPath:'key',indexes:[]},
+    nods:{keyPath:'id',indexes:[]}                         // « moi aussi » sur la passion de quelqu'un
   };
   let dbp=null;
   function open(){

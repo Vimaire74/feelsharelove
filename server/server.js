@@ -19,7 +19,7 @@ function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), wh
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
-const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings']);
+const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods']);
 const PRIVATE = new Set(['lists','reports','settings']);
 
 /* ---------- base ---------- */
@@ -129,7 +129,7 @@ function threadView(t, me) {
   let status = t.state;
   if (t.state === 'pending') status = t.a === me ? 'pending-out' : 'pending-in';
   if (t.state === 'declined') status = t.decliner === me ? 'declined' : 'declined-by-them';
-  return { id: other, status, startedBy: t.a, firstAt: t.firstAt };
+  return { id: other, status, startedBy: t.a, firstAt: t.firstAt, free: !!t.free };
 }
 async function putThread(me, other, body) {
   if (!other || other === me) throw err(400, 'conversation');
@@ -139,9 +139,11 @@ async function putThread(me, other, body) {
     if (t && !(t.state === 'declined' && t.decliner === me)) throw err(409, 'Une conversation existe déjà.');
     const { hidden } = await hiddenFor(me); if (hidden.has(other)) throw err(403, 'Cette personne n\'est pas joignable.');
     const day = new Date().toISOString().slice(0, 10);
-    const mineToday = (await listDocs('threads', 'AND data->>\'a\'=$2', [me])).filter(x => new Date(x.firstAt).toISOString().slice(0, 10) === day).length;
-    if (mineToday >= FIRST_PER_DAY) throw err(429, 'Limite de trois premiers messages par jour atteinte.');
-    const n = { a: me, b: other, state: 'pending', firstAt: Date.now() };
+    const mineToday = (await listDocs('threads', 'AND data->>\'a\'=$2', [me])).filter(x => !x.free && new Date(x.firstAt).toISOString().slice(0, 10) === day).length;
+    /* réponse à un « moi aussi » reçu : ne compte pas dans les trois premiers messages */
+    let free = false; if (body.viaNod) { const nd = await getDoc('nods', body.viaNod); free = !!(nd && nd.owner === other && nd.target === me); }
+    if (!free && mineToday >= FIRST_PER_DAY) throw err(429, 'Limite de trois premiers messages par jour atteinte.');
+    const n = { a: me, b: other, state: 'pending', firstAt: Date.now(), free };
     await putDoc('threads', id, null, n);
     notify(other, (await pseudoOf(me)) + ' a répondu à ton portrait', '/#messages/' + me);
     return threadView(n, me);
@@ -180,6 +182,8 @@ async function readList(store, me, query) {
     if (query.thread) rows = rows.filter(m => m.thread === query.thread); return rows;
   }
   if (store === 'settings') return (await listDocs('settings', 'AND owner=$2', [me])).map(s => ({ key: s.key, value: s.value }));
+  /* « moi aussi » : visibles seulement par celui qui l'a écrit et par la personne concernée */
+  if (store === 'nods') { const { hidden } = await hiddenFor(me); return (await listDocs('nods', "AND (owner=$2 OR data->>'target'=$2)", [me])).filter(n => !hidden.has(n.owner) && !hidden.has(n.target)); }
   if (PRIVATE.has(store)) { let rows = await listDocs(store, 'AND owner=$2', [me]); for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v); return rows; }
   let rows = await listDocs(store);
   for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v);
@@ -200,6 +204,7 @@ async function readOne(store, me, id) {
   const d = await getDoc(store, id); if (!d) return null;
   if (store === 'messages') return d.from === me || d.to === me ? msgView(d, me) : null;
   if (PRIVATE.has(store)) return d.owner === me ? d : null;
+  if (store === 'nods') return d.owner === me || d.target === me ? d : null;
   if (store === 'profiles' && d.id !== me) { const { hidden, intimate } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate); }
   return d;
 }
@@ -223,6 +228,7 @@ async function writeOne(store, me, id, body) {
   data.__owner = me;
   const saved = await putDoc(store, id, me, data);
   /* cercle intime : quand l'autre m'avait déjà mis dans sa tribu, on le dit à tous les deux */
+  if (store === 'nods' && data.target && !old) { try { notify(data.target, (await pseudoOf(me)) + ' aime aussi « ' + String(data.title || '').slice(0, 60) + ' »', '/#portrait'); } catch (e) {} }
   if (store === 'lists' && data.type === 'tribe' && data.target && !old) {
     try { const back = (await listDocs('lists')).some(l => l.type === 'tribe' && l.owner === data.target && l.target === me);
       if (back) { notify(data.target, (await pseudoOf(me)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); notify(me, (await pseudoOf(data.target)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); } } catch (e) {}

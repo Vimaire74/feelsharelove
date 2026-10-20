@@ -78,6 +78,6 @@ Pages.resonances=async function(S,id){
   if(r.feels.length){const h=document.createElement('h2');h.innerHTML='Vous cherchez <em>la même chose</em>';B.appendChild(h);r.feels.forEach(c=>B.appendChild(pairBlock('Vous aimez tous les deux '+c.feel.both,c,'Pas la même œuvre, le même effet.')));}
   if(r.echo.length){const h=document.createElement('h2');h.innerHTML='Des <em>échos</em>';B.appendChild(h);r.echo.forEach(c=>B.appendChild(pairBlock(`${esc(c.mine.title)} · ${esc(c.theirs.title)}`,c,'Un mot en commun dans vos titres.')));}
   const used=new Set([...r.common,...r.feels,...r.echo].map(c=>c.theirs.id));const rest=p.entries.filter(e=>!used.has(e.id));
-  if(rest.length){const h=document.createElement('h2');h.innerHTML=`Ce qu'${il} a et <em>pas toi</em>`;B.appendChild(h);const L=document.createElement('div');L.className='list';rest.forEach(e=>L.appendChild(App.entryEl(e,{reply:reply(e)})));B.appendChild(L);}
+  if(rest.length){const h=document.createElement('h2');h.innerHTML=`Ce qu'${il} a et <em>pas toi</em>`;B.appendChild(h);const L=document.createElement('div');L.className='list';rest.forEach(e=>L.appendChild(App.entryEl(e,{reply:reply(e),metoo:d=>Plus.meToo(d,e,p)})));B.appendChild(L);}
   const act=document.createElement('div');act.className='actions2';act.innerHTML=`<a class="btn ghost" href="#personne/${p.id}">Voir le portrait</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a>`;B.appendChild(act);
 };

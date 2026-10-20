@@ -124,13 +124,14 @@ Pages.portrait=async function(S){
 
   /* œuvres et passions */
   function closeForm(){$('form-slot').innerHTML='';$('add').style.display='';}
+  let nods=[];try{nods=(await DB.all('nods')).filter(n=>n.target==='me');}catch(x){}
   function renderList(){const L=$('list');L.innerHTML='';
     if(!entries.length){L.innerHTML='<p class="muted" style="font-size:14px">Aucune entrée pour l\'instant.</p>';return;}
     entries.forEach((e,i)=>{const el=App.entryEl(e,{
       edit:()=>{const f=App.entryForm(e,async ne=>{const saved=await DB.put('entries',{...ne,profileId:'me'});entries[i]=saved;renderList();},()=>renderList());el.replaceWith(f);},
       del:async()=>{await DB.del('entries',e.id);entries.splice(i,1);renderList();}});
       if(!(e.feel&&e.feel.length)){const n=document.createElement('div');n.className='nudge';n.textContent='Ajoute ce que ça te fait : touche, puis Modifier.';el.appendChild(n);}
-      L.appendChild(el);});}
+      Plus.nodsFor(el,e,nods);L.appendChild(el);});}
   renderList();
   $('add').addEventListener('click',()=>{$('add').style.display='none';$('form-slot').innerHTML='';
     $('form-slot').appendChild(App.entryForm({},async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));renderList();closeForm();},closeForm));});

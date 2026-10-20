@@ -1,34 +1,8 @@
-# FeelShareLove — lot 4 (seulement les fichiers modifiés, à mettre aux mêmes endroits)
+# FeelShareLove — lot 5 (seulement les fichiers modifiés, à mettre aux mêmes endroits)
 
-Version 1.3.1 (19/10/2026)
-- Portrait d'une personne : « Qui il est » affichait [object Object] et des noms techniques (birth) ; corrigé
-- Signe astrologique : enregistré en texte, visible par les autres même quand l'année de naissance est cachée
-- Année de naissance cachée : elle n'est plus envoyée aux autres par le serveur
-- Boutons « Nos résonances », « Conversation », « Ma tribu » : plus de grosses bulles soulignées
-- Menu du bas : noms en entier (plus de « Mainten… »)
-- Titres : plus de coupure au milieu des mots (« Quel-qu'un »), 23 px sur téléphone
-- Maintenant : le titre change selon le moment de la journée (nuit, matin, midi, après-midi, soir, tard), une phrase différente chaque jour ; l'heure, la ville et le nombre de personnes disponibles passent dessous en petit
-- Résonances : « Qui résonne avec moi ? » au lieu du pseudo ; dans le détail, « Toi & … »
-- Maintenant : les filtres choisis (envies, disponibles, vérifiés…) sont gardés quand on quitte la page et qu'on revient
-- Résonances : champ « Je cherche… » par mots-clés (passions, œuvres, personnages, investissements, ville, pseudo)
-- Résonances : « ou » un menu de critères à cocher, combinables : envie du moment, ce qu'on cherche (amis, amour…), proche de chez moi, dans mon pays, disponible, vérifiés, au moins un point commun
-- Résonances : critères gardés en mémoire sur le téléphone
-- Pourcentage de similitude (œuvres, ressentis, fonctionnement, personnages, investissements, ce qui représente, intention) ; classement du plus fort au plus faible
-- Le pourcentage s'affiche aussi dans Maintenant et dans le détail d'une résonance, avec le nombre de points communs
-- Photo : après la prise, éditeur pour la placer soi-même (glisser, zoom à la barre ou à deux doigts) dans le rond que les autres verront ; centrage automatique sur le visage quand le navigateur le permet
-- Photo : bouton « Recadrer ou dessiner » sous la photo dans Mon portrait (vraie photo, crayon, affiche, aquarelle, silhouette floue) ; ne compte pas comme un changement de photo
-- La photo d'origine et la vraie photo restent privées (le serveur ne les envoie jamais aux autres)
-- Mode voyage (Mon portrait, sous la ville) : se localiser avec le téléphone ou écrire la ville, pour 3 jours, 1 semaine, 2 semaines, 1 mois ou jusqu'au retour ; « en voyage » s'affiche à côté de la ville ; retour automatique à la date choisie, ou bouton « Je suis rentré »
-- « Ce qui me représente » : jusqu'à six mots au lieu de trois
-- Résonances : le texte d'explication est remplacé par les mots-clés en commun, en pastilles de couleur
-- Une couleur fixe par catégorie : passion (orange), ressenti (rose), fonctionnement (violet), personnage (or), investissement (vert), ce qui représente (bleu) ; légende en haut de la liste
-- Les pastilles s'affichent aussi en haut du détail d'une résonance
-- Photo : « Silhouette floue » remplacée par « Peinture de points » (points ronds aux couleurs de l'app, plus gros dans la lumière, comme les icônes du menu)
-- Cercle intime : deux personnes qui se sont mises mutuellement dans leur tribu ; mention « Cercle intime » sur le portrait et en tête de Ma tribu
-- Notification aux deux quand le cercle intime se forme
-- Photo en dessin : option « Montrer ma vraie photo à mon cercle intime » (désactivée par défaut) ; le serveur n'envoie la vraie photo qu'au cercle intime
-- Ma tribu : texte mis à jour (la tribu reste privée, sauf le choix réciproque)
-- Test du fonctionnement : flèche ronde pour la question précédente, grand bouton pour la suivante
-- Langues : base multilingue (langue du téléphone par défaut, choix « Langue de l'app » dans Réglages)
-- Portrait, « Langues » : on tape le début (fran, angl, jap…), l'app propose, on touche pour choisir ; 97 langues ; les autres les voient dans leur propre langue
-- Mise en page testée avec 8 écritures (allemand, russe, arabe de droite à gauche, hindi, japonais, chinois, coréen, thaï) : mots longs coupés proprement, noms du menu sur deux lignes si besoin
+Version 1.4.0 (20/10/2026)
+- « Moi aussi » sous chaque passion d'un portrait (et dans « Ce qu'il a et pas toi ») : la passion rejoint ton portrait, avec ce que ça te fait et ton pourquoi
+- La personne concernée reçoit une notification « X aime aussi … »
+- Sous sa passion, elle voit ton mot ; elle seule le voit (pas les autres visiteurs)
+- Elle peut répondre à ton mot : ça ouvre la conversation, sans compter dans ses trois premiers messages du jour
+- La passion reprise compte tout de suite comme passion commune dans les résonances
