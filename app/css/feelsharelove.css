@@ -447,3 +447,5 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 /* demande d'activer les notifications */
 .notif-ask{background:linear-gradient(135deg,rgba(255,106,42,.16),rgba(232,69,110,.14));border:1px solid var(--flame);border-radius:16px;padding:12px 14px;margin:0 0 16px}
 .notif-ask p{font-size:14px;line-height:1.45;margin:0}.notif-ask b{color:var(--fg)}
+/* petit espace entre les noms du menu pour qu'ils ne se touchent jamais */
+.tabs a span:not(.tbadge){padding:0 3px;box-sizing:border-box}
