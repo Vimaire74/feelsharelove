@@ -85,6 +85,11 @@ window.App=(function(){
     tabs.innerHTML='<svg class="tabwave" viewBox="0 0 390 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10 L390 22 L0 22 Z" style="fill:var(--bar)"/><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10" fill="none" stroke="#e8456e" stroke-width="1.6" stroke-dasharray="14 4 3 4"/></svg>'+
       [['now','now','Maintenant'],['resonances','res','Résonances'],['messages','msg','Messages'],['tribu','tribu','Ma tribu'],['portrait','port','Portrait']].map(([h,i,l])=>`<a href="#${h}" data-tab="${h}">${Plus.icon(i)}${h==='messages'?'<span class="tbadge" id="tab-badge" hidden></span>':''}<span>${l}</span></a>`).join('');
     phone.prepend(menu);phone.prepend(star);phone.append(tabs);
+    /* noms du menu : toujours en entier sur une ligne ; la taille baisse jusqu'à ce qu'ils tiennent (même si le téléphone grossit le texte) */
+    const fit=()=>{const L=[...tabs.querySelectorAll('a span:not(.tbadge)')];let m=99;
+      L.forEach(s=>{s.style.fontSize='';let f=parseFloat(getComputedStyle(s).fontSize),i=0;while(s.scrollWidth>s.clientWidth+1&&i++<30&&f>7){f-=.5;s.style.fontSize=f+'px';}m=Math.min(m,f);});
+      L.forEach(s=>{s.style.fontSize=m+'px';});};  // même taille pour les cinq noms
+    window.__fitTabs=fit;fit();window.addEventListener('resize',fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
     star.addEventListener('click',()=>{menu.classList.toggle('on');star.classList.toggle('on');});
     document.querySelector('.screen').addEventListener('click',closeMenu);
   }
@@ -133,7 +138,7 @@ window.App=(function(){
   function avatarHtml(p,cls=''){return `<div class="avatar ${p.av||''} ${cls}" aria-hidden="true">${p.photo?`<img src="${p.photo}" alt="">`:''}</div>`;}
   function personEl(p,r,sub){const d=document.createElement('div');d.className='person';
     const wants=isAvail(p)?`<div class="wants">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').filter(Boolean).join(' · ')}</div>`:'';
-    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(p.city)}${p.travel?' · en voyage':''} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?(r.pct!=null?`<div class="r"><b>${r.pct}%</b><span>similitude</span></div>`:`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`):'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
+    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(p.city)}${p.travel?' · en voyage':''} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?(r.pct!=null?`<div class="r"><b>${r.pct}%</b><span>similitude</span></div>`:'pct' in r&&!r.n?`<div class="r"><b>—</b><span>nouveau</span></div>`:`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`):'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
     return d;}
 
   /* ---------- catalogue (Wikipédia, gratuit, sans inscription) ---------- */

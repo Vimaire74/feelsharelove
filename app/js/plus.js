@@ -128,8 +128,12 @@ window.Plus=(function(){
       [2,new Set((me.invest||[]).flatMap(k=>[k,k.split(':')[0]])),new Set(p.investShow===false?[]:(p.invest||[]).flatMap(k=>[k,k.split(':')[0]]))],
       [1,new Set(me.rep||[]),new Set(p.repShow===false?[]:(p.rep||[]))],
       [1,new Set(me.intent||[]),new Set(p.intent||[])]];
-    let tot=0,sum=0;dims.forEach(([w,a,b])=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;});
-    return tot?Math.round(100*sum/tot):null;}
+    let tot=0,sum=0,real=0;dims.forEach(([w,a,b],i)=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;if(i<6)real++;});
+    /* portrait encore vide (seulement l'intention) : pas de pourcentage, la personne ne passe pas devant tout le monde */
+    if(!real)return null;
+    /* peu de rubriques comparables : le pourcentage est réduit (au moins 60 % du poids total doit compter) */
+    const ALL=dims.reduce((s,d)=>s+d[0],0);
+    return Math.round(100*sum/Math.max(tot,ALL*.6));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
   const CAT={oeuvre:'Même passion',feel:'Même ressenti',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
   function tagList(r,ct,ex){const t=[];

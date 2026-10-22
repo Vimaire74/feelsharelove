@@ -442,3 +442,8 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .nod p{font-size:14px;margin:0 0 6px}.nod a{color:var(--saffron)}
 .nod .compose{display:none;margin-top:8px}.nod .compose.on{display:block}
 .nod .compose textarea{width:100%;min-height:60px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:8px;font:14px var(--body)}
+/* noms du menu : une ligne, jamais coupés au milieu d'un mot (la taille s'ajuste en JavaScript) */
+.tabs a span:not(.tbadge){display:block;width:100%;white-space:nowrap;overflow:hidden;text-overflow:clip;overflow-wrap:normal;-webkit-line-clamp:unset;text-align:center;font-size:12px;letter-spacing:-.01em}
+/* demande d'activer les notifications */
+.notif-ask{background:linear-gradient(135deg,rgba(255,106,42,.16),rgba(232,69,110,.14));border:1px solid var(--flame);border-radius:16px;padding:12px 14px;margin:0 0 16px}
+.notif-ask p{font-size:14px;line-height:1.45;margin:0}.notif-ask b{color:var(--fg)}

@@ -45,15 +45,17 @@ Pages.messages=async function(S,id){
     d.innerHTML=(m.aboutTitle?`<div class="ctx">À propos de ${esc(m.aboutTitle)}</div>`:'')+(m.kind==='decline'?'<div class="ctx">Réponse</div>':'')+(m.kind==='ephemeral'?'<span class="muted">Photo éphémère envoyée · '+m.seconds+' s</span>':m.kind==='voice'?'':esc(m.text))+`<div class="time">${hhmm(m.ts)}</div>`;
     if(m.kind==='voice'){DB.get('voices',m.voiceId).then(v=>{if(v)d.insertBefore(App.audioEl(v.blob),d.lastChild);});}
     C.appendChild(d);}
-  async function render(){C.innerHTML='';Bo.innerHTML='';
-    const th=await DB.get('threads',p.id);const ms=(await DB.where('messages','thread',p.id)).sort((a,b)=>a.ts-b.ts);ms.forEach(addMsg);
+  /* un seul affichage de la conversation à la fois (la mise à jour automatique peut tomber pendant un affichage) */
+  let drawing=null;const render=()=>drawing||(drawing=draw().finally(()=>{drawing=null;}));
+  async function draw(){if(!Bo.isConnected)return;C.innerHTML='';Bo.innerHTML='';
+    const th=await DB.get('threads',p.id);const ms=(await DB.where('messages','thread',p.id)).sort((a,b)=>a.ts-b.ts);if(!Bo.isConnected)return;ms.forEach(addMsg);
     if(th&&(th.status==='declined-by-them'||th.status==='declined')){Bo.innerHTML=`<div class="empty">${th.status==='declined'?'Tu as répondu non à '+esc(dn(p))+'.':esc(dn(p))+' a répondu, gentiment, ne pas souhaiter commencer de conversation.'} La conversation s'arrête ici.</div>`;return;}
     if(!th){
       Bo.innerHTML=`<div class="empty">Pour écrire à ${esc(dn(p))}, réponds à une de ses entrées. ${f?'Elle':'Il'} choisira ensuite d'ouvrir la conversation.</div><div class="list" id="ent" style="margin-top:10px"></div>`;
       p.entries.forEach(e=>$('ent').appendChild(App.entryEl(e,{reply:async txt=>{const r=await App.sendTo(p,txt,e);if(r.ok)setTimeout(render,50);return App.sendResultText(p,r);}})));return;}
     if(th.status==='pending-out'){Bo.innerHTML=`<div class="empty">En attente : ${esc(dn(p))} va lire ta réponse et choisir d'ouvrir la conversation.</div>`;
       const wait=Math.max(500,th.acceptAt-Date.now()+300);setTimeout(async()=>{if(location.hash!=='#messages/'+p.id)return;if(await App.tickThreads())render();},wait);return;}
-    if(th.status==='pending-in'){const opts=App.declineChoices(p,await DB.get('profiles','me'));
+    if(th.status==='pending-in'){const opts=App.declineChoices(p,await DB.get('profiles','me'));if(!Bo.isConnected)return;
       Bo.innerHTML=`<div class="gate"><p>${esc(dn(p))} t'a écrit. Sur FeelShareLove, on répond toujours : tu ouvres la conversation, ou tu dis non gentiment.</p>
         <div class="row" style="justify-content:flex-start"><button class="btn" type="button" id="acc">Ouvrir la conversation</button><button class="btn ghost" type="button" id="no">Répondre non, gentiment</button></div>
         <div id="dec" hidden><p class="muted small" style="margin:12px 0 8px">Choisis une phrase. Elle sera envoyée telle quelle.</p>${opts.map((o,i)=>`<label class="dopt"><input type="radio" name="dch" value="${i}"><span>${esc(o.t)}</span></label>`).join('')}
