@@ -25,7 +25,17 @@ window.App=(function(){
     {k:'epate',l:'Ça m\'épate',both:'ce qui épate'},
     {k:'hallucine',l:'Ça m\'hallucine',both:'ce qui fait halluciner'},
     {k:'scotche',l:'Ça m\'a scotché',both:'ce qui scotche'},
-    {k:'vital',l:'Je ne peux pas vivre sans',both:'ce dont on ne peut pas se passer'}];
+    {k:'vital',l:'Je ne peux pas vivre sans',both:'ce dont on ne peut pas se passer'},
+    {k:'reflechir',l:'Ça me fait réfléchir',both:'ce qui fait réfléchir'},
+    {k:'perturbe',l:'Ça me perturbe',both:'ce qui perturbe'},
+    {k:'force',l:'Ça me donne de la force',both:'ce qui donne de la force'},
+    {k:'passe',l:'J\'ai aimé ça dans le passé',both:'ce qu\'on a aimé autrefois'},
+    {k:'mavie',l:'Ça ressemble à ma vie',both:'ce qui ressemble à sa vie'},
+    {k:'vecu',l:'C\'est quelque chose que j\'ai vécu',both:'ce qu\'on a vécu'},
+    {k:'partager',l:'J\'aimerais partager ça avec quelqu\'un',both:'ce qu\'on aimerait partager'}];
+  /* ressentis dominants : ceux qu'une personne a mis sous au moins 5 de ses passions. Seuls eux comptent dans les résonances. */
+  const FEEL_MIN=5;
+  function dominantFeels(entries){const n={};(entries||[]).forEach(e=>(e.feel||[]).forEach(k=>{n[k]=(n[k]||0)+1;}));return Object.keys(n).filter(k=>n[k]>=FEEL_MIN);}
   const FEEL=Object.fromEntries(FEELS.map(f=>[f.k,f]));
   /* envies du moment (disponibilité) */
   const WANTS=[
@@ -117,7 +127,8 @@ window.App=(function(){
   function resonance(mine,theirs){const common=[],echo=[],feels=[];const used=new Set();
     theirs.forEach(t=>{const m=mine.find(x=>sameWork(x,t));if(m){common.push({mine:m,theirs:t});used.add(t.id);used.add(m.id);return;}
       const tw=words(t.title);const near=mine.find(x=>words(x.title).some(w=>tw.includes(w)));if(near){echo.push({mine:near,theirs:t});}});
-    FEELS.forEach(f=>{const m=mine.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));const t=theirs.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));if(m&&t)feels.push({feel:f,mine:m,theirs:t});});
+    const domM=new Set(dominantFeels(mine)),domT=new Set(dominantFeels(theirs));
+    FEELS.filter(f=>domM.has(f.k)&&domT.has(f.k)).forEach(f=>{const m=mine.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));const t=theirs.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));if(m&&t)feels.push({feel:f,mine:m,theirs:t});});
     return {common,echo,feels,score:common.length*3+feels.length*2+echo.length};}
 
   /* ---------- éléments d'affichage ---------- */
@@ -312,7 +323,7 @@ window.App=(function(){
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
     shell,closeMenu,refreshMsgCount,tribeOf,inTribe,tribeAdd,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
-    catalogSearch,catalogField,entryForm,stylize,STYLES,prefixes,pseudoProposals,recorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
+    catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();
 window.Pages={};

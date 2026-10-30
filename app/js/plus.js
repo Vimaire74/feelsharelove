@@ -118,27 +118,33 @@ window.Plus=(function(){
 
   /* pourcentage de similitude : pour chaque rubrique remplie des deux côtés, la part de ce qui est commun
      (rapportée au plus petit des deux, pour ne pas pénaliser un portrait plus riche), puis moyenne pondérée */
+  const TYPE_MATCH={sens:{sens:1,emo:.7},emo:{emo:1,sens:.7},mental:{mental:1},phys:{phys:1}};
   function similarity(me,p,mine,theirs){
     const wk=e=>e.workId||('t:'+App.norm(e.title));
     const dims=[
       [3,new Set((mine||[]).map(wk)),new Set((theirs||[]).map(wk))],
-      [2,new Set((mine||[]).flatMap(e=>e.feel||[])),new Set((theirs||[]).flatMap(e=>e.feel||[]))],
-      [1,new Set(me.types&&me.types.list||[]),new Set(p.types&&p.types.show!==false&&p.types.list||[])],
+      [2,new Set(App.dominantFeels(mine)),new Set(App.dominantFeels(theirs))],
       [2,new Set((me.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean))),new Set(p.chinoisShow===false?[]:(p.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean)))],
       [2,new Set((me.invest||[]).flatMap(k=>[k,k.split(':')[0]])),new Set(p.investShow===false?[]:(p.invest||[]).flatMap(k=>[k,k.split(':')[0]]))],
       [1,new Set(me.rep||[]),new Set(p.repShow===false?[]:(p.rep||[]))],
       [1,new Set(me.intent||[]),new Set(p.intent||[])]];
-    let tot=0,sum=0,real=0;dims.forEach(([w,a,b],i)=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;if(i<6)real++;});
+    let tot=0,sum=0,real=0;dims.forEach(([w,a,b],i)=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;if(i<5)real++;});
+    /* type de fonctionnement : le poids le plus fort (4 par type). Sensible et émotionnel s'entendent à 70 %.
+       Deux types en commun comptent double : la ressemblance pèse plus dans le total. */
+    const TA=me.types&&me.types.list||[],TB=p.types&&p.types.show!==false&&p.types.list||[];
+    if(TA.length&&TB.length){const left=[...TB];let st=0;
+      [...TA].sort((x,y)=>(TB.includes(y)?1:0)-(TB.includes(x)?1:0)).forEach(a=>{let bi=-1,bv=0;left.forEach((b,j)=>{const v=(TYPE_MATCH[a]||{})[b]||0;if(v>bv){bv=v;bi=j;}});if(bi>=0){st+=bv;left.splice(bi,1);}});
+      sum+=4*st;tot+=4*Math.max(TA.length,TB.length);real++;}
     /* portrait encore vide (seulement l'intention) : pas de pourcentage, la personne ne passe pas devant tout le monde */
     if(!real)return null;
     /* peu de rubriques comparables : le pourcentage est réduit (au moins 60 % du poids total doit compter) */
-    const ALL=dims.reduce((s,d)=>s+d[0],0);
+    const ALL=dims.reduce((s,d)=>s+d[0],0)+4;
     return Math.round(100*sum/Math.max(tot,ALL*.6));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
   const CAT={oeuvre:'Même passion',feel:'Même ressenti',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
-    (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on) /,'')]));
+    (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));
     (ct||[]).forEach(k=>t.push(['type',window.TYPES?TYPES.name(k):k]));
     (ex||[]).forEach(x=>t.push([x.k==='pc'||x.k==='pcw'?'perso':x.k,x.kw||x.l]));
     return t;}
