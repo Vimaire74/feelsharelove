@@ -74,7 +74,7 @@ Pages.portrait=async function(S){
   /* présentation vocale */
   async function renderVoice(){const V=$('voice');V.innerHTML='';const v=await DB.get('voices','pres-me');
     if(v){V.appendChild(App.audioEl(v.blob));const del=document.createElement('button');del.className='linkbtn';del.type='button';del.textContent='Effacer et réenregistrer';del.addEventListener('click',async()=>{await DB.del('voices','pres-me');renderVoice();});V.appendChild(del);}
-    else{V.appendChild(App.recorder('Enregistrer ma présentation',60,async(blob,secs)=>{await DB.put('voices',{id:'pres-me',owner:'me',kind:'presentation',blob,secs});renderVoice();}));
+    else{V.appendChild(App.voiceRecorder('Enregistrer ma présentation',60,async(blob,secs)=>{await DB.put('voices',{id:'pres-me',owner:'me',kind:'presentation',blob,secs});renderVoice();},'Garder cet enregistrement'));
       const p=document.createElement('p');p.className='muted small';p.style.marginTop='6px';p.textContent='Firefox te demandera l\'accès au micro. Touche à nouveau pour arrêter.';V.appendChild(p);}}
   renderVoice();
 

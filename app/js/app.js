@@ -212,6 +212,18 @@ window.App=(function(){
       rec.onstop=()=>{stream.getTracks().forEach(t=>t.stop());clearInterval(timer);const secs=Math.max(1,Math.round((Date.now()-t0)/1000));const blob=new Blob(chunks,{type:rec.mimeType||'audio/ogg'});rec=null;b.classList.remove('rec');b.textContent=label;onDone(blob,secs);};
       rec.start();t0=Date.now();b.classList.add('rec');const tick=()=>{const s=Math.round((Date.now()-t0)/1000);b.textContent='● '+s+' s / '+max+' · arrêter';if(s>=max&&rec)rec.stop();};tick();timer=setInterval(tick,250);});
     return b;}
+  /* enregistrement vocal avec écoute avant envoi : on réécoute, puis on envoie, on recommence ou on annule */
+  function voiceRecorder(label,max,onSend,sendLabel='Envoyer'){const w=document.createElement('div');w.className='vrec';
+    const start=()=>{w.innerHTML='';w.appendChild(recorder(label,max,(blob,secs)=>review(blob,secs)));};
+    const review=(blob,secs)=>{w.innerHTML='';const a=audioEl(blob);w.appendChild(a);
+      const row=document.createElement('div');row.className='vrec-act';
+      row.innerHTML=`<button class="btn flame small-btn" type="button" data-v="send">${esc(sendLabel)}</button><button class="btn ghost small-btn" type="button" data-v="again">Recommencer</button><button class="linkbtn" type="button" data-v="cancel">Annuler</button>`;
+      w.appendChild(row);
+      row.addEventListener('click',async e=>{const v=e.target.dataset&&e.target.dataset.v;if(!v)return;
+        if(v==='send'){e.target.disabled=true;try{await onSend(blob,secs);start();}catch(x){e.target.disabled=false;}}
+        if(v==='again'){start();w.querySelector('button').click();}
+        if(v==='cancel')start();});};
+    start();return w;}
   function audioEl(blob){const a=document.createElement('audio');a.controls=true;a.src=URL.createObjectURL(blob);a.className='aud';return a;}
   function speak(text){if(!window.speechSynthesis)return false;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='fr-FR';u.rate=.95;speechSynthesis.speak(u);return true;}
 
@@ -323,7 +335,7 @@ window.App=(function(){
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
     shell,closeMenu,refreshMsgCount,tribeOf,inTribe,tribeAdd,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
-    catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
+    catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();
 window.Pages={};

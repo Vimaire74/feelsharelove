@@ -1,8 +1,7 @@
-# FeelShareLove — lot 8
+# FeelShareLove — lot 9 (à envoyer APRÈS le lot 8)
 
-Version 1.5.0 (22/10/2026)
-- Ressentis : 7 nouvelles étiquettes (Ça me fait réfléchir, Ça me perturbe, Ça me donne de la force, J'ai aimé ça dans le passé, Ça ressemble à ma vie, C'est quelque chose que j'ai vécu, J'aimerais partager ça avec quelqu'un)
-- Résonances : le type de fonctionnement devient le critère le plus fort (poids 4 par type)
-- Sensible et émotionnel s'entendent à 70 % ; mental avec mental, physique avec physique
-- Deux types en commun comptent double
-- Ressentis : ils ne comptent dans les résonances que s'ils sont dominants (mis sous au moins 5 passions)
+Version 1.5.1 (29/10/2026)
+- Message vocal : après l'enregistrement, on le réécoute, puis Envoyer, Recommencer ou Annuler
+- Présentation vocale du portrait : même écoute avant de la garder
+- Mes messages vocaux envoyés : bouton Effacer (ils disparaissent aussi chez l'autre)
+- Correction : un vocal envoyé en ligne ne déclenche plus la fausse réponse automatique de la version locale

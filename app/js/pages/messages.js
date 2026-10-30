@@ -43,7 +43,13 @@ Pages.messages=async function(S,id){
       C.appendChild(d);return;}
     const d=document.createElement('div');d.className='msg '+(m.from==='me'?'me':'them')+(m.kind==='decline'?' decline':'');
     d.innerHTML=(m.aboutTitle?`<div class="ctx">À propos de ${esc(m.aboutTitle)}</div>`:'')+(m.kind==='decline'?'<div class="ctx">Réponse</div>':'')+(m.kind==='ephemeral'?'<span class="muted">Photo éphémère envoyée · '+m.seconds+' s</span>':m.kind==='voice'?'':esc(m.text))+`<div class="time">${hhmm(m.ts)}</div>`;
-    if(m.kind==='voice'){DB.get('voices',m.voiceId).then(v=>{if(v)d.insertBefore(App.audioEl(v.blob),d.lastChild);});}
+    if(m.kind==='voice'){DB.get('voices',m.voiceId).then(v=>{if(v)d.insertBefore(App.audioEl(v.blob),d.lastChild);});
+      /* mes vocaux : je peux les effacer plus tard (ils disparaissent aussi chez l'autre) */
+      if(m.from==='me'){const x=document.createElement('div');x.className='vdel';x.innerHTML='<button class="linkbtn" type="button" data-x="ask">Effacer</button>';d.appendChild(x);
+        x.addEventListener('click',async e=>{const a=e.target.dataset&&e.target.dataset.x;
+          if(a==='ask')x.innerHTML='<span class="muted small">Effacer ce vocal, aussi chez '+esc(dn(p))+' ?</span> <button class="linkbtn" type="button" data-x="yes">Oui</button> <button class="linkbtn" type="button" data-x="no">Non</button>';
+          if(a==='no')x.innerHTML='<button class="linkbtn" type="button" data-x="ask">Effacer</button>';
+          if(a==='yes'){try{await DB.del('messages',m.id);if(m.voiceId)await DB.del('voices',m.voiceId);}catch(err){}d.remove();}});}}
     C.appendChild(d);}
   /* un seul affichage de la conversation à la fois (la mise à jour automatique peut tomber pendant un affichage) */
   let drawing=null;const render=()=>drawing||(drawing=draw().finally(()=>{drawing=null;}));
@@ -75,7 +81,7 @@ Pages.messages=async function(S,id){
     const send=async()=>{const v=$('chat-in').value.trim();if(!v)return;$('chat-in').value='';const r=await App.sendTo(p,v,null);if(r.ok){addMsg(r.msg);C.lastElementChild.scrollIntoView({block:'nearest'});if(!DB.remote)fake();}};
     $('chat-send').addEventListener('click',send);$('chat-in').addEventListener('keydown',k=>{if(k.key==='Enter')send();});
     $('eph-in').addEventListener('change',async e=>{if(!e.target.files[0])return;const m=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'ephemeral',text:'',seconds:10,ts:Date.now()});addMsg(m);e.target.value='';});
-    $('mic').appendChild(App.recorder('Message vocal',60,async(blob,secs)=>{const v=await DB.put('voices',{owner:'me',kind:'message',blob,secs});const m=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'voice',voiceId:v.id,secs,ts:Date.now()});addMsg(m);C.lastElementChild.scrollIntoView({block:'nearest'});fake();}));
+    $('mic').appendChild(App.voiceRecorder('Message vocal',60,async(blob,secs)=>{const v=await DB.put('voices',{owner:'me',kind:'message',blob,secs});const m=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'voice',voiceId:v.id,secs,ts:Date.now()});addMsg(m);C.lastElementChild.scrollIntoView({block:'nearest'});if(!DB.remote)fake();}));
     $('block').addEventListener('click',async()=>{await DB.put('lists',{owner:'me',type:'black',target:p.id,name:p.name||p.pseudo});await DB.put('reports',{by:'me',target:p.id,kind:'block',status:'open',ts:Date.now()});location.hash='#reglages';});
   }
   await render();

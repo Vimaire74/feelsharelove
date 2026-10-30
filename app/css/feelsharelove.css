@@ -449,3 +449,7 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .notif-ask p{font-size:14px;line-height:1.45;margin:0}.notif-ask b{color:var(--fg)}
 /* petit espace entre les noms du menu pour qu'ils ne se touchent jamais */
 .tabs a span:not(.tbadge){padding:0 3px;box-sizing:border-box}
+/* vocal : écoute avant envoi, effacement */
+.vrec .aud{width:100%;margin:4px 0 8px}
+.vrec-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.vdel{margin-top:4px;text-align:right;font-size:12px}
