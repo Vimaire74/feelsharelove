@@ -24,9 +24,10 @@ window.Plus=(function(){
 
   /* ---------- affichage sur un portrait ---------- */
   function investGroups(keys){const g={};(keys||[]).forEach(k=>{const c=k.split(':')[0];(g[c]=g[c]||[]);if(k.includes(':'))g[c].push(k);});return g;}
-  function viewHtml(p,me,preview){let h='';const ex=preview?[]:extraCommon(me,p);
+  function viewHtml(p,me,preview,only){let h='';const ex=preview?[]:extraCommon(me,p);
     const rp=(preview||p.repShow!==false)?(p.rep||[]):[];
     if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>Ce qui ${preview?'me':(App.fem(p)?'la':'le')} <em>représente</em></h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
+    if(only==='rep')return h;
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
     const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
     if(pc.length){h+=`<h2>Si ${preview?'j\'étais':'c\'était'} <em>un personnage</em></h2><div class="pc-show">${pc.map(x=>`<div class="pc-item${hitPc.has(x.id)?' hit':hitW.has(x.wid)?' near':''}"><div class="pc-n">${esc(x.n)}${x.w?` <small>${esc(x.w)}</small>`:''}</div>${x.why?`<div class="pc-why">${esc(x.why)}</div>`:''}${hitPc.has(x.id)?'<div class="tag">En commun avec toi</div>':hitW.has(x.wid)?'<div class="tag">Le même univers que toi</div>':''}</div>`).join('')}</div>`;}
@@ -141,7 +142,7 @@ window.Plus=(function(){
     const ALL=dims.reduce((s,d)=>s+d[0],0)+4;
     return Math.round(100*sum/Math.max(tot,ALL*.6));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
-  const CAT={oeuvre:'Même passion',feel:'Même ressenti',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
+  const CAT={oeuvre:'Même passion',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
     (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));

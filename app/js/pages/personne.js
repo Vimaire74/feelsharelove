@@ -13,25 +13,27 @@ Pages._view=async function(S,p,preview){
     facts.push([x.k,s.v]);});
   Object.entries(F).forEach(([k,v])=>{if(typeof v==='string'&&v&&!FACTS.some(x=>x.id===k))facts.push([FACT_LABEL[k]||k,v]);});
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
-  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Cercle intime</span>':''}<p class="muted">${esc(p.city||'')}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
+  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Cercle intime</span>':''}<p class="muted">${esc(preview?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
   <div class="intent">${(p.intent||[]).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}
-  <div class="voice-box"><p class="eyebrow" style="margin:0">${preview?'Ma voix':'Sa voix'}</p><div id="voice"></div></div>
+  ${p.limited?'':`<div class="voice-box"><p class="eyebrow" style="margin:0">${preview?'Ma voix':'Sa voix'}</p><div id="voice"></div></div>`}
   ${preview?'':`<div class="actions2"><a class="btn flame" href="#resonances/${p.id}">Nos résonances · ${nres}</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a><button class="btn ghost" type="button" id="tribe"></button></div>`}
   ${p.types&&p.types.list&&p.types.list.length&&p.types.show!==false?`<h2>${preview?'Mon':'Son'} <em>fonctionnement</em></h2><div class="types-show">${p.types.list.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div>`:''}
   ${facts.length?`<h2>Qui ${preview?'je':il} <em>${preview?'suis':'est'}</em></h2><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`:''}
-  ${Plus.viewHtml(p,me,preview)}
+  ${Plus.viewHtml(p,me,preview,p.limited?'rep':null)}
   <h2>Ce qui ${preview?'me':(f?'la':'le')} fait <em>vibrer</em></h2>${preview?'':`<p class="muted small" style="margin-bottom:10px">Ouvre une entrée et réponds-y : c'est comme ça qu'on écrit à quelqu'un sur FeelShareLove.</p>`}<div class="list" id="v-list"></div>
+  ${p.limited?`<div class="locked">Le reste de ${f?'son':'son'} portrait (ce qu'${il} vit en ce moment, sa voix, ses personnages, ce dans quoi ${il} s'investit, ses questions ouvertes…) s'ouvre quand vous aurez commencé à vous parler.</div>`:''}
   ${p.qs.filter(q=>q.a).length?`<h2>Questions <em>ouvertes</em></h2>${p.qs.filter(q=>q.a).map(q=>`<div class="q ro"><div class="k">${esc(q.k)}</div><div class="a">${esc(q.a)}</div></div>`).join('')}`:''}
   ${preview?'':`<div class="actions2"><button class="btn ghost" type="button" id="red">Ajouter à ma liste rouge</button><button class="btn ghost" type="button" id="rep">Signaler ce portrait</button></div><p class="muted small" id="done" style="margin-top:8px"></p>`}`;
   const L=$('v-list');if(!p.entries.length)L.innerHTML='<p class="muted small">Rien pour l\'instant.</p>';
   p.entries.forEach(e=>L.appendChild(App.entryEl(e,{hit:commons.has(e.id),reply:preview?null:async txt=>App.sendResultText(p,await App.sendTo(p,txt,e)),metoo:preview||commons.has(e.id)?null:d=>Plus.meToo(d,e,p)})));
   /* voix */
-  const V=$('voice');const v=await DB.get('voices',preview?'pres-me':'pres-'+p.id);
-  if(v)V.appendChild(App.audioEl(v.blob));
-  else if(!preview&&window.speechSynthesis){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.textContent='Écouter (voix de synthèse pour la démo)';b.addEventListener('click',()=>App.speak(`Bonjour, je suis ${dn(p)}. ${p.now}`));V.appendChild(b);}
-  else V.innerHTML=`<p class="muted small">${preview?'Pas encore enregistrée. Tu peux le faire dans ton portrait.':'Pas encore enregistrée.'}</p>`;
+  const V=$('voice');const v=V&&await DB.get('voices',preview?'pres-me':'pres-'+p.id);
+  if(!V){}
+  else if(v)V.appendChild(App.audioEl(v.blob));
+  else if(!preview&&!DB.remote&&window.speechSynthesis){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.textContent='Écouter (voix de synthèse pour la démo)';b.addEventListener('click',()=>App.speak(`Bonjour, je suis ${dn(p)}. ${p.now}`));V.appendChild(b);}
+  else if(V)V.innerHTML=`<p class="muted small">${preview?'Pas encore enregistrée. Tu peux le faire dans ton portrait.':'Pas encore enregistrée.'}</p>`;
   if(preview)return;
   /* ma tribu */
   const TB=$('tribe');const setT=async()=>{const t=await App.inTribe(p);TB.textContent=t?'Dans ma tribu · retirer':'Ajouter à ma tribu';TB.classList.toggle('on',!!t);};await setT();

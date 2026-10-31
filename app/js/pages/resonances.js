@@ -14,10 +14,9 @@ Pages.resonances=async function(S,id){
     const C=window.CATALOGUE,norm=App.norm,WANT=App.WANT;
     /* critères : dans un même groupe, l'un OU l'autre ; entre les groupes, tous à la fois */
     const GROUPS=[
-      {k:'want',l:'Envie du moment',o:[['ecoute','Être écouté'],['parler','Parler'],['rire','Rire'],['decouvrir','Découvrir quelqu\'un'],['proposer','Une proposition'],['soiree','Une soirée']]},
       {k:'intent',l:'Ce que je cherche',o:[['parler','Quelqu\'un à qui parler'],['amis','Des amis'],['amour','L\'amour']]},
       {k:'near',l:'Où',o:[['ville','Proche de chez moi'],['pays','Dans mon pays']]},
-      {k:'more',l:'Et aussi',o:[['avail','Disponible maintenant'],['verif','Vérifiés seulement'],['reso','Au moins un point commun']]}];
+      {k:'more',l:'Et aussi',o:[['verif','Vérifiés seulement'],['reso','Au moins un point commun']]}];
     const KEY='fsl_res_filters';let sel={};try{sel=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
     GROUPS.forEach(g=>{sel[g.k]=new Set(sel[g.k]||[]);});
     const keep=()=>{try{localStorage.setItem(KEY,JSON.stringify(Object.fromEntries(GROUPS.map(g=>[g.k,[...sel[g.k]]]))));}catch(e){}};
@@ -27,7 +26,7 @@ Pages.resonances=async function(S,id){
     const all=people.map(p=>{const r=App.resonance(entries,p.entries);const ct=commonTypes(me,p);const ex=Plus.extraCommon(me,p);
       r.n=r.common.length+r.feels.length+ct.length+ex.length;r.pct=Plus.similarity(me,p,entries,p.entries);
       const near=myCity&&cityOf(p.city)===myCity,samec=myCountry&&countryOf(p.city)===myCountry;
-      const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.l.includes(':')?1:1):1),0)+(near?2:samec?.5:0)+(App.isAvail(p)?1:0);
+      const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.l.includes(':')?1:1):1),0)+(near?2:samec?.5:0);
       const text=norm([dn(p),p.city,p.now,...p.entries.flatMap(e=>[e.title,e.why,e.desc,e.kind]),...(p.chinois||[]).flatMap(x=>[x.n,x.w]),...(p.invest||[]).map(k=>C.INV[k]&&C.INV[k].l),...(p.rep||[]).map(k=>Plus.repLabel(k,p))].filter(Boolean).join(' | '));
       return {p,r,ct,ex,w,near,samec,text};});
     function panel(){const P=$('r-panel');P.innerHTML=GROUPS.map(g=>`<p class="crit-g">${g.l}</p><div class="crit-o">${g.o.map(([k,l])=>`<button class="chip${sel[g.k].has(k)?' on':''}" type="button" data-g="${g.k}" data-k="${k}">${esc(l)}</button>`).join('')}</div>`).join('')+
@@ -41,10 +40,9 @@ Pages.resonances=async function(S,id){
     function draw(){L.innerHTML='';const q=norm($('r-q').value);
       let list=all.filter(x=>{const p=x.p,a=App.isAvail(p);
         if(q&&!q.split(' ').every(w=>x.text.includes(w)))return false;
-        if(sel.want.size&&!(a&&p.avail.wants.some(k=>sel.want.has(k))))return false;
         if(sel.intent.size&&!(p.intent||[]).some(k=>sel.intent.has(k)))return false;
         if(sel.near.size&&!((sel.near.has('ville')&&x.near)||(sel.near.has('pays')&&(x.samec||x.near))))return false;
-        if(sel.more.has('avail')&&!a)return false;if(sel.more.has('verif')&&!App.isVerified(p))return false;if(sel.more.has('reso')&&!x.r.n)return false;
+        if(sel.more.has('verif')&&!App.isVerified(p))return false;if(sel.more.has('reso')&&!x.r.n)return false;
         return true;}).sort((a,b)=>((b.r.pct||0)-(a.r.pct||0))||(b.w-a.w));
       const n=GROUPS.reduce((s,g)=>s+sel[g.k].size,0);
       $('r-info').textContent=list.length?(list.length+' personne'+(list.length>1?'s':'')+(q||n?' trouvée'+(list.length>1?'s':''):'')+', de la plus forte à la plus faible'):'';
@@ -59,7 +57,7 @@ Pages.resonances=async function(S,id){
   const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const ex=Plus.extraCommon(me,p);const n=r.common.length+r.feels.length+commonTypes(me,p).length+ex.length;const pct=Plus.similarity(me,p,entries,p.entries);
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
-  <p class="muted" style="margin-top:6px">${esc(p.city)} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
+  <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
   <div class="pair">${App.avatarHtml(me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div id="body" style="margin-top:10px"></div>`;
   const B=$('body');
   const ct=commonTypes(me,p);

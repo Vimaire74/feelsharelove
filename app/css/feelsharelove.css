@@ -453,3 +453,15 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .vrec .aud{width:100%;margin:4px 0 8px}
 .vrec-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .vdel{margin-top:4px;text-align:right;font-size:12px}
+.rtag.t-want{color:#ffe9b0;border-color:#f7b733;background:rgba(247,183,51,.18)}
+.locked{margin:18px 0;padding:12px 14px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);font-size:14px;line-height:1.45}
+
+/* version internet (ordinateur, tablette) : plus de cadre de téléphone, l'app prend la hauteur de l'écran avec une largeur maximale */
+@media (min-width:521px){
+  body{padding:0;gap:0;display:block;height:100%}
+  .note{display:none}
+  .phone{max-width:760px;width:100%;height:100vh;height:100dvh;min-height:0;margin:0 auto;border-radius:0;border:0;border-left:1px solid var(--line);border-right:1px solid var(--line);box-shadow:none}
+  .screen{padding:28px 36px 48px}
+  .star{top:16px;right:20px}
+  .tabs a svg{width:32px;height:32px}
+}

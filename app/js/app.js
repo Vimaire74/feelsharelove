@@ -32,19 +32,23 @@ window.App=(function(){
     {k:'passe',l:'J\'ai aimé ça dans le passé',both:'ce qu\'on a aimé autrefois'},
     {k:'mavie',l:'Ça ressemble à ma vie',both:'ce qui ressemble à sa vie'},
     {k:'vecu',l:'C\'est quelque chose que j\'ai vécu',both:'ce qu\'on a vécu'},
-    {k:'partager',l:'J\'aimerais partager ça avec quelqu\'un',both:'ce qu\'on aimerait partager'}];
+    {k:'partager',l:'J\'aimerais partager ça avec quelqu\'un',both:'ce qu\'on aimerait partager'},
+    {k:'adore',l:'J\'adore ça',both:'ce qu\'on adore'}];
   /* ressentis dominants : ceux qu'une personne a mis sous au moins 5 de ses passions. Seuls eux comptent dans les résonances. */
   const FEEL_MIN=5;
   function dominantFeels(entries){const n={};(entries||[]).forEach(e=>(e.feel||[]).forEach(k=>{n[k]=(n[k]||0)+1;}));return Object.keys(n).filter(k=>n[k]>=FEEL_MIN);}
   const FEEL=Object.fromEntries(FEELS.map(f=>[f.k,f]));
   /* envies du moment (disponibilité) */
   const WANTS=[
-    {k:'parler',l:'Envie de parler maintenant'},
-    {k:'rire',l:'Envie de rire'},
-    {k:'decouvrir',l:'Envie de découvrir quelqu\'un'},
-    {k:'proposer',l:'Envie de proposer un truc'},
-    {k:'soiree',l:'Envie d\'organiser une soirée'},
-    {k:'ecoute',l:'Envie d\'être écouté'}];
+    /* s = libellé court (choix), l = affiché sur les fiches */
+    {k:'parler',s:'Parler',l:'Envie de parler'},
+    {k:'texter',s:'Texter',l:'Envie de texter'},
+    {k:'rire',s:'Rire',l:'Envie de rire'},
+    {k:'ecoute',s:'Écouter et être écouté',l:'Envie d\'écouter et d\'être écouté'},
+    {k:'decouvrir',s:'Découvrir quelqu\'un',l:'Envie de découvrir quelqu\'un'},
+    {k:'proposer',s:'Proposer une activité',l:'Envie de proposer une activité'},
+    {k:'soiree',s:'Organiser une soirée',l:'Envie d\'organiser une soirée'},
+    {k:'film',s:'Regarder un film ensemble',l:'Envie de regarder un film ensemble',hint:'à distance, avec un outil de partage comme Teleparty'}];
   const WANT=Object.fromEntries(WANTS.map(w=>[w.k,w]));
   /* pseudo composé : début du prénom + un mot d'une famille */
   const FAMILIES={
@@ -127,8 +131,8 @@ window.App=(function(){
   function resonance(mine,theirs){const common=[],echo=[],feels=[];const used=new Set();
     theirs.forEach(t=>{const m=mine.find(x=>sameWork(x,t));if(m){common.push({mine:m,theirs:t});used.add(t.id);used.add(m.id);return;}
       const tw=words(t.title);const near=mine.find(x=>words(x.title).some(w=>tw.includes(w)));if(near){echo.push({mine:near,theirs:t});}});
-    const domM=new Set(dominantFeels(mine)),domT=new Set(dominantFeels(theirs));
-    FEELS.filter(f=>domM.has(f.k)&&domT.has(f.k)).forEach(f=>{const m=mine.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));const t=theirs.find(x=>(x.feel||[]).includes(f.k)&&!used.has(x.id));if(m&&t)feels.push({feel:f,mine:m,theirs:t});});
+    /* ressentis communs (ça me passionne, ça m'hallucine…) : plus montrés comme points communs, trop banals (décision de Marc).
+       Seuls les ressentis dominants comptent encore, discrètement, dans le pourcentage. */
     return {common,echo,feels,score:common.length*3+feels.length*2+echo.length};}
 
   /* ---------- éléments d'affichage ---------- */
@@ -147,9 +151,11 @@ window.App=(function(){
       d.classList.toggle('open');});
     d.addEventListener('keydown',k=>{if(k.target.tagName==='TEXTAREA')return;if(k.key==='Enter'||k.key===' '){k.preventDefault();d.classList.toggle('open');}});return d;}
   function avatarHtml(p,cls=''){return `<div class="avatar ${p.av||''} ${cls}" aria-hidden="true">${p.photo?`<img src="${p.photo}" alt="">`:''}</div>`;}
+  /* lieu affiché : le pays seulement tant que la conversation n'est pas ouverte */
+  function place(p){if(!p)return '';if(p.limited&&!p.travel){try{return p.country?new Intl.DisplayNames([I18N.lang],{type:'region'}).of(p.country):'';}catch(e){return p.country||'';}}return p.city||'';}
   function personEl(p,r,sub){const d=document.createElement('div');d.className='person';
     const wants=isAvail(p)?`<div class="wants">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').filter(Boolean).join(' · ')}</div>`:'';
-    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(p.city)}${p.travel?' · en voyage':''} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?(r.pct!=null?`<div class="r"><b>${r.pct}%</b><span>similitude</span></div>`:'pct' in r&&!r.n?`<div class="r"><b>—</b><span>nouveau</span></div>`:`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`):'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
+    d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(place(p))}${p.travel?' · en voyage':''} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?(r.pct!=null?`<div class="r"><b>${r.pct}%</b><span>similitude</span></div>`:'pct' in r&&!r.n?`<div class="r"><b>—</b><span>nouveau</span></div>`:`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`):'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
     return d;}
 
   /* ---------- catalogue (Wikipédia, gratuit, sans inscription) ---------- */
@@ -335,7 +341,7 @@ window.App=(function(){
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
     shell,closeMenu,refreshMsgCount,tribeOf,inTribe,tribeAdd,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
-    catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,firstLeft,tickThreads,sendTo,sendResultText,
+    catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();
 window.Pages={};

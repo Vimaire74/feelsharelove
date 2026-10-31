@@ -108,12 +108,20 @@ async function hiddenFor(me) {
   /* cercle intime : les personnes qui m'ont mis dans leur tribu et que j'ai mises dans la mienne */
   const iChose = new Set(lists.filter(l => l.type === 'tribe' && l.owner === me).map(l => l.target));
   const intimate = new Set(lists.filter(l => l.type === 'tribe' && l.target === me && iChose.has(l.owner)).map(l => l.owner));
-  return { hidden, byId, intimate };
+  /* portrait complet : seulement avec les personnes avec qui la conversation est ouverte (ou le cercle intime) */
+  const opened = new Set((await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).filter(t => t.state === 'open').map(t => t.a === me ? t.b : t.a));
+  intimate.forEach(id => opened.add(id));
+  return { hidden, byId, intimate, opened };
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
-function publicProfile(p, intimate) {
+function publicProfile(p, intimate, opened) {
   const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, ...rest } = p;
   rest.intimate = !!(intimate && intimate.has(p.id));
+  /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
+  rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
+  /* avant que la conversation soit ouverte : pas de « Qui il est » (âge, langues, métier…) */
+  if (opened && !opened.has(p.id)) { rest.limited = true; delete rest.now;
+    const f = {}; if (rest.facts) { if (rest.facts.sign) f.sign = rest.facts.sign; if (rest.facts.langs) f.langs = rest.facts.langs; } rest.facts = f; } // signe et langues seulement
   if (rest.intimate && photoReal && p.photoIntimate === true) rest.photo = photoReal; // vraie photo seulement pour le cercle intime // l'accord (masculin, féminin, neutre) reste visible : il sert à écrire « il » ou « elle »
   if (rest.facts) { const f = {}; for (const [k, v] of Object.entries(rest.facts)) if (v && v.show !== false) f[k] = v;
     if (f.birth && f.birth.v && !f.birth.year) f.birth = { ...f.birth, v: '2000' + String(f.birth.v).slice(4) }; // année cachée : elle ne quitte pas le serveur
@@ -189,12 +197,13 @@ async function readList(store, me, query) {
   for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v);
   if (store === 'circles') { const profs = await listDocs('profiles'); rows = rows.map(c => ({ ...c, members: profs.filter(p => (p.circles || []).includes(c.id)).length })); }
   if (['profiles', 'entries', 'questions', 'circlePosts', 'voices'].includes(store)) {
-    const { hidden, intimate } = await hiddenFor(me);
+    const { hidden, intimate, opened } = await hiddenFor(me);
     const ownerOf = r => store === 'profiles' ? r.id : store === 'circlePosts' ? r.author : r.profileId || r.owner;
     rows = rows.filter(r => !hidden.has(ownerOf(r)));
     if (store === 'profiles') rows = rows.filter(p => p.id === me || p.pseudo);
-    if (store === 'voices') rows = rows.filter(v => v.owner === me || v.kind === 'presentation');
-    if (store === 'profiles') rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate));
+    if (store === 'voices') rows = rows.filter(v => v.owner === me || (v.kind === 'presentation' && opened.has(v.owner)));
+    if (store === 'questions') rows = rows.filter(r => r.profileId === me || opened.has(r.profileId));
+    if (store === 'profiles') rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened));
   }
   return rows;
 }
@@ -205,7 +214,9 @@ async function readOne(store, me, id) {
   if (store === 'messages') return d.from === me || d.to === me ? msgView(d, me) : null;
   if (PRIVATE.has(store)) return d.owner === me ? d : null;
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
-  if (store === 'profiles' && d.id !== me) { const { hidden, intimate } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate); }
+  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened); }
+  if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
+  if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
   return d;
 }
 async function writeOne(store, me, id, body) {
