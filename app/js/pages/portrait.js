@@ -34,7 +34,7 @@ Pages.portrait=async function(S){
 
   <h2>Ce qui me <em>représente</em></h2><div class="sec" id="rep-box"></div>
   <h2>Si j'étais <em>un personnage</em></h2><div class="sec" id="pc-box"></div>
-  <h2>Ce dans quoi je <em>m'investis</em></h2><div class="sec" id="inv-box"></div>
+  <h2>Là où je mets <em>mon cœur</em></h2><div class="sec" id="inv-box"></div>
 
   <h2>Ce qui me fait <em>vibrer</em></h2>
   <p class="muted small" style="margin-bottom:10px">Pour chaque chose : le titre, ce que ça te fait, et pourquoi. C'est de là que partent les résonances.</p>

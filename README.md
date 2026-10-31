@@ -1,19 +1,15 @@
-# FeelShareLove — lot 10
+# FeelShareLove — lot 11
 
-Version 1.5.2 (31/10/2026)
-- Résonances : les ressentis communs (ça me passionne, ça m'hallucine…) ne sont plus montrés comme points communs
-- Plus de pastilles roses « même ressenti » ni de rubrique « Vous cherchez la même chose »
-- Les ressentis dominants (sous au moins 5 passions) comptent encore dans le pourcentage, sans être affichés
-- Ressentis : nouvelle étiquette « J'adore ça »
-- Envies du moment : une seule liste partout (Parler, Texter, Rire, Écouter et être écouté, Découvrir quelqu'un, Proposer une activité, Organiser une soirée, Regarder un film ensemble)
-- Nouvelles envies : Texter, Regarder un film ensemble (à distance, avec un outil comme Teleparty)
-- Présent : les pastilles d'envies du bas sont retirées
-- Présent : les personnes qui partagent une de mes envies passent en premier (pastille « Même envie »), puis les autres par ordre de résonance
-- Présent : trois personnes affichées, puis un bouton « Montre-moi les autres »
-- Résonances : plus de critères liés aux envies du moment ni à la disponibilité ; la page reste la même quelles que soient les envies
-- Portrait d'une personne, tant que la conversation n'est pas ouverte : pseudo, photo, pays, signe astrologique, langues, passions, type de fonctionnement, ce qui la représente
-- Caché jusqu'à l'ouverture de la conversation : en ce moment, le reste de « qui il est », voix, personnages, investissements, questions ouvertes (le serveur n'envoie ni « en ce moment », ni la voix, ni les questions)
-- Le cercle intime voit tout le portrait
-- Lieu : le pays seulement (pas la ville) tant que la conversation n'est pas ouverte
-- Version internet (écran de plus de 520 px) : plus de cadre de téléphone, toute la hauteur de l'écran, largeur maximale 760 px
-- Version téléphone (et future application) : inchangée, plein écran
+Version 1.5.4 (31/10/2026)
+- Portrait chinois : « En quoi je lui ressemble » passe à la ligne et s'agrandit en écrivant
+- Création du compte : nouvelle dernière étape « Être prévenu quand quelqu'un t'écrit » (Activer les notifications / Plus tard)
+- Sur iPhone : explication en 3 étapes pour installer l'app sur l'écran d'accueil
+- L'étape des notifications ne s'affiche pas si elles sont déjà actives ou bloquées
+- La rubrique « Ce dans quoi je m'investis » devient « Là où je mets mon cœur »
+- 14 nouveaux domaines : Danse, Plein air et aventure, Bien-être, Astrologie et ésotérisme, Lecture et écriture, Sorties et spectacles, Fête et nuit, Numérique, Animaux, Ciel et étoiles, Maison et déco, Mode et création, Mécanique, Collections
+- Nouvelles précisions dans Sport, Famille, Jeux de société, Cuisine et Bénévolat
+- Jeux vidéo : 30 précisions (genres actuels et plateformes)
+- Danse et Animaux deviennent des domaines à part : les anciens choix sont convertis automatiquement
+- Résonance : nouveau calcul par addition de points, plafonné à 100 %
+- Points : type identique 15, sensible avec émotif 10, œuvre 8, personnage 8, ce qui me représente 6, précision du cœur 5, univers 4, domaine du cœur 2, intention 2
+- Les ressentis ne comptent plus dans le score

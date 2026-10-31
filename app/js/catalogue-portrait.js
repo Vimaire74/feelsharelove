@@ -1,5 +1,5 @@
 /* FeelShareLove — catalogue du portrait : « Si j'étais un personnage » (liste fermée, choisie à la main)
-   et « Ce dans quoi je m'investis ». Pour ajouter un nom : l'ajouter ici, dans son groupe. */
+   et « Là où je mets mon cœur ». Pour ajouter un nom : l'ajouter ici, dans son groupe. */
 window.CATALOGUE=(function(){
   const H=[
     {g:'sciences',l:'Sciences et découvertes',n:['Marie Curie','Albert Einstein','Isaac Newton','Galilée','Charles Darwin','Louis Pasteur','Nikola Tesla','Ada Lovelace','Alan Turing','Hypatie d\'Alexandrie','Nicolas Copernic','Johannes Kepler','Archimède','Gregor Mendel','Stephen Hawking','Rosalind Franklin','Jane Goodall','Carl Sagan','Hubert Reeves','Théodore Monod']},
@@ -128,28 +128,45 @@ window.CATALOGUE=(function(){
   F.forEach(gr=>gr.w.forEach(([w,cs])=>cs.forEach(n=>ALL.push({id:'f:'+slug(w)+':'+slug(n),n,src:'f',g:gr.l,w,wid:'f:'+slug(w)}))));
   const BYID=Object.fromEntries(ALL.map(x=>[x.id,x]));
   const INVEST=[
-    {k:'sport',l:'Sport',sub:['Course à pied','Randonnée et montagne','Vélo','Natation','Ski et snowboard','Escalade','Yoga','Arts martiaux','Danse','Fitness et musculation','Football','Tennis','Sports d\'équipe','Sports nautiques','Équitation','Golf']},
-    {k:'famille',l:'Famille',sub:['Mes enfants','Mes parents','Mes petits-enfants','Mes frères et sœurs']},
+    {k:'sport',l:'Sport',sub:['Course à pied','Marche nordique','Randonnée et montagne','Vélo','Natation','Ski et snowboard','Escalade','Yoga','Pilates','Arts martiaux','Boxe','Fitness et musculation','Football','Tennis','Padel','Badminton','Sports d\'équipe','Sports nautiques','Surf et kitesurf','Roller','Équitation','Golf','Pétanque']},
+    {k:'danse',l:'Danse',sub:['Salsa','Bachata','Tango','Rock','Swing','Contemporaine','Classique','Hip-hop','Danse en ligne']},
+    {k:'pleinair',l:'Plein air et aventure',sub:['Camping et bivouac','Road trip','Voile','Plongée','Parapente','Canoë et kayak','Survie et bushcraft']},
+    {k:'bienetre',l:'Bien-être',sub:['Massages','Sauna et bains','Respiration','Soins du corps']},
+    {k:'famille',l:'Famille',sub:['Mes enfants','Mes parents','Mes petits-enfants','Mes frères et sœurs','Parentalité','Grands-parents','Famille recomposée']},
     {k:'amour',l:'Amour et couple'},
     {k:'amitie',l:'Amitié'},
     {k:'conscience',l:'Conscience et éveil',sub:['Méditation','Éveil','Spiritualité','Religion','Soins énergétiques']},
+    {k:'esoterisme',l:'Astrologie et ésotérisme',sub:['Astrologie','Tarot','Numérologie','Rêves']},
     {k:'devperso',l:'Développement personnel',sub:['Psychologie','Coaching','Lecture']},
     {k:'arts',l:'Arts',sub:['Peinture','Sculpture','Dessin','Photo','Céramique','Écriture et poésie','Théâtre']},
+    {k:'lecture',l:'Lecture et écriture',sub:['Romans','Poésie','BD et mangas','Journal intime','Clubs de lecture']},
     {k:'musique',l:'Musique',sub:['Jouer d\'un instrument','Chanter','Composer','Concerts']},
     {k:'image',l:'Image',sub:['Montage','Cinéma','Séries']},
-    {k:'jeux',l:'Jeux de société',sub:['Stratégie','Coopératifs','Ambiance','Jeux de rôle','Échecs','Cartes']},
-    {k:'jv',l:'Jeux vidéo'},
-    {k:'nature',l:'Nature',sub:['Jardinage','Animaux','Écologie']},
-    {k:'cuisine',l:'Cuisine et gastronomie',sub:['Cuisiner','Pâtisserie','Vin','Restaurants']},
+    {k:'sorties',l:'Sorties et spectacles',sub:['Concerts','Théâtre','Festivals','Expositions','Cinéma','Stand-up']},
+    {k:'fete',l:'Fête et nuit',sub:['Clubbing','Karaoké','Bars','Soirées dansantes']},
+    {k:'jeux',l:'Jeux de société',sub:['Stratégie','Coopératifs','Ambiance','Jeux de rôle','Échecs','Cartes','Poker','Puzzles','Mots croisés','Quiz']},
+    {k:'jv',l:'Jeux vidéo',sub:['Aventure et action','RPG','FPS (jeux de tir)','Battle royale','Extraction shooter','MOBA','Stratégie','Simulation et gestion','Sandbox et construction (Minecraft, Sims)','Survie et crafting','Sport et course','Combat','Soulslike','Roguelike','Jeux narratifs','Horreur','Cosy games','Jeux indépendants','MMO','Gacha (Genshin…)','Jeux en coopération','Jeux mobiles','Rétrogaming','Réalité virtuelle','Esport','Streaming (Twitch)','PC','PlayStation','Xbox','Nintendo Switch']},
+    {k:'numerique',l:'Numérique',sub:['Programmation','Intelligence artificielle','Impression 3D','Photo numérique']},
+    {k:'nature',l:'Nature',sub:['Jardinage','Écologie']},
+    {k:'animaux',l:'Animaux',sub:['Chiens','Chats','Chevaux','Oiseaux','NAC (nouveaux animaux de compagnie)']},
+    {k:'ciel',l:'Ciel et étoiles',sub:['Astronomie','Observation du ciel']},
+    {k:'cuisine',l:'Cuisine et gastronomie',sub:['Cuisiner','Pâtisserie','Cuisine du monde','Végétarien ou végane','Barbecue','Fermentation','Vin','Restaurants']},
     {k:'voyages',l:'Voyages'},
-    {k:'benevolat',l:'Bénévolat et causes'},
+    {k:'maison',l:'Maison et déco',sub:['Décoration','Plantes d\'intérieur','Brocante et chine','Rénovation']},
+    {k:'mode',l:'Mode et création',sub:['Vintage','Création de bijoux','Maquillage','Upcycling']},
+    {k:'mains',l:'Couture et bricolage',sub:['Couture','Tricot','Bricolage','Menuiserie']},
+    {k:'mecanique',l:'Mécanique',sub:['Voitures','Motos','Vélos anciens']},
+    {k:'collections',l:'Collections',sub:['Vinyles','Livres anciens','Objets vintage','Timbres et pièces']},
+    {k:'benevolat',l:'Bénévolat et causes',sub:['Personnes âgées','Animaux','Réfugiés','Environnement','Aide aux enfants']},
     {k:'sciences',l:'Sciences et technologie'},
     {k:'histoire',l:'Histoire'},
     {k:'langues',l:'Langues'},
-    {k:'mains',l:'Couture et bricolage',sub:['Couture','Tricot','Bricolage','Menuiserie']},
     {k:'travail',l:'Travail et entreprise'}];
   INVEST.forEach(c=>{c.subs=(c.sub||[]).map(l=>({k:c.k+':'+slug(l),l}));});
   const INV=Object.fromEntries(INVEST.flatMap(c=>[[c.k,{l:c.l}],...c.subs.map(s=>[s.k,{l:s.l,cat:c.k}])]));
+  /* clés déplacées dans un autre domaine : les anciens portraits sont convertis à la lecture */
+  const INV_OLD={'sport:danse':'danse','nature:animaux':'animaux'};
+  const fixInv=keys=>[...new Set((keys||[]).map(k=>INV_OLD[k]||k))];
   /* ce qui me représente : [clé, masculin, féminin] */
   const REP=[['artiste','Artiste','Artiste'],['intellectuel','Intellectuel','Intellectuelle'],['creatif','Créatif','Créative'],['sportif','Sportif','Sportive'],
     ['organisateur','Organisateur','Organisatrice'],['reveur','Rêveur','Rêveuse'],['artisan','Artisan','Artisane'],['chercheur','Chercheur','Chercheuse'],
@@ -161,5 +178,5 @@ window.CATALOGUE=(function(){
     ['engage','Engagé','Engagée'],['militant','Militant','Militante'],['bricoleur','Bricoleur','Bricoleuse'],['collectionneur','Collectionneur','Collectionneuse'],
     ['pilier','Pilier de la famille','Pilier de la famille']];
   const REPK=Object.fromEntries(REP.map(r=>[r[0],r]));
-  return {H,F,ALL,BYID,INVEST,INV,REP,REPK,slug};
+  return {H,F,ALL,BYID,INVEST,INV,INV_OLD,fixInv,REP,REPK,slug};
 })();

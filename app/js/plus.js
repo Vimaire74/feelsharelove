@@ -1,4 +1,4 @@
-/* FeelShareLove — icônes du menu (peinture de points), portrait chinois, « ce dans quoi je m'investis » et leurs résonances */
+/* FeelShareLove — icônes du menu (peinture de points), portrait chinois, « là où je mets mon cœur » et leurs résonances */
 window.Plus=(function(){
   const ICONS={"now": "<svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><g fill=\"currentColor\"><path d=\"M8 4 14.5 7.2v24L8 30z\"></path><circle cx=\"8\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"10.33\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"12.67\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"15\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"17.33\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"19.67\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"22\" cy=\"3.2\" r=\"1\"></circle><circle cx=\"22\" cy=\"5.5\" r=\"1\"></circle><circle cx=\"22\" cy=\"8.56\" r=\"1\"></circle><circle cx=\"22\" cy=\"11.62\" r=\"1\"></circle><circle cx=\"22\" cy=\"14.69\" r=\"1\"></circle><circle cx=\"22\" cy=\"17.75\" r=\"1\"></circle><circle cx=\"22\" cy=\"20.81\" r=\"1\"></circle><circle cx=\"22\" cy=\"23.88\" r=\"1\"></circle><circle cx=\"22\" cy=\"26.94\" r=\"1\"></circle><circle cx=\"22\" cy=\"30\" r=\"1\"></circle><circle cx=\"18\" cy=\"12\" r=\"1.1\"></circle><circle cx=\"25.5\" cy=\"10\" r=\"1\"></circle><circle cx=\"29\" cy=\"8.4\" r=\"0.9\"></circle><circle cx=\"18.5\" cy=\"18\" r=\"1.1\"></circle><circle cx=\"25.5\" cy=\"18\" r=\"1\"></circle><circle cx=\"29.5\" cy=\"18\" r=\"0.9\"></circle><circle cx=\"18\" cy=\"24\" r=\"1.1\"></circle><circle cx=\"25.5\" cy=\"26\" r=\"1\"></circle><circle cx=\"29\" cy=\"27.6\" r=\"0.9\"></circle><circle cx=\"3\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"6.25\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"9.5\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"12.75\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"16\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"19.25\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"22.5\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"25.75\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"29\" cy=\"31\" r=\"0.8\"></circle></g><circle cx=\"12.4\" cy=\"19\" r=\"1\" style=\"fill:var(--cut)\"></circle></svg>", "res": "<svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><g fill=\"currentColor\"><circle cx=\"16\" cy=\"16\" r=\"3\"></circle><circle cx=\"22.5\" cy=\"16\" r=\"1.15\"></circle><circle cx=\"21.26\" cy=\"19.82\" r=\"1.15\"></circle><circle cx=\"18.01\" cy=\"22.18\" r=\"1.15\"></circle><circle cx=\"13.99\" cy=\"22.18\" r=\"1.15\"></circle><circle cx=\"10.74\" cy=\"19.82\" r=\"1.15\"></circle><circle cx=\"9.5\" cy=\"16\" r=\"1.15\"></circle><circle cx=\"10.74\" cy=\"12.18\" r=\"1.15\"></circle><circle cx=\"13.99\" cy=\"9.82\" r=\"1.15\"></circle><circle cx=\"18.01\" cy=\"9.82\" r=\"1.15\"></circle><circle cx=\"21.26\" cy=\"12.18\" r=\"1.15\"></circle><circle cx=\"26.29\" cy=\"18.09\" r=\"1.05\"></circle><circle cx=\"24.71\" cy=\"21.87\" r=\"1.05\"></circle><circle cx=\"21.8\" cy=\"24.75\" r=\"1.05\"></circle><circle cx=\"18.01\" cy=\"26.31\" r=\"1.05\"></circle><circle cx=\"13.91\" cy=\"26.29\" r=\"1.05\"></circle><circle cx=\"10.13\" cy=\"24.71\" r=\"1.05\"></circle><circle cx=\"7.25\" cy=\"21.8\" r=\"1.05\"></circle><circle cx=\"5.69\" cy=\"18.01\" r=\"1.05\"></circle><circle cx=\"5.71\" cy=\"13.91\" r=\"1.05\"></circle><circle cx=\"7.29\" cy=\"10.13\" r=\"1.05\"></circle><circle cx=\"10.2\" cy=\"7.25\" r=\"1.05\"></circle><circle cx=\"13.99\" cy=\"5.69\" r=\"1.05\"></circle><circle cx=\"18.09\" cy=\"5.71\" r=\"1.05\"></circle><circle cx=\"21.87\" cy=\"7.29\" r=\"1.05\"></circle><circle cx=\"24.75\" cy=\"10.2\" r=\"1.05\"></circle><circle cx=\"26.31\" cy=\"13.99\" r=\"1.05\"></circle><circle cx=\"30.2\" cy=\"16\" r=\"0.85\"></circle><circle cx=\"29.62\" cy=\"20\" r=\"0.85\"></circle><circle cx=\"27.95\" cy=\"23.68\" r=\"0.85\"></circle><circle cx=\"25.3\" cy=\"26.73\" r=\"0.85\"></circle><circle cx=\"21.9\" cy=\"28.92\" r=\"0.85\"></circle><circle cx=\"18.02\" cy=\"30.06\" r=\"0.85\"></circle><circle cx=\"13.98\" cy=\"30.06\" r=\"0.85\"></circle><circle cx=\"10.1\" cy=\"28.92\" r=\"0.85\"></circle><circle cx=\"6.7\" cy=\"26.73\" r=\"0.85\"></circle><circle cx=\"4.05\" cy=\"23.68\" r=\"0.85\"></circle><circle cx=\"2.38\" cy=\"20\" r=\"0.85\"></circle><circle cx=\"1.8\" cy=\"16\" r=\"0.85\"></circle><circle cx=\"2.38\" cy=\"12\" r=\"0.85\"></circle><circle cx=\"4.05\" cy=\"8.32\" r=\"0.85\"></circle><circle cx=\"6.7\" cy=\"5.27\" r=\"0.85\"></circle><circle cx=\"10.1\" cy=\"3.08\" r=\"0.85\"></circle><circle cx=\"13.98\" cy=\"1.94\" r=\"0.85\"></circle><circle cx=\"18.02\" cy=\"1.94\" r=\"0.85\"></circle><circle cx=\"21.9\" cy=\"3.08\" r=\"0.85\"></circle><circle cx=\"25.3\" cy=\"5.27\" r=\"0.85\"></circle><circle cx=\"27.95\" cy=\"8.32\" r=\"0.85\"></circle><circle cx=\"29.62\" cy=\"12\" r=\"0.85\"></circle></g></svg>", "msg": "<svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><g fill=\"currentColor\"><rect x=\"7.9\" y=\"20\" width=\"11\" height=\"3.74\" rx=\"1.87\"></rect><circle cx=\"11.2\" cy=\"20.66\" r=\"2.42\"></circle><circle cx=\"14.17\" cy=\"19.56\" r=\"3.08\"></circle><circle cx=\"16.59\" cy=\"21.1\" r=\"1.87\"></circle><rect x=\"14.9\" y=\"13\" width=\"9\" height=\"3.06\" rx=\"1.53\"></rect><circle cx=\"17.6\" cy=\"13.54\" r=\"1.98\"></circle><circle cx=\"20.03\" cy=\"12.64\" r=\"2.52\"></circle><circle cx=\"22.01\" cy=\"13.9\" r=\"1.53\"></circle><rect x=\"9.1\" y=\"5.2\" width=\"7\" height=\"2.38\" rx=\"1.19\"></rect><circle cx=\"11.2\" cy=\"5.62\" r=\"1.54\"></circle><circle cx=\"13.09\" cy=\"4.92\" r=\"1.96\"></circle><circle cx=\"14.63\" cy=\"5.9\" r=\"1.19\"></circle><circle cx=\"15.2\" cy=\"19.4\" r=\"0.8\"></circle><circle cx=\"17.4\" cy=\"17.6\" r=\"0.7\"></circle><circle cx=\"15.6\" cy=\"11.2\" r=\"0.75\"></circle><circle cx=\"13.8\" cy=\"9.6\" r=\"0.65\"></circle><circle cx=\"10.5\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"13\" cy=\"31.2\" r=\"0.8\"></circle><circle cx=\"19\" cy=\"31.2\" r=\"0.8\"></circle><circle cx=\"21.5\" cy=\"31\" r=\"0.8\"></circle><circle cx=\"9.4\" cy=\"27.6\" r=\"0.7\"></circle><circle cx=\"22.6\" cy=\"27.6\" r=\"0.7\"></circle><path d=\"M16 30.4c-2.2-1.4-2.6-3.6-.2-6.4 2.5 2.6 2.4 5 .2 6.4z\"></path></g><path d=\"M16 29.2c-.8-.6-.9-1.5 0-2.6.9 1 .9 1.9 0 2.6z\" style=\"fill:var(--cut)\"></path></svg>", "tribu": "<svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><g fill=\"currentColor\"><circle cx=\"16\" cy=\"16\" r=\"2.4\"></circle><circle cx=\"21.2\" cy=\"16\" r=\"0.9\"></circle><circle cx=\"20.21\" cy=\"19.06\" r=\"0.9\"></circle><circle cx=\"17.61\" cy=\"20.95\" r=\"0.9\"></circle><circle cx=\"14.39\" cy=\"20.95\" r=\"0.9\"></circle><circle cx=\"11.79\" cy=\"19.06\" r=\"0.9\"></circle><circle cx=\"10.8\" cy=\"16\" r=\"0.9\"></circle><circle cx=\"11.79\" cy=\"12.94\" r=\"0.9\"></circle><circle cx=\"14.39\" cy=\"11.05\" r=\"0.9\"></circle><circle cx=\"17.61\" cy=\"11.05\" r=\"0.9\"></circle><circle cx=\"20.21\" cy=\"12.94\" r=\"0.9\"></circle><circle cx=\"26\" cy=\"10.22\" r=\"0.9\"></circle><circle cx=\"16\" cy=\"27.55\" r=\"0.9\"></circle><circle cx=\"6\" cy=\"10.23\" r=\"0.9\"></circle></g><path transform=\"rotate(0 16 5)\" d=\"M13 2.4v1.6a3 3 0 0 0 6 0v-1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"></path><path transform=\"rotate(120 25.53 21.5)\" d=\"M22.53 18.9v1.6a3 3 0 0 0 6 0v-1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"></path><path transform=\"rotate(240 6.47 21.5)\" d=\"M3.47 18.9v1.6a3 3 0 0 0 6 0v-1.6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"></path></svg>", "port": "<svg viewBox=\"0 0 32 32\" aria-hidden=\"true\"><g fill=\"currentColor\"><path d=\"M10.4 31.5C11 24 11.4 17 11.8 10.2l4.8.2c.1 7.2 1.6 14.3 4 21.1z\"></path><path d=\"M10.8 9.6c0-3 3-4.6 7.2-4.1 4 .5 7.7 1.9 7.7 4 0 2-3.5 2.5-6.6 2.1-3-.3-5.4.9-7.2-.1z\"></path><path d=\"M11.4 7.6 8 6.1l2.9 3.2z\"></path><circle cx=\"13.3\" cy=\"2.3\" r=\"1.2\"></circle><circle cx=\"16.9\" cy=\"2\" r=\"1.2\"></circle><circle cx=\"9.2\" cy=\"12\" r=\"0.75\"></circle><circle cx=\"9.1\" cy=\"14.83\" r=\"0.75\"></circle><circle cx=\"9\" cy=\"17.67\" r=\"0.75\"></circle><circle cx=\"8.9\" cy=\"20.5\" r=\"0.75\"></circle><circle cx=\"8.8\" cy=\"23.33\" r=\"0.75\"></circle><circle cx=\"8.7\" cy=\"26.17\" r=\"0.75\"></circle><circle cx=\"8.6\" cy=\"29\" r=\"0.75\"></circle><circle cx=\"23\" cy=\"4.3\" r=\"0.7\"></circle><circle cx=\"26.8\" cy=\"6.5\" r=\"0.7\"></circle><circle cx=\"27.6\" cy=\"11.6\" r=\"0.7\"></circle></g><path d=\"M14.1 6.2 13.3 2.6M16.5 5.6l.4-3.4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"></path><g style=\"fill:var(--cut)\"><circle cx=\"17.6\" cy=\"7.9\" r=\"0.9\"></circle><circle cx=\"13.2\" cy=\"13\" r=\"0.75\"></circle><circle cx=\"15\" cy=\"13.8\" r=\"0.75\"></circle><circle cx=\"13.6\" cy=\"17.5\" r=\"0.75\"></circle><circle cx=\"15.6\" cy=\"18.4\" r=\"0.75\"></circle><circle cx=\"13.8\" cy=\"22.2\" r=\"0.75\"></circle><circle cx=\"16\" cy=\"23\" r=\"0.75\"></circle><circle cx=\"14.2\" cy=\"26.8\" r=\"0.75\"></circle><circle cx=\"16.6\" cy=\"27.8\" r=\"0.75\"></circle><circle cx=\"18.4\" cy=\"29.8\" r=\"0.75\"></circle></g></svg>"};
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -16,10 +16,10 @@ window.Plus=(function(){
     pc.forEach(x=>{const same=mc.find(y=>y.id===x.id);
       if(same){out.push({k:'pc',kw:x.n,l:'Vous vous voyez tous les deux en '+x.n,mine:same,theirs:x});seenW.add(x.wid||x.id);return;}
       if(x.wid&&!seenW.has(x.wid)){const w=mc.find(y=>y.wid===x.wid);if(w){out.push({k:'pcw',kw:x.w,l:'Le même univers : '+x.w,mine:w,theirs:x});seenW.add(x.wid);}}});
-    const mi=new Set(me.invest||[]),pi=p.investShow===false?[]:(p.invest||[]);
+    const mi=new Set(C.fixInv(me.invest)),pi=p.investShow===false?[]:C.fixInv(p.invest);
     const subs=pi.filter(k=>k.includes(':')&&mi.has(k));const cats=new Set(subs.map(k=>k.split(':')[0]));
-    subs.forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
-    pi.filter(k=>!k.includes(':')&&mi.has(k)&&!cats.has(k)).forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous vous investissez tous les deux : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
+    subs.forEach(k=>out.push({k:'inv',sub:true,kw:C.INV[k]?C.INV[k].l:k,l:'Vous y mettez tous les deux votre cœur : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
+    pi.filter(k=>!k.includes(':')&&mi.has(k)&&!cats.has(k)).forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous y mettez tous les deux votre cœur : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
     return out;}
 
   /* ---------- affichage sur un portrait ---------- */
@@ -31,9 +31,9 @@ window.Plus=(function(){
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
     const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
     if(pc.length){h+=`<h2>Si ${preview?'j\'étais':'c\'était'} <em>un personnage</em></h2><div class="pc-show">${pc.map(x=>`<div class="pc-item${hitPc.has(x.id)?' hit':hitW.has(x.wid)?' near':''}"><div class="pc-n">${esc(x.n)}${x.w?` <small>${esc(x.w)}</small>`:''}</div>${x.why?`<div class="pc-why">${esc(x.why)}</div>`:''}${hitPc.has(x.id)?'<div class="tag">En commun avec toi</div>':hitW.has(x.wid)?'<div class="tag">Le même univers que toi</div>':''}</div>`).join('')}</div>`;}
-    const inv=(preview||p.investShow!==false)?(p.invest||[]):[];
-    if(inv.length){const mi=new Set(me&&!preview?me.invest||[]:[]);const g=investGroups(inv);
-      h+=`<h2>Ce dans quoi ${preview?'je <em>m\'investis</em>':(App.fem(p)?'elle':'il')+' <em>s\'investit</em>'}</h2><div class="inv-show">${Object.entries(g).map(([c,subs])=>{const cat=C.INV[c];if(!cat)return'';
+    const inv=(preview||p.investShow!==false)?C.fixInv(p.invest):[];
+    if(inv.length){const mi=new Set(me&&!preview?C.fixInv(me.invest):[]);const g=investGroups(inv);
+      h+=`<h2>Là où ${preview?'je mets <em>mon cœur</em>':(App.fem(p)?'elle':'il')+' met <em>son cœur</em>'}</h2><div class="inv-show">${Object.entries(g).map(([c,subs])=>{const cat=C.INV[c];if(!cat)return'';
         const hit=mi.has(c)||subs.some(k=>mi.has(k));
         return `<span class="chip on ro${hit?' hit':''}">${esc(cat.l)}${subs.length?' · '+subs.map(k=>`<b class="${mi.has(k)?'hit':''}">${esc(C.INV[k]?C.INV[k].l.toLowerCase():'')}</b>`).join(', '):''}</span>`;}).join('')}</div>`;}
     return h;}
@@ -41,7 +41,7 @@ window.Plus=(function(){
   /* ---------- édition dans « Mon portrait » ---------- */
   function editors(me,save){
     const $=id=>document.getElementById(id);
-    me.chinois=me.chinois||[];me.invest=me.invest||[];me.rep=me.rep||[];
+    me.chinois=me.chinois||[];me.invest=C.fixInv(me.invest);me.rep=me.rep||[];
     /* ce qui me représente : 1 à 3 choix */
     const RB=$('rep-box');
     function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à six mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
@@ -59,8 +59,9 @@ window.Plus=(function(){
         ${me.chinois.length?`<label class="check" style="margin-top:10px"><input type="checkbox" id="pc-show" ${me.chinoisShow!==false?'checked':''}> Afficher sur mon portrait</label>`:''}`;
       const L=$('pc-list');
       me.chinois.forEach((x,i)=>{const d=document.createElement('div');d.className='pc-item edit';
-        d.innerHTML=`<div class="pc-n">${esc(x.n)}${x.w?` <small>${esc(x.w)}</small>`:''}</div><input class="in" placeholder="En quoi je lui ressemble (facultatif)" value="${esc(x.why||'')}"><button class="del" type="button">Retirer</button>`;
-        d.querySelector('input').addEventListener('input',e=>{x.why=e.target.value;save();});
+        d.innerHTML=`<div class="pc-n">${esc(x.n)}${x.w?` <small>${esc(x.w)}</small>`:''}</div><textarea class="ta pc-why-in" rows="2" placeholder="En quoi je lui ressemble (facultatif)">${esc(x.why||'')}</textarea><button class="del" type="button">Retirer</button>`;
+        const ta=d.querySelector('textarea');const g=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};setTimeout(g,0);
+        ta.addEventListener('input',e=>{x.why=e.target.value;g();save();});
         d.querySelector('.del').addEventListener('click',()=>{me.chinois.splice(i,1);save();renderPc();});L.appendChild(d);});
       const A=$('pc-add');if(A)A.addEventListener('click',()=>{A.style.display='none';st={step:'src'};$('pc-pick').hidden=false;renderPick();});
       const SH=$('pc-show');if(SH)SH.addEventListener('change',e=>{me.chinoisShow=e.target.checked;save();});}
@@ -103,10 +104,10 @@ window.Plus=(function(){
         el.appendChild(m);}
       step();}
     renderPc();
-    /* ce dans quoi je m'investis */
+    /* là où je mets mon cœur */
     const IB=$('inv-box');
     function renderInv(){const sel=new Set(me.invest);
-      IB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Ce que tu fais, ce à quoi tu donnes ton temps. Touche un domaine, puis précise si tu veux.</p><div class="inv-cats"></div>
+      IB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Ce qui te passionne, ce à quoi tu donnes ton temps. Touche un domaine, puis précise : plus c'est précis, plus les résonances sont justes.</p><div class="inv-cats"></div>
         ${me.invest.length?`<label class="check" style="margin-top:10px"><input type="checkbox" id="inv-show" ${me.investShow!==false?'checked':''}> Afficher sur mon portrait</label>`:''}`;
       const W=IB.querySelector('.inv-cats');
       C.INVEST.forEach(c=>{const on=sel.has(c.k);const b=document.createElement('button');b.type='button';b.className='chip'+(on?' on':'');b.textContent=c.l+(c.subs.length?(on?'  ▾':'  ▸'):'');
@@ -117,32 +118,38 @@ window.Plus=(function(){
       const SH=$('inv-show');if(SH)SH.addEventListener('change',e=>{me.investShow=e.target.checked;save();});}
     renderInv();}
 
-  /* pourcentage de similitude : pour chaque rubrique remplie des deux côtés, la part de ce qui est commun
-     (rapportée au plus petit des deux, pour ne pas pénaliser un portrait plus riche), puis moyenne pondérée */
+  /* pourcentage de similitude : chaque similitude ajoute des points selon son importance, total plafonné à 100.
+     Plus deux portraits sont remplis, plus ils peuvent se ressembler. Les ressentis ne comptent pas. */
+  const PTS={type:15,typeNear:10,work:8,perso:8,rep:6,invSub:5,univers:4,invCat:2,intent:2};
   const TYPE_MATCH={sens:{sens:1,emo:.7},emo:{emo:1,sens:.7},mental:{mental:1},phys:{phys:1}};
   function similarity(me,p,mine,theirs){
     const wk=e=>e.workId||('t:'+App.norm(e.title));
-    const dims=[
-      [3,new Set((mine||[]).map(wk)),new Set((theirs||[]).map(wk))],
-      [2,new Set(App.dominantFeels(mine)),new Set(App.dominantFeels(theirs))],
-      [2,new Set((me.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean))),new Set(p.chinoisShow===false?[]:(p.chinois||[]).flatMap(x=>[x.id,x.wid].filter(Boolean)))],
-      [2,new Set((me.invest||[]).flatMap(k=>[k,k.split(':')[0]])),new Set(p.investShow===false?[]:(p.invest||[]).flatMap(k=>[k,k.split(':')[0]]))],
-      [1,new Set(me.rep||[]),new Set(p.repShow===false?[]:(p.rep||[]))],
-      [1,new Set(me.intent||[]),new Set(p.intent||[])]];
-    let tot=0,sum=0,real=0;dims.forEach(([w,a,b],i)=>{if(!a.size||!b.size)return;let c=0;a.forEach(x=>{if(b.has(x))c++;});sum+=w*c/Math.min(a.size,b.size);tot+=w;if(i<5)real++;});
-    /* type de fonctionnement : le poids le plus fort (4 par type). Sensible et émotionnel s'entendent à 70 %.
-       Deux types en commun comptent double : la ressemblance pèse plus dans le total. */
+    const inter=(A,B)=>{const b=new Set(B);return [...new Set(A)].filter(x=>b.has(x));};
+    let pts=0;
+    /* œuvres et passions */
+    pts+=PTS.work*inter((mine||[]).map(wk),(theirs||[]).map(wk)).length;
+    /* personnages : le même personnage, sinon le même univers */
+    const mc=me.chinois||[],pc=p.chinoisShow===false?[]:(p.chinois||[]);
+    const ids=inter(mc.map(x=>x.id),pc.map(x=>x.id));pts+=PTS.perso*ids.length;
+    const wSeen=new Set(mc.filter(x=>ids.includes(x.id)).map(x=>x.wid));
+    pts+=PTS.univers*inter(mc.map(x=>x.wid).filter(w=>w&&!wSeen.has(w)),pc.map(x=>x.wid).filter(Boolean)).length;
+    /* ce qui me représente */
+    pts+=PTS.rep*inter(me.rep||[],p.repShow===false?[]:(p.rep||[])).length;
+    /* là où je mets mon cœur : précision commune 5, domaine commun sans précision commune 2 */
+    const IA=C.fixInv(me.invest),IB=p.investShow===false?[]:C.fixInv(p.invest);
+    const subs=inter(IA.filter(k=>k.includes(':')),IB);const hitCat=new Set(subs.map(k=>k.split(':')[0]));
+    pts+=PTS.invSub*subs.length+PTS.invCat*inter(IA.map(k=>k.split(':')[0]),IB.map(k=>k.split(':')[0])).filter(c=>!hitCat.has(c)).length;
+    /* type de fonctionnement : 15 par type identique, 10 pour sensible avec émotif */
     const TA=me.types&&me.types.list||[],TB=p.types&&p.types.show!==false&&p.types.list||[];
-    if(TA.length&&TB.length){const left=[...TB];let st=0;
-      [...TA].sort((x,y)=>(TB.includes(y)?1:0)-(TB.includes(x)?1:0)).forEach(a=>{let bi=-1,bv=0;left.forEach((b,j)=>{const v=(TYPE_MATCH[a]||{})[b]||0;if(v>bv){bv=v;bi=j;}});if(bi>=0){st+=bv;left.splice(bi,1);}});
-      sum+=4*st;tot+=4*Math.max(TA.length,TB.length);real++;}
-    /* portrait encore vide (seulement l'intention) : pas de pourcentage, la personne ne passe pas devant tout le monde */
-    if(!real)return null;
-    /* peu de rubriques comparables : le pourcentage est réduit (au moins 60 % du poids total doit compter) */
-    const ALL=dims.reduce((s,d)=>s+d[0],0)+4;
-    return Math.round(100*sum/Math.max(tot,ALL*.6));}
+    if(TA.length&&TB.length){const left=[...TB];
+      [...TA].sort((x,y)=>(TB.includes(y)?1:0)-(TB.includes(x)?1:0)).forEach(a=>{let bi=-1,bv=0;left.forEach((b,j)=>{const v=(TYPE_MATCH[a]||{})[b]||0;if(v>bv){bv=v;bi=j;}});
+        if(bi>=0){pts+=bv===1?PTS.type:PTS.typeNear;left.splice(bi,1);}});}
+    /* rien en commun à part l'intention : pas de pourcentage */
+    if(!pts)return null;
+    pts+=PTS.intent*inter(me.intent||[],p.intent||[]).length;
+    return Math.min(100,Math.round(pts));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
-  const CAT={oeuvre:'Même passion',type:'Fonctionnement',perso:'Personnage',inv:'Investissement',rep:'Ce qui représente'};
+  const CAT={oeuvre:'Même passion',type:'Fonctionnement',perso:'Personnage',inv:'Mon cœur',rep:'Ce qui représente'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
     (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));

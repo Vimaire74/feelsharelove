@@ -26,8 +26,8 @@ Pages.resonances=async function(S,id){
     const all=people.map(p=>{const r=App.resonance(entries,p.entries);const ct=commonTypes(me,p);const ex=Plus.extraCommon(me,p);
       r.n=r.common.length+r.feels.length+ct.length+ex.length;r.pct=Plus.similarity(me,p,entries,p.entries);
       const near=myCity&&cityOf(p.city)===myCity,samec=myCountry&&countryOf(p.city)===myCountry;
-      const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.l.includes(':')?1:1):1),0)+(near?2:samec?.5:0);
-      const text=norm([dn(p),p.city,p.now,...p.entries.flatMap(e=>[e.title,e.why,e.desc,e.kind]),...(p.chinois||[]).flatMap(x=>[x.n,x.w]),...(p.invest||[]).map(k=>C.INV[k]&&C.INV[k].l),...(p.rep||[]).map(k=>Plus.repLabel(k,p))].filter(Boolean).join(' | '));
+      const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.sub?1:.4):1),0)+(near?2:samec?.5:0);
+      const text=norm([dn(p),p.city,p.now,...p.entries.flatMap(e=>[e.title,e.why,e.desc,e.kind]),...(p.chinois||[]).flatMap(x=>[x.n,x.w]),...C.fixInv(p.invest).map(k=>C.INV[k]&&C.INV[k].l),...(p.rep||[]).map(k=>Plus.repLabel(k,p))].filter(Boolean).join(' | '));
       return {p,r,ct,ex,w,near,samec,text};});
     function panel(){const P=$('r-panel');P.innerHTML=GROUPS.map(g=>`<p class="crit-g">${g.l}</p><div class="crit-o">${g.o.map(([k,l])=>`<button class="chip${sel[g.k].has(k)?' on':''}" type="button" data-g="${g.k}" data-k="${k}">${esc(l)}</button>`).join('')}</div>`).join('')+
       `<div class="row" style="justify-content:space-between;margin-top:12px"><button class="linkbtn" type="button" id="r-clear">Tout enlever</button><button class="btn" type="button" id="r-ok">Voir les résonances</button></div>`;

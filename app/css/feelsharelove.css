@@ -465,3 +465,5 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
   .star{top:16px;right:20px}
   .tabs a svg{width:32px;height:32px}
 }
+.pc-item.edit .pc-why-in{flex:1 1 100%;width:100%;min-height:44px;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
+.ios-steps{margin:0 0 0 18px;padding:0;line-height:1.5;color:var(--fg)}.ios-steps li{margin-bottom:6px}

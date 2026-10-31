@@ -30,7 +30,7 @@ App.pseudoPicker=function(me,onPick){
   pickWords();drawLetters();drawProps();return w;
 };
 Pages.accueil=async function(S){
-  const {$,esc,INTENT_LABEL}=App;let {me,entries}=await App.loadMe();let step=1;const N=5;
+  const {$,esc,INTENT_LABEL}=App;let {me,entries}=await App.loadMe();let step=1;const N=DB.remote?6:5;
   const save=()=>DB.put('profiles',me);
   async function render(){S.scrollTop=0;
     const head=`<div class="steps"><span>Étape ${step} sur ${N}</span><div class="bar-p"><i style="width:${step/N*100}%"></i></div></div>`;
@@ -72,7 +72,20 @@ Pages.accueil=async function(S){
       if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
       $('take').addEventListener('click',async()=>{const url=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Retardateur pour une photo en pied.'});if(!url)return;me.photo=url;me.photoAt=Date.now();await save();render();});
       $('back').addEventListener('click',()=>{step=4;render();});
-      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();await save();location.hash='#now';});}
+      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();await save();if(DB.remote){step=6;render();}else location.hash='#now';});}
+    /* dernière étape (version en ligne) : être prévenu des messages */
+    if(step===6){const st=await DB.pushState();const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!navigator.standalone;const f=App.fem(me);
+      if(st==='on'||st==='denied'||(st==='unsupported'&&!ios)){location.hash='#now';return;}
+      S.innerHTML=head+`<p class="eyebrow">Dernière chose</p><h1>Être prévenu${f?'e':''} quand quelqu'un t'écrit</h1>`+(st==='off'
+        ?`<p class="muted" style="margin:10px 0 16px">Une notification sur ce téléphone, même quand l'app est fermée. Le contenu des messages n'y apparaît jamais. Tu peux changer d'avis dans Réglages.</p>
+          <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="n-on">Activer les notifications</button><button class="btn ghost" type="button" id="n-later">Plus tard</button></div><p class="small" id="n-err" style="margin-top:10px;color:var(--flame)"></p>`
+        :`<p class="muted" style="margin:10px 0 12px">Sur iPhone, les notifications marchent quand FeelShareLove est installée sur l'écran d'accueil :</p>
+          <ol class="ios-steps"><li>Touche le bouton Partager du navigateur (le carré avec une flèche vers le haut).</li><li>Choisis « Sur l'écran d'accueil », puis « Ajouter ».</li><li>Ouvre FeelShareLove depuis la nouvelle icône : l'app te proposera les notifications.</li></ol>
+          <div class="row" style="justify-content:flex-start;margin-top:14px"><button class="btn flame" type="button" id="n-later">Compris, entrer</button></div>`);
+      const done=()=>{location.hash='#now';};
+      $('n-later').addEventListener('click',done);
+      const on=$('n-on');if(on)on.addEventListener('click',async()=>{on.disabled=true;try{await DB.pushOn();done();}catch(e){$('n-err').textContent=e.message;on.disabled=false;}});
+      return;}
   }
   render();
 };
