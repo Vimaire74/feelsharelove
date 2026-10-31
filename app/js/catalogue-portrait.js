@@ -171,12 +171,13 @@ window.CATALOGUE=(function(){
   const REP=[['artiste','Artiste','Artiste'],['intellectuel','Intellectuel','Intellectuelle'],['creatif','Créatif','Créative'],['sportif','Sportif','Sportive'],
     ['organisateur','Organisateur','Organisatrice'],['reveur','Rêveur','Rêveuse'],['artisan','Artisan','Artisane'],['chercheur','Chercheur','Chercheuse'],
     ['aventurier','Aventurier','Aventurière'],['explorateur','Explorateur','Exploratrice'],['voyageur','Voyageur','Voyageuse'],['batisseur','Bâtisseur','Bâtisseuse'],
-    ['entrepreneur','Entrepreneur','Entrepreneuse'],['protecteur','Protecteur','Protectrice'],['soignant','Soignant','Soignante'],['conteur','Conteur','Conteuse'],
+    ['entrepreneur','Entrepreneur','Entrepreneuse'],['protecteur','Protecteur','Protectrice'],['sauveur','Sauveur','Salvatrice'],['soignant','Soignant','Soignante'],['conteur','Conteur','Conteuse'],
     ['philosophe','Philosophe','Philosophe'],['sage','Sage','Sage'],['mentor','Mentor','Mentore'],['mediateur','Médiateur','Médiatrice'],
     ['spirituel','Spirituel','Spirituelle'],['mystique','Mystique','Mystique'],['nature','Amoureux de la nature','Amoureuse de la nature'],
     ['bonvivant','Bon vivant','Bonne vivante'],['joyeux','Joyeux luron','Joyeuse luronne'],['solitaire','Solitaire','Solitaire'],['rebelle','Rebelle','Rebelle'],
     ['engage','Engagé','Engagée'],['militant','Militant','Militante'],['bricoleur','Bricoleur','Bricoleuse'],['collectionneur','Collectionneur','Collectionneuse'],
-    ['pilier','Pilier de la famille','Pilier de la famille']];
+    ['pilier','Pilier de la famille','Pilier de la famille'],
+    ['competitif','Compétitif','Compétitive'],['perfectionniste','Perfectionniste','Perfectionniste'],['facile','Facile à vivre','Facile à vivre'],['hedoniste','Hédoniste','Hédoniste'],['principes','Homme de principes','Femme de principes'],['integre','Intègre','Intègre']];
   const REPK=Object.fromEntries(REP.map(r=>[r[0],r]));
   return {H,F,ALL,BYID,INVEST,INV,INV_OLD,fixInv,REP,REPK,slug};
 })();

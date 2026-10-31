@@ -26,7 +26,7 @@ window.Plus=(function(){
   function investGroups(keys){const g={};(keys||[]).forEach(k=>{const c=k.split(':')[0];(g[c]=g[c]||[]);if(k.includes(':'))g[c].push(k);});return g;}
   function viewHtml(p,me,preview,only){let h='';const ex=preview?[]:extraCommon(me,p);
     const rp=(preview||p.repShow!==false)?(p.rep||[]):[];
-    if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>Ce qui ${preview?'me':(App.fem(p)?'la':'le')} <em>représente</em></h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
+    if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>${preview?'Mes':'Ses'} rôles, <em>métiers, activités</em></h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
     if(only==='rep')return h;
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
     const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
@@ -42,13 +42,13 @@ window.Plus=(function(){
   function editors(me,save){
     const $=id=>document.getElementById(id);
     me.chinois=me.chinois||[];me.invest=C.fixInv(me.invest);me.rep=me.rep||[];
-    /* ce qui me représente : 1 à 3 choix */
+    /* rôles, métiers, activités : jusqu'à 10 choix */
     const RB=$('rep-box');
-    function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à six mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
+    function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à dix mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
         ${me.rep.length?`<label class="check" style="margin-top:10px"><input type="checkbox" id="rep-show" ${me.repShow!==false?'checked':''}> Afficher sur mon portrait</label>`:''}`;
       const W=RB.querySelector('.inv-cats');
       C.REP.forEach(r=>{const on=me.rep.includes(r[0]);const b=document.createElement('button');b.type='button';b.className='chip'+(on?' on':'');b.textContent=repLabel(r[0],me);
-        b.addEventListener('click',()=>{if(on)me.rep=me.rep.filter(k=>k!==r[0]);else{if(me.rep.length>=6){$('rep-max').textContent='Six au maximum : retire d\'abord un mot.';return;}me.rep.push(r[0]);}save();renderRep();});W.appendChild(b);});
+        b.addEventListener('click',()=>{if(on)me.rep=me.rep.filter(k=>k!==r[0]);else{if(me.rep.length>=10){$('rep-max').textContent='Dix au maximum : retire d\'abord un mot.';return;}me.rep.push(r[0]);}save();renderRep();});W.appendChild(b);});
       const SH=$('rep-show');if(SH)SH.addEventListener('change',e=>{me.repShow=e.target.checked;save();});}
     renderRep();
     /* portrait chinois */
@@ -149,7 +149,7 @@ window.Plus=(function(){
     pts+=PTS.intent*inter(me.intent||[],p.intent||[]).length;
     return Math.min(100,Math.round(pts));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
-  const CAT={oeuvre:'Même passion',type:'Fonctionnement',perso:'Personnage',inv:'Mon cœur',rep:'Ce qui représente'};
+  const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos rôles, métiers, activités'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
     (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));

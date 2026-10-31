@@ -30,9 +30,23 @@ App.pseudoPicker=function(me,onPick){
   pickWords();drawLetters();drawProps();return w;
 };
 Pages.accueil=async function(S){
-  const {$,esc,INTENT_LABEL}=App;let {me,entries}=await App.loadMe();let step=1;const N=DB.remote?6:5;
+  const {$,esc,INTENT_LABEL}=App;let {me,entries}=await App.loadMe();const N=DB.remote?6:5;
+  /* reprise là où on s'était arrêté */
+  let step=!me.onboardedAt&&me.onboardStep?Math.min(5,me.onboardStep):1;
   const save=()=>DB.put('profiles',me);
-  async function render(){S.scrollTop=0;
+  /* « Enregistrer et reprendre plus tard » : garde ce qui est déjà écrit, même incomplet */
+  async function later(){const v=id=>{const e=$(id);return e?e.value.trim():null;};
+    if(step===1){const n=v('a-name'),l=v('a-last');if(n)me.name=n;if(l)me.lastName=l;}
+    if(step===3){const i=$('intent');if(i)me.intent=[...i.querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=v('a-city')??me.city;me.npa=v('a-npa')??me.npa;me.now=v('a-now')??me.now;}
+    me.onboardStep=step;await save();
+    S.innerHTML=`<p class="eyebrow">C'est enregistré</p><h1>Tu reprendras ici</h1><p class="muted" style="margin:10px 0 18px">Tu peux fermer FeelShareLove. La prochaine fois, tu retrouveras tout ce que tu as rempli, à l'étape ${step} sur ${N}.</p>
+      <div class="row" style="justify-content:flex-start"><button class="btn ghost" type="button" id="resume">Continuer maintenant</button></div>`;
+    $('resume').addEventListener('click',()=>render());}
+  async function render(){await draw();
+    if(step<=5&&!me.onboardedAt){if(step>1&&me.onboardStep!==step){me.onboardStep=step;save();}
+      S.insertAdjacentHTML('beforeend','<div class="row" style="justify-content:center;margin-top:22px"><button class="linkbtn" type="button" id="later">Enregistrer et reprendre plus tard</button></div>');
+      $('later').addEventListener('click',later);}}
+  async function draw(){S.scrollTop=0;
     const head=`<div class="steps"><span>Étape ${step} sur ${N}</span><div class="bar-p"><i style="width:${step/N*100}%"></i></div></div>`;
     if(step===1){S.innerHTML=head+`<p class="eyebrow">Bienvenue</p><h1>FeelShareLove relie les gens par ce qui les touche.</h1>
       <p class="muted" style="margin:12px 0 18px">Pas de photos à faire défiler. Tu te présentes par ce que tu aimes, et pourquoi.</p>
@@ -72,7 +86,7 @@ Pages.accueil=async function(S){
       if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
       $('take').addEventListener('click',async()=>{const url=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Retardateur pour une photo en pied.'});if(!url)return;me.photo=url;me.photoAt=Date.now();await save();render();});
       $('back').addEventListener('click',()=>{step=4;render();});
-      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();await save();if(DB.remote){step=6;render();}else location.hash='#now';});}
+      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();delete me.onboardStep;await save();if(DB.remote){step=6;render();}else location.hash='#now';});}
     /* dernière étape (version en ligne) : être prévenu des messages */
     if(step===6){const st=await DB.pushState();const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!navigator.standalone;const f=App.fem(me);
       if(st==='on'||st==='denied'||(st==='unsupported'&&!ios)){location.hash='#now';return;}
