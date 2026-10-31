@@ -354,6 +354,17 @@ async function admin(req, res, url) {
     if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; await putDoc('reports', id, r.by, r); } }
     if (a === 'ban') { await q('UPDATE users SET banned=true WHERE id=$1', [id]); await q('DELETE FROM sessions WHERE user_id=$1', [id]); const p = await getDoc('profiles', id); if (p) { p.paused = Date.now(); await putDoc('profiles', id, id, p); } }
     if (a === 'unban') await q('UPDATE users SET banned=false WHERE id=$1', [id]);
+    if (a === 'fakes') { // profils de test : réécrit seulement les comptes marqués fake:true (photo et vérification gardées)
+      const FK = require('./fakes.js');
+      for (const old of await listDocs('profiles')) {
+        if (old.fake !== true) continue;
+        const f = FK.find(x => x.from.includes(old.pseudo)); if (!f) continue;
+        const p = { ...old, ...f.p, id: old.id, fake: true }; if (!f.p.travel) delete p.travel;
+        await putDoc('profiles', old.id, old.id, p);
+        await q("DELETE FROM docs WHERE store='entries' AND data->>'profileId'=$1", [old.id]);
+        let i = 0; for (const e of f.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); }
+      }
+    }
     res.writeHead(303, { Location: '/admin?key=' + encodeURIComponent(key) }); return res.end();
   }
   const users = (await q('SELECT id, email, created, banned FROM users ORDER BY created DESC')).rows;
@@ -370,6 +381,7 @@ async function admin(req, res, url) {
 <p>${users.length} comptes · ${counts.map(c => H(c.store) + ' ' + c.n).join(' · ')}</p>
 <h2>Vérifications en attente (${pend.length})</h2>${(await Promise.all(pend.map(card))).join('') || '<p>Aucune.</p>'}
 <h2>Signalements ouverts (${reports.length})</h2>${reports.length ? `<table><tr><th>Date</th><th>Type</th><th>Par</th><th>Visé</th><th>Raison</th><th></th></tr>${reports.map(r => `<tr><td>${new Date(r.ts || r.updatedAt).toLocaleString('fr-CH')}</td><td>${H(r.kind)}</td><td>${who(r.by)}</td><td>${who(r.target)}</td><td>${H(r.reason)}</td><td>${btn('report-done', r.id, 'Traité')} ${btn('ban', r.target, 'Suspendre la personne visée')}</td></tr>`).join('')}</table>` : '<p>Aucun.</p>'}
+<h2>Profils de test (${Object.values(profiles).filter(p => p.fake === true).length})</h2><p>Réécrit le contenu des faux profils (Brad, Sandra, Tom, Sophie, Jean-Jacques). À supprimer avant l'ouverture au public.</p>${btn('fakes', '', 'Remplir les profils de test')}
 <h2>Comptes</h2><table><tr><th>Inscription</th><th>Pseudo / nom</th><th>E-mail</th><th></th></tr>${users.map(u => `<tr><td>${new Date(+u.created).toLocaleDateString('fr-CH')}</td><td>${who(u.id)}</td><td>${H(u.email)}</td><td>${u.banned ? 'suspendu ' + btn('unban', u.id, 'Réactiver') : btn('ban', u.id, 'Suspendre')}</td></tr>`).join('')}</table>`;
   send(res, 200, html, 'text/html; charset=utf-8');
 }

@@ -26,7 +26,7 @@ window.Plus=(function(){
   function investGroups(keys){const g={};(keys||[]).forEach(k=>{const c=k.split(':')[0];(g[c]=g[c]||[]);if(k.includes(':'))g[c].push(k);});return g;}
   function viewHtml(p,me,preview,only){let h='';const ex=preview?[]:extraCommon(me,p);
     const rp=(preview||p.repShow!==false)?(p.rep||[]):[];
-    if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>${preview?'Mes':'Ses'} rôles, <em>métiers, activités</em></h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
+    if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>${preview?'Mes métiers, mes rôles, <em>mes tendances</em>':'Ses métiers, ses rôles, <em>ses tendances</em>'}</h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
     if(only==='rep')return h;
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
     const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
@@ -42,7 +42,7 @@ window.Plus=(function(){
   function editors(me,save){
     const $=id=>document.getElementById(id);
     me.chinois=me.chinois||[];me.invest=C.fixInv(me.invest);me.rep=me.rep||[];
-    /* rôles, métiers, activités : jusqu'à 10 choix */
+    /* métiers, rôles, tendances : jusqu'à 10 choix */
     const RB=$('rep-box');
     function renderRep(){RB.innerHTML=`<p class="muted small" style="margin-bottom:10px">Jusqu'à dix mots qui te ressemblent.</p><div class="inv-cats"></div><p class="muted small" id="rep-max" style="margin-top:8px"></p>
         ${me.rep.length?`<label class="check" style="margin-top:10px"><input type="checkbox" id="rep-show" ${me.repShow!==false?'checked':''}> Afficher sur mon portrait</label>`:''}`;
@@ -149,7 +149,7 @@ window.Plus=(function(){
     pts+=PTS.intent*inter(me.intent||[],p.intent||[]).length;
     return Math.min(100,Math.round(pts));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
-  const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos rôles, métiers, activités'};
+  const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos métiers, nos rôles, nos tendances'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
     (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));

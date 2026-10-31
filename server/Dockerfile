@@ -5,6 +5,7 @@ WORKDIR /srv
 COPY server/package.json ./
 RUN npm install --omit=dev
 COPY server/server.js ./
+COPY server/fakes.js ./
 COPY app ./public
 ENV PORT=8080 PUBLIC_DIR=/srv/public
 EXPOSE 8080

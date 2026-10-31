@@ -32,7 +32,7 @@ Pages.portrait=async function(S){
   <p class="muted small" style="margin-bottom:10px">Chaque ligne a son bouton : visible pour les autres, ou gardée pour toi.</p>
   <div class="facts" id="facts"></div>
 
-  <h2>Quels sont mes rôles, <em>métiers, activités</em></h2><div class="sec" id="rep-box"></div>
+  <h2>Quels sont mes métiers, mes rôles, <em>mes tendances</em></h2><div class="sec" id="rep-box"></div>
   <h2>Si j'étais <em>un personnage</em></h2><div class="sec" id="pc-box"></div>
   <h2>Là où je mets <em>mon cœur</em></h2><div class="sec" id="inv-box"></div>
 
