@@ -467,3 +467,10 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 }
 .pc-item.edit .pc-why-in{flex:1 1 100%;width:100%;min-height:44px;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
 .ios-steps{margin:0 0 0 18px;padding:0;line-height:1.5;color:var(--fg)}.ios-steps li{margin-bottom:6px}
+
+/* page d'accueil (profession de foi) */
+.manif p{margin:0 0 12px;line-height:1.6}
+.manif h2{margin-top:22px}
+.manif-no{margin-top:16px!important;padding:12px 14px;border-left:3px solid var(--flame);background:rgba(255,255,255,.04);border-radius:6px}
+.manif-dots{display:flex;justify-content:center;gap:8px;margin-top:18px}.manif-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25)}.manif-dots i.on{background:var(--flame)}
+.manif-step{display:flex;gap:12px;align-items:flex-start}.manif-step .manif-ic{flex:none;width:34px;height:34px;margin-top:2px;color:var(--saffron)}
