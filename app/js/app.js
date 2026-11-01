@@ -97,7 +97,7 @@ window.App=(function(){
     menu.innerHTML=`<a href="#messages">Messages <small id="msg-count"></small></a><a href="#tribu">Ma tribu <small>les gens qui comptent</small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#portrait">Mon portrait</a><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
     const tabs=document.createElement('nav');tabs.className='tabs';tabs.setAttribute('aria-label','Menu principal');
     tabs.innerHTML='<svg class="tabwave" viewBox="0 0 390 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10 L390 22 L0 22 Z" style="fill:var(--bar)"/><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10" fill="none" stroke="#e8456e" stroke-width="1.6" stroke-dasharray="14 4 3 4"/></svg>'+
-      [['now','now','Présent'],['resonances','res','Résonances'],['messages','msg','Messages'],['tribu','tribu','Ma tribu'],['portrait','port','Portrait']].map(([h,i,l])=>`<a href="#${h}" data-tab="${h}">${Plus.icon(i)}${h==='messages'?'<span class="tbadge" id="tab-badge" hidden></span>':''}<span>${l}</span></a>`).join('');
+      [['now','now','Présent'],['resonances','res','Résonances'],['messages','msg','Messages'],['tribu','tribu','Ma tribu'],['portrait','port','Portrait']].map(([h,i,l])=>`<a href="#${h}" data-tab="${h}">${Plus.icon(i)}${h==='messages'?'<span class="tbadge" id="tab-badge" hidden></span>':h==='tribu'?'<span class="tbadge" id="tab-badge-t" hidden></span>':''}<span>${l}</span></a>`).join('');
     phone.prepend(menu);phone.prepend(star);phone.append(tabs);
     /* noms du menu : toujours en entier sur une ligne ; la taille baisse jusqu'à ce qu'ils tiennent (même si le téléphone grossit le texte) */
     const fit=()=>{const L=[...tabs.querySelectorAll('a span:not(.tbadge)')];let m=99;
@@ -108,7 +108,22 @@ window.App=(function(){
     document.querySelector('.screen').addEventListener('click',closeMenu);
   }
   function closeMenu(){const m=$('menu'),s=$('star');if(m){m.classList.remove('on');s.classList.remove('on');}}
-  async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}}
+  async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}
+    /* invitations dans une tribu en attente de ma réponse : pastille sur « Ma tribu » et fenêtre mise en avant */
+    const ask=(await invites()).filter(i=>i.state==='pending'&&i.to==='me');const tt=$('tab-badge-t');if(tt){tt.textContent=ask.length;tt.hidden=!ask.length;}
+    invitePopup(ask).catch(()=>{});}
+  const popShown=new Set();
+  async function invitePopup(ask){if(document.querySelector('.tb-pop')||location.hash.startsWith('#tribu'))return;
+    const i=ask.find(x=>!popShown.has(x.id));if(!i)return;popShown.add(i.id);
+    const p=await DB.get('profiles',i.from);if(!p)return;
+    const o=document.createElement('div');o.className='tb-pop';
+    o.innerHTML=`<div class="tb-pop-in"><p class="eyebrow">Invitation</p><div class="tb-pop-who">${avatarHtml(p)}<h2 style="margin:0">${esc(dn(p))} <em>t'invite dans sa tribu</em></h2></div>
+      <p class="muted small">${fem(p)?'Elle':'Il'} attend ta réponse. Sur FeelShareLove, on répond toujours : oui, ou non avec une phrase gentille.</p><div class="tb" id="tb-pop-box"></div>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><a class="linkbtn" href="#personne/${esc(p.id)}" id="tb-pop-see">Voir son portrait</a><button class="linkbtn" type="button" id="tb-pop-later">Plus tard</button></div></div>`;
+    (document.querySelector('.phone')||document.body).appendChild(o);
+    const close=()=>{o.remove();refreshMsgCount().catch(()=>{});};
+    o.querySelector('#tb-pop-later').addEventListener('click',close);o.querySelector('#tb-pop-see').addEventListener('click',()=>o.remove());
+    await tribeBox(p,o.querySelector('#tb-pop-box'),async()=>{const inv=await inviteWith(p);if(inv&&inv.state!=='pending')setTimeout(close,1200);});}
 
   /* ---------- données ---------- */
   async function loadMe(){const me=await DB.get('profiles','me');const entries=await DB.where('entries','profileId','me');const qs=await DB.where('questions','profileId','me');return {me,entries,qs};}

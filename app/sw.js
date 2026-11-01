@@ -11,7 +11,7 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) if ('focus' in c) { c.navigate(url); return c.focus(); }
+    for (const c of list) if ('focus' in c) { c.postMessage({ go: url }); return c.focus(); } // l'app ouvre elle-même la bonne page
     return self.clients.openWindow(url);
   }));
 });

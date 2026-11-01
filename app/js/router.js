@@ -53,6 +53,8 @@
   window.Router={route};
   /* version en ligne : le compteur de demandes se met à jour toutes les 20 secondes */
   /* la mise à jour automatique s'arrête quand l'app n'est pas à l'écran, et reprend tout de suite au retour */
+  /* clic sur une notification alors que l'app est déjà ouverte : aller à la bonne page */
+  if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const g=e.data&&e.data.go;if(!g)return;try{const h=new URL(g,location.href).hash||'#now';if(location.hash!==h)location.hash=h;else route().catch(()=>{});}catch(x){}});
   if(DB.remote){setInterval(()=>{if(document.hidden)return;App.refreshMsgCount().catch(()=>{});},20000);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(location.hash.startsWith('#messages'))route().catch(()=>{});else App.refreshMsgCount().catch(()=>{});});}
   route();
