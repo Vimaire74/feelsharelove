@@ -115,10 +115,41 @@ window.App=(function(){
   async function loadPerson(id){const p=await DB.get('profiles',id);if(!p)return null;p.entries=await DB.where('entries','profileId',id);p.qs=await DB.where('questions','profileId',id);return p;}
   async function blockedNames(){const lists=await DB.where('lists','owner','me');return lists;}
   function isListed(p,lists){return lists.some(l=>{if(l.type!=='red'&&l.type!=='black')return false;if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
-  /* ma tribu : liste privée des gens qui comptent */
-  async function tribeOf(){return (await DB.where('lists','owner','me')).filter(l=>l.type==='tribe');}
-  async function inTribe(p){return (await tribeOf()).find(l=>l.target===p.id)||null;}
-  async function tribeAdd(p){if(await inTribe(p))return;await DB.put('lists',{owner:'me',type:'tribe',target:p.id,name:p.pseudo||p.name});}
+  /* mes personnes préférées : liste privée, personne ne sait qu'il y est */
+  async function favOf(){return (await DB.where('lists','owner','me')).filter(l=>l.type==='fav');}
+  async function isFav(p){return (await favOf()).find(l=>l.target===p.id)||null;}
+  async function favToggle(p){const f=await isFav(p);if(f)await DB.del('lists',f.id);else await DB.put('lists',{owner:'me',type:'fav',target:p.id,name:p.pseudo||p.name});return !f;}
+  /* tribu : on invite, l'autre répond toujours (oui, ou non avec une des trois phrases) */
+  async function invites(){try{return await DB.all('invites');}catch(e){return [];}}
+  async function inviteWith(p){return (await invites()).find(i=>i.from===p.id||i.to===p.id)||null;}
+  async function tribeInvite(p){const inv=await DB.put('invites',{from:'me',to:p.id,state:'pending',ts:Date.now()});
+    if(!DB.remote){inv.state='yes';inv.answeredAt=Date.now();await DB.put('invites',inv);}return inv;} // version locale : les personnes fictives acceptent
+  const REFUS=p=>{const e=fem(p)?'e':'';return ['Je suis désolé'+e+', mais je ne suis pas sûr'+e+' que nous soyons suffisamment sur la même longueur d\'onde pour faire partie de la même tribu.',
+    'Je suis désolé'+e+', mais j\'ai déjà une tribu nombreuse et pas assez de temps pour honorer tous mes messages et activités.',
+    'Je suis désolé'+e+', mais ma vie de famille est très remplie et je n\'ai pas assez de temps en ce moment pour ajouter des gens à ma tribu.'];};
+  /* boutons « Personne préférée » et « Inviter dans ma tribu », et réponse à une invitation reçue ; sur le portrait, la conversation et les résonances */
+  async function tribeBox(p,el,onChange){const me=(await loadMe()).me;
+    async function draw(){const inv=await inviteWith(p),fav=await isFav(p),Il=fem(p)?'Elle':'Il';let h='<div class="tb-row">',note='';
+      h+=`<button class="btn ghost small-btn tb-fav${fav?' on':''}" type="button" data-a="fav">${fav?'★':'☆'} Personne préférée</button>`;
+      if(!inv||(inv.state==='no'&&inv.to==='me'))h+=`<button class="btn small-btn" type="button" data-a="inv">Inviter dans ma tribu</button>`;
+      else if(inv.state==='yes')h+=`<span class="rtag t-int">Dans ta tribu</span>`;
+      else if(inv.state==='pending'&&inv.from==='me'){h+=`<span class="muted small">Invitation envoyée</span>`;note=`${esc(dn(p))} reçoit un rappel chaque jour jusqu'à sa réponse.`;}
+      else if(inv.state==='no'&&inv.from==='me')note=`${esc(dn(p))} a répondu à ton invitation : « ${esc(REFUS(p)[inv.reason-1]||'')} »`;
+      h+='</div>';
+      if(inv&&inv.state==='pending'&&inv.to==='me')h+=`<div class="tb-ask"><p><b>${esc(dn(p))}</b> t'invite dans sa tribu. ${Il} attend ta réponse.</p><div class="tb-row"><button class="btn flame small-btn" type="button" data-a="yes">Accepter</button><button class="btn ghost small-btn" type="button" data-a="no">Répondre non</button></div>
+        <div class="tb-no" hidden><p class="muted small">Choisis ta réponse :</p>${REFUS(me).map((t,i)=>`<button class="tb-reason" type="button" data-r="${i+1}">${esc(t)}</button>`).join('')}</div></div>`;
+      if(note)h+=`<p class="muted small tb-note">${note}</p>`;
+      el.innerHTML=h;}
+    el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.a,r=b.dataset.r;
+      try{if(a==='fav')await favToggle(p);
+        else if(a==='inv')await tribeInvite(p);
+        else if(a==='yes')await DB.put('invites',{...(await inviteWith(p)),state:'yes'});
+        else if(a==='no'){el.querySelector('.tb-no').hidden=false;return;}
+        else if(r)await DB.put('invites',{...(await inviteWith(p)),state:'no',reason:+r});
+        else return;}
+      catch(x){el.insertAdjacentHTML('beforeend',`<p class="small" style="color:var(--flame)">${esc(x.message)}</p>`);return;}
+      await draw();if(onChange)onChange();};
+    await draw();}
   async function others(){const all=await DB.all('profiles');const lists=await blockedNames();return all.filter(p=>!p.isMe&&!isListed(p,lists));}
   async function isBlocked(p){return isListed(p,await blockedNames());}
 
@@ -340,7 +371,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,tribeOf,inTribe,tribeAdd,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,refreshMsgCount,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

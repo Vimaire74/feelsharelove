@@ -14,10 +14,11 @@ Pages.messages=async function(S,id){
       waiting.forEach(t=>{const p=byId[t.id];const m=last(t.id);const d=App.personEl(p,null,`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">Te répond${m&&m.aboutTitle?' sur « '+esc(m.aboutTitle)+' »':''} · à toi de répondre</div>`);d.addEventListener('click',()=>location.hash='#messages/'+p.id);$('t-in').appendChild(d);});return;}
     S.innerHTML=`<p class="eyebrow">Messages</p><h1>Conversations</h1><p class="muted small" style="margin:8px 0 4px">Il te reste ${left} premier${left>1?'s':''} message${left>1?'s':''} aujourd'hui. On écrit à quelqu'un en répondant à une entrée de son portrait.</p><div id="t-in"></div><div id="t-open"></div><div id="t-out"></div><div id="t-end"></div>`;
     const sect=(el,title,list,sub)=>{if(!list.length)return;el.innerHTML=`<h2>${title}</h2>`;list.sort((a,b)=>((last(b.id)||{}).ts||0)-((last(a.id)||{}).ts||0)).forEach(t=>{const p=byId[t.id];const m=last(t.id);
-      const d=App.personEl(p,null,`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">${sub(t,m)}</div>`);d.addEventListener('click',()=>location.hash='#messages/'+p.id);el.appendChild(d);});};
-    const txt=m=>!m?'':m.kind==='ephemeral'?'Photo éphémère':m.kind==='voice'?'Message vocal':m.kind==='decline'?'A répondu non, gentiment':esc(m.text.slice(0,60));
-        sect($('t-open'),'Ouvertes',threads.filter(t=>t.status==='open'),(t,m)=>txt(m));
-    sect($('t-end'),'Terminées',threads.filter(t=>t.status==='declined-by-them'||t.status==='declined'),(t,m)=>txt(m));
+      const d=App.personEl(p,null,`<div class="st two" style="font-style:normal;font-family:var(--body);color:var(--muted)">${sub(t,m)}</div>`);d.addEventListener('click',()=>location.hash='#messages/'+p.id);el.appendChild(d);});};
+    /* dernier message : qui l'a écrit, puis le texte sur deux lignes */
+    const txt=(m,p)=>!m?'':`<b>${m.from==='me'?'Toi':esc(App.dn(p))} :</b> `+(m.kind==='ephemeral'?'Photo éphémère':m.kind==='voice'?'Message vocal':m.kind==='decline'?'a répondu non, gentiment':esc(String(m.text||'').slice(0,180)));
+        sect($('t-open'),'Ouvertes',threads.filter(t=>t.status==='open'),(t,m)=>txt(m,byId[t.id]));
+    sect($('t-end'),'Terminées',threads.filter(t=>t.status==='declined-by-them'||t.status==='declined'),(t,m)=>txt(m,byId[t.id]));
     sect($('t-out'),'En <em>attente</em>',threads.filter(t=>t.status==='pending-out'),(t,m)=>'Ta réponse'+(m&&m.aboutTitle?' sur « '+esc(m.aboutTitle)+' »':'')+' attend d\'être lue');
     if(!threads.length)S.insertAdjacentHTML('beforeend','<div class="empty" style="margin-top:14px">Pas encore de conversation. Va dans Résonances et réponds à une entrée qui te touche.</div>');
     return;}
@@ -29,8 +30,8 @@ Pages.messages=async function(S,id){
   const f=fem(p);const il=f?'elle':'il';
   S.innerHTML=`<a class="back" href="#messages">← Conversations</a>
   <div class="chat-head">${App.avatarHtml(p)}<div><a class="nm" href="#personne/${p.id}">${esc(dn(p))}</a>${App.badge(p)}<div class="muted small">${esc(p.city)} · ${App.isAvail(p)?'disponible':'pas disponible, '+localTime(p)+' chez '+(f?'elle':'lui')}</div></div></div>
-  <div class="chat" id="chat"></div><div id="bottom"></div>`;
-  const C=$('chat'),Bo=$('bottom');
+  <div class="tb" id="tribe"></div><div class="chat" id="chat"></div><div id="bottom"></div>`;
+  const C=$('chat'),Bo=$('bottom');App.tribeBox(p,$('tribe'));
   function addMsg(m){
     if(m.kind==='ephemeral'&&m.from!=='me'){const d=document.createElement('div');d.className='eph'+(m.seen?' gone':'');
       d.innerHTML=`<div class="lbl">Photo éphémère · ${m.seconds} secondes · vue une fois</div><div class="pic">${m.seen?'Photo vue. Elle n\'est plus sur ton téléphone.':esc(m.text)}</div><div class="timer"></div><div class="actions"><button class="btn" type="button" ${m.seen?'disabled':''}>Voir</button><button class="btn ghost" type="button">Signaler</button></div>

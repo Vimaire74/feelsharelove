@@ -1,23 +1,24 @@
-/* FeelShareLove — écran « Ma tribu » : les gens qui comptent pour moi ici (liste privée), et inviter mes amis */
+/* FeelShareLove — écran « Ma tribu » : invitations à répondre, ma tribu, invitations envoyées, personnes préférées, inviter mes amis */
 Pages.tribu=async function(S){
   const {$,esc,dn}=App;
   const {me}=await App.loadMe();
-  const lists=(await DB.where('lists','owner','me')).filter(l=>l.type==='tribe');
-  const inTribe=new Set(lists.map(l=>l.target));
   const people=await App.others();const byId=Object.fromEntries(people.map(p=>[p.id,p]));
+  const inv=await App.invites();const other=i=>i.from==='me'?i.to:i.from;
+  const ask=inv.filter(i=>i.state==='pending'&&i.to==='me'&&byId[i.from]);
+  const tribe=inv.filter(i=>i.state==='yes'&&byId[other(i)]);
+  const sent=inv.filter(i=>i.from==='me'&&(i.state==='pending'||i.state==='no')&&byId[i.to]);
+  const favs=await App.favOf();
+  const known=new Set(inv.map(other));
   const threads=await DB.all('threads');
-  /* amis découverts : conversations ouvertes, pas encore dans la tribu */
-  const met=threads.filter(t=>t.status==='open'&&byId[t.id]&&!inTribe.has(t.id)).map(t=>byId[t.id]);
-  let invited=[];if(DB.remote&&DB.invited){try{invited=(await DB.invited()).filter(x=>!inTribe.has(x.id));}catch(e){}}
+  /* rencontrés ici : conversation ouverte, pas encore d'invitation */
+  const met=threads.filter(t=>t.status==='open'&&byId[t.id]&&!known.has(t.id)).map(t=>byId[t.id]);
   const link=DB.remote&&DB.inviteLink?DB.inviteLink():'https://feelsharelove.com';
   const msg=`Je t'invite sur FeelShareLove : on s'y rencontre par ce qui nous fait vibrer, sans publicité. ${link}`;
   S.innerHTML=`<p class="eyebrow">Ma tribu</p><h1>Les gens qui <span style="color:var(--flame)">comptent</span></h1>
-  <p class="muted small" style="margin:8px 0 14px">Ta tribu est privée : personne ne voit qui y est. Seule exception : si quelqu'un t'a aussi mis dans la sienne, vous êtes dans le cercle intime l'un de l'autre, et vous le voyez tous les deux.</p>
-  <div id="t-list"></div>
-  <div id="t-inv"></div>
-  <div id="t-met"></div>
+  <p class="muted small" style="margin:8px 0 14px">Ta tribu, ce sont les personnes qui se sont choisies des deux côtés : l'un invite, l'autre répond toujours. Dans la tribu, vous voyez ce que vous réservez à la tribu. Tes personnes préférées, c'est une liste privée : personne ne sait qu'il y est.</p>
+  <div id="t-ask"></div><div id="t-list"></div><div id="t-sent"></div><div id="t-fav"></div><div id="t-met"></div>
   <h2>Inviter <em>mes amis</em></h2>
-  <div class="sec" style="margin-top:6px"><p class="exp">Invite les personnes que tu aimes. Quand elles s'inscrivent avec ton lien, tu entres dans leur tribu et elles apparaissent ici.</p>
+  <div class="sec" style="margin-top:6px"><p class="exp">Invite les personnes que tu aimes. Quand elles s'inscrivent avec ton lien, vous êtes directement dans la même tribu.</p>
     <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px">
       <button class="btn flame" type="button" id="i-contacts" hidden>Choisir dans mon carnet d'adresses</button>
       <button class="btn" type="button" id="i-share">Envoyer mon invitation</button>
@@ -25,24 +26,28 @@ Pages.tribu=async function(S){
     <div id="i-picked" style="margin-top:12px"></div>
     <p class="muted small" id="i-msg" style="margin-top:8px"></p>
     <p class="muted small" style="margin-top:8px">Sur iPhone, « Envoyer mon invitation » ouvre Messages, WhatsApp ou Mail : tu choisis la personne dans tes contacts à ce moment-là.</p></div>`;
+  const card=(el,p,extra)=>{const d=App.personEl(p,null,'');d.addEventListener('click',ev=>{if(ev.target.closest('button,.tb'))return;location.hash='#personne/'+p.id;});if(extra)extra(d);el.appendChild(d);return d;};
+  const btn=(d,label,fn)=>{const b=document.createElement('button');b.className='linkbtn';b.type='button';b.textContent=label;b.style.marginLeft='auto';b.addEventListener('click',async ev=>{ev.stopPropagation();await fn();Router.route();});d.appendChild(b);};
+  /* à toi de répondre */
+  if(ask.length){const A=$('t-ask');A.innerHTML=`<h2>À toi <em>de répondre</em></h2>`;
+    for(const i of ask){const p=byId[i.from];card(A,p);const box=document.createElement('div');box.className='tb';A.appendChild(box);await App.tribeBox(p,box,()=>Router.route());}}
   /* ma tribu */
-  const T=$('t-list');
-  /* cercle intime : choisis des deux côtés ; en premier dans la liste */
-  lists.sort((a,b)=>((byId[b.target]||{}).intimate?1:0)-((byId[a.target]||{}).intimate?1:0));
-  const nInt=lists.filter(l=>(byId[l.target]||{}).intimate).length;
-  if(nInt)T.insertAdjacentHTML('beforebegin',`<p class="int-head">Cercle intime · ${nInt} personne${nInt>1?'s':''} qui t'${nInt>1?'ont':'a'} aussi choisi${App.fem(me)?'e':''}</p>`);
-  if(!lists.length)T.innerHTML='<div class="empty">Personne pour l\'instant. Ajoute quelqu\'un depuis son portrait (« Ajouter à ma tribu ») ou depuis les suggestions plus bas.</div>';
-  for(const l of lists){const p=byId[l.target]||null;
-    const d=p?App.personEl(p,null,p.intimate?'<span class="rtag t-int">Cercle intime</span>':''):Object.assign(document.createElement('div'),{className:'person',innerHTML:`<div class="i"><div class="nm">${esc(l.name||'Ancien membre')}</div><div class="st muted">n'est plus visible</div></div>`});
-    const b=document.createElement('button');b.className='linkbtn';b.type='button';b.textContent='Retirer';b.style.marginLeft='auto';
-    b.addEventListener('click',async ev=>{ev.stopPropagation();await DB.del('lists',l.id);Router.route();});d.appendChild(b);
-    if(p)d.addEventListener('click',()=>location.hash='#personne/'+p.id);T.appendChild(d);}
-  const addRow=(el,p,label)=>{const d=App.personEl(p,null,label?`<div class="st" style="font-style:normal;font-family:var(--body);color:var(--muted)">${label}</div>`:'');
-    const b=document.createElement('button');b.className='btn small-btn';b.type='button';b.textContent='Ajouter';b.style.marginLeft='auto';
-    b.addEventListener('click',async ev=>{ev.stopPropagation();await App.tribeAdd(p);Router.route();});d.appendChild(b);
-    d.addEventListener('click',()=>location.hash='#personne/'+p.id);el.appendChild(d);};
-  if(invited.length){const I=$('t-inv');I.innerHTML='<h2>Ont rejoint <em>grâce à toi</em></h2>';invited.forEach(x=>addRow(I,byId[x.id]||{id:x.id,pseudo:x.pseudo},'Inscrit avec ton invitation'));}
-  if(met.length){const M=$('t-met');M.innerHTML='<h2>Rencontrés <em>ici</em></h2>';met.forEach(p=>addRow(M,p,'Vous avez une conversation ouverte'));}
+  const T=$('t-list');T.innerHTML=`<h2>Ma <em>tribu</em>${tribe.length?' · '+tribe.length:''}</h2>`;
+  if(!tribe.length)T.insertAdjacentHTML('beforeend','<div class="empty">Personne pour l\'instant. Invite quelqu\'un depuis son portrait, votre conversation ou vos résonances (« Inviter dans ma tribu »).</div>');
+  tribe.forEach(i=>card(T,byId[other(i)],d=>btn(d,'Retirer',()=>DB.del('invites',i.id))));
+  /* invitations envoyées, et les réponses reçues */
+  if(sent.length){const E=$('t-sent');E.innerHTML='<h2>Invitations <em>envoyées</em></h2>';
+    sent.forEach(i=>{const p=byId[i.to];card(E,p,d=>{const st=document.createElement('div');st.className='st two';st.style.cssText='font-style:normal;font-family:var(--body);color:var(--muted)';
+      st.innerHTML=i.state==='pending'?'En attente de sa réponse (rappel chaque jour)':'A répondu : « '+esc(App.REFUS(p)[i.reason-1]||'')+' »';d.querySelector('.i').appendChild(st);
+      btn(d,i.state==='pending'?'Annuler':'Effacer',()=>DB.del('invites',i.id));});});}
+  /* personnes préférées */
+  const F=$('t-fav');F.innerHTML='<h2>Mes personnes <em>préférées</em></h2>';
+  if(!favs.length)F.insertAdjacentHTML('beforeend','<div class="empty">Touche « ☆ Personne préférée » sur un portrait, une conversation ou vos résonances.</div>');
+  favs.forEach(l=>{const p=byId[l.target];if(!p)return;card(F,p,d=>btn(d,'Retirer',()=>DB.del('lists',l.id)));});
+  /* rencontrés ici */
+  if(met.length){const M=$('t-met');M.innerHTML='<h2>Rencontrés <em>ici</em></h2><p class="muted small" style="margin:-4px 0 10px">Vous avez une conversation ouverte.</p>';
+    met.forEach(p=>card(M,p,d=>{const b=document.createElement('button');b.className='btn small-btn';b.type='button';b.textContent='Inviter dans ma tribu';b.style.marginLeft='auto';
+      b.addEventListener('click',async ev=>{ev.stopPropagation();try{await App.tribeInvite(p);}catch(e){}Router.route();});d.appendChild(b);}));}
   /* inviter */
   const say=t=>{$('i-msg').textContent=t;};
   $('i-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(msg);say('Invitation copiée : colle-la dans un message.');}catch(e){prompt('Copie ce texte :',msg);}});

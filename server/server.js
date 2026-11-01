@@ -19,7 +19,7 @@ function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), wh
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
-const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods']);
+const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites']);
 const PRIVATE = new Set(['lists','reports','settings']);
 
 /* ---------- base ---------- */
@@ -106,8 +106,8 @@ async function hiddenFor(me) {
   }
   for (const p of profiles) if (p.paused && p.id !== me) hidden.add(p.id);
   /* cercle intime : les personnes qui m'ont mis dans leur tribu et que j'ai mises dans la mienne */
-  const iChose = new Set(lists.filter(l => l.type === 'tribe' && l.owner === me).map(l => l.target));
-  const intimate = new Set(lists.filter(l => l.type === 'tribe' && l.target === me && iChose.has(l.owner)).map(l => l.owner));
+  /* tribu : invitation acceptée des deux côtés */
+  const intimate = new Set((await listDocs('invites', "AND data->>'state'='yes' AND (data->>'from'=$2 OR data->>'to'=$2)", [me])).map(i => i.from === me ? i.to : i.from));
   /* portrait complet : seulement avec les personnes avec qui la conversation est ouverte (ou le cercle intime) */
   const opened = new Set((await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).filter(t => t.state === 'open').map(t => t.a === me ? t.b : t.a));
   intimate.forEach(id => opened.add(id));
@@ -190,6 +190,7 @@ async function readList(store, me, query) {
     if (query.thread) rows = rows.filter(m => m.thread === query.thread); return rows;
   }
   if (store === 'settings') return (await listDocs('settings', 'AND owner=$2', [me])).map(s => ({ key: s.key, value: s.value }));
+  if (store === 'invites') { const { hidden } = await hiddenFor(me); return (await listDocs('invites', "AND (data->>'from'=$2 OR data->>'to'=$2)", [me])).filter(i => !hidden.has(i.from === me ? i.to : i.from)); }
   /* « moi aussi » : visibles seulement par celui qui l'a écrit et par la personne concernée */
   if (store === 'nods') { const { hidden } = await hiddenFor(me); return (await listDocs('nods', "AND (owner=$2 OR data->>'target'=$2)", [me])).filter(n => !hidden.has(n.owner) && !hidden.has(n.target)); }
   if (PRIVATE.has(store)) { let rows = await listDocs(store, 'AND owner=$2', [me]); for (const [k, v] of Object.entries(query)) rows = rows.filter(r => String(r[k]) === v); return rows; }
@@ -214,6 +215,7 @@ async function readOne(store, me, id) {
   if (store === 'messages') return d.from === me || d.to === me ? msgView(d, me) : null;
   if (PRIVATE.has(store)) return d.owner === me ? d : null;
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
+  if (store === 'invites') return d.from === me || d.to === me ? d : null;
   if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened); }
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
@@ -222,6 +224,7 @@ async function readOne(store, me, id) {
 async function writeOne(store, me, id, body) {
   if (store === 'threads') return putThread(me, id, body);
   if (store === 'settings') { const v = { key: id, value: body.value }; await putDoc('settings', me + ':' + id, me, v); return v; }
+  if (store === 'invites') return putInvite(me, body);
   const old = await getDoc(store, id);
   if (store === 'messages') return putMessage(me, id, body, old);
   const data = { ...body, id };
@@ -246,12 +249,55 @@ async function writeOne(store, me, id, body) {
   }
   return saved;
 }
+/* tribu : on s'invite, l'autre répond toujours (oui, ou non avec une des trois phrases), rappel chaque jour tant qu'il n'a pas répondu */
+const DAY = 864e5;
+async function putInvite(me, body) {
+  const other = String(body.from === me ? body.to : body.from || '');
+  if (!other || other === me || !(await getDoc('profiles', other))) throw err(400, 'Personne introuvable.');
+  const id = 'inv-' + pair(me, other), old = await getDoc('invites', id), now = Date.now();
+  if (body.state === 'pending' && body.from === me) {
+    if (old && (old.state === 'pending' || old.state === 'yes')) return old;
+    if (old && old.state === 'no' && old.from === me && now - (old.answeredAt || 0) < 30 * DAY) throw err(429, 'Tu pourras proposer à nouveau dans un mois.');
+    const inv = { id, from: me, to: other, state: 'pending', ts: now };
+    await putDoc('invites', id, me, inv);
+    notify(other, (await pseudoOf(me)) + ' t\'invite dans sa tribu', '/#tribu');
+    return inv;
+  }
+  if (old && old.to === me && old.state === 'pending' && (body.state === 'yes' || body.state === 'no')) {
+    const reason = Number(body.reason);
+    if (body.state === 'no' && ![1, 2, 3].includes(reason)) throw err(400, 'Choisis une des trois réponses.');
+    const inv = { ...old, state: body.state, answeredAt: now, ...(body.state === 'no' ? { reason } : {}) };
+    await putDoc('invites', id, old.from, inv);
+    notify(old.from, (await pseudoOf(me)) + (body.state === 'yes' ? ' a accepté : vous êtes dans la même tribu' : ' a répondu à ton invitation'), '/#tribu');
+    return inv;
+  }
+  throw err(400, 'Action impossible.');
+}
+async function remindInvites() {
+  try { const now = Date.now();
+    for (const i of await listDocs('invites', "AND data->>'state'='pending'")) {
+      if (now - (i.lastRemind || i.ts) < DAY - 36e5) continue;
+      i.lastRemind = now; await putDoc('invites', i.id, i.from, i);
+      notify(i.to, (await pseudoOf(i.from)) + ' attend ta réponse pour entrer dans ta tribu', '/#tribu');
+    } } catch (e) {}
+}
+/* une fois : l'ancienne tribu à sens unique devient « personnes préférées », les choix réciproques deviennent la tribu */
+async function migrateTribes() {
+  const all = (await listDocs('lists')).filter(l => l.type === 'tribe'); if (!all.length) return;
+  for (const l of all) {
+    const back = all.find(x => x.owner === l.target && x.target === l.owner);
+    if (back) { const id = 'inv-' + pair(l.owner, l.target); if (!(await getDoc('invites', id))) await putDoc('invites', id, l.owner, { id, from: l.owner, to: l.target, state: 'yes', ts: Date.now(), answeredAt: Date.now() }); }
+    l.type = 'fav'; await putDoc('lists', l.id, l.owner, l);
+  }
+}
 async function deleteOne(store, me, id) {
+  if (store === 'invites') { const d = await getDoc('invites', id); if (!d || (d.from !== me && d.to !== me)) return; if (d.state === 'pending' && d.from !== me) throw err(403, 'Réponds d\'abord à l\'invitation.'); return q("DELETE FROM docs WHERE store='invites' AND id=$1", [id]); }
   if (store === 'settings') return q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', me + ':' + id]);
   return q('DELETE FROM docs WHERE store=$1 AND id=$2 AND owner=$3', [store, id, me]);
 }
 async function wipeUser(me) {
   await q('DELETE FROM docs WHERE owner=$1', [me]);
+  await q("DELETE FROM docs WHERE store='invites' AND (data->>'to'=$1 OR data->>'from'=$1)", [me]);
   await q("DELETE FROM docs WHERE store='profiles' AND id=$1", [me]);
   await q('DELETE FROM files WHERE owner=$1', [me]);
   await q('DELETE FROM users WHERE id=$1', [me]);
@@ -296,7 +342,7 @@ async function api(req, res, url) {
       const inviter = invite ? (await q('SELECT id FROM users WHERE id=$1', [String(invite)])).rows[0] : null;
       await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(password), Date.now(), inviter ? inviter.id : null]);
       if (inviter) { // la personne qui invite entre directement dans la tribu de la nouvelle, et elle est prévenue
-        const lid = uid(); await putDoc('lists', lid, id, { id: lid, owner: id, type: 'tribe', target: inviter.id, name: await pseudoOf(inviter.id), __owner: id });
+        const iid = 'inv-' + pair(id, inviter.id); await putDoc('invites', iid, inviter.id, { id: iid, from: inviter.id, to: id, state: 'yes', ts: Date.now(), answeredAt: Date.now() });
         notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/#tribu');
       }
     } else if (parts[1] === 'login') {
@@ -427,5 +473,7 @@ http.createServer(async (req, res) => {
   }
 }).listen(PORT, async () => {
   for (let i = 0; i < 30; i++) { try { await initDb(); break; } catch (e) { console.error('Base pas encore prête…', e.message); await new Promise(r => setTimeout(r, 2000)); } }
+  try { await migrateTribes(); } catch (e) { console.error('migration tribu', e.message); }
+  setInterval(remindInvites, 36e5); setTimeout(remindInvites, 6e4);
   console.log('FeelShareLove sur le port ' + PORT);
 });

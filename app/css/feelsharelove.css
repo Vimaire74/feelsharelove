@@ -488,3 +488,13 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .rk-ic svg{width:34px;height:34px;filter:url(#rk-rough)}
 .rk-dots{display:flex;justify-content:center;gap:10px;margin:18px 0 8px}
 .rk-dots i{width:9px;height:9px;border-radius:50%;background:rgba(239,225,198,.25)}.rk-dots i.on{background:#d8843a;box-shadow:0 0 0 3px rgba(216,132,58,.25)}
+/* tribu sur invitation, personnes préférées */
+.tb{margin:10px 0 12px}.tb:empty{display:none}
+.tb-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tb-fav.on{color:var(--saffron);border-color:var(--saffron)}
+.tb-ask{margin-top:10px;padding:12px 14px;border-radius:14px;border:1px solid var(--rose);background:rgba(232,69,110,.10)}.tb-ask p{margin:0 0 8px}
+.tb-no{margin-top:10px;display:grid;gap:8px}
+.tb-reason{text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:14px/1.4 var(--body);cursor:pointer}
+.tb-reason:hover{border-color:var(--saffron)}
+.tb-note{margin-top:8px}
+.st.two{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}

@@ -41,7 +41,7 @@ Pages.connexion=function(S){
   ${step('port',"<b>1. Ton portrait.</b> Comment tu fonctionnes, tes goûts, tes passions : <i>qui tu es, avec précision</i>. Tout ne sera pas visible : l'essentiel sert à calculer ta <b>résonance</b> avec d'autres, près de chez toi ou ailleurs dans le monde.")}
   ${step('res',"<b>2. Tes résonances.</b> Tu vois avec qui tu résonnes et tu découvres une partie de son profil, mais pas tout.")}
   ${step('msg',"<b>3. Le premier message.</b> Si un goût commun t'emballe (le même film, la même chanson, le même jeu vidéo, le même musée ou la même région du monde), écris-lui. Dès que cette personne te répond, vous voyez davantage l'un de l'autre.")}
-  ${step('tribu',"<b>4. La tribu.</b> Si vous vous ajoutez tous les deux à votre cercle intime, vous êtes de la même tribu : la plupart de ce que vous avez choisi de partager devient visible l'un pour l'autre. Vous devenez <i>intimes de passions, de sentiments, de fonctionnement</i>, et il y a de bonnes chances que vous deveniez de vrais amis, ou plus si vous le souhaitez. ❤️")}</div>`]];
+  ${step('tribu',"<b>4. La tribu.</b> L'un de vous invite l'autre dans sa tribu, l'autre répond toujours. S'il accepte, vous êtes de la même tribu : la plupart de ce que vous avez choisi de partager devient visible l'un pour l'autre. Vous devenez <i>intimes de passions, de sentiments, de fonctionnement</i>, et il y a de bonnes chances que vous deveniez de vrais amis, ou plus si vous le souhaitez. ❤️")}</div>`]];
   let pg=0;
   function intro(){const last=pg===PAGES.length-1;
     S.innerHTML=`<div class="rock">${DEFS}<div class="rk-top"><span class="rk-brand">${PAGES[pg][0]}</span><button class="linkbtn" type="button" id="c-have">J'ai déjà un compte</button></div>

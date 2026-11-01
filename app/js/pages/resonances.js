@@ -58,8 +58,8 @@ Pages.resonances=async function(S,id){
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
   <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
-  <div class="pair">${App.avatarHtml(me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div id="body" style="margin-top:10px"></div>`;
-  const B=$('body');
+  <div class="pair">${App.avatarHtml(me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
+  const B=$('body');App.tribeBox(p,$('tribe'));
   const ct=commonTypes(me,p);
   if(ct.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Vous fonctionnez tous les deux ${ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et ')}</div><div class="types-show">${ct.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div></div>`);
   if(ex.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Dans vos portraits</div>${ex.map(x=>`<p style="margin:6px 0">${esc(x.l)}${x.mine&&x.mine.id!==x.theirs.id?` <span class="muted">(toi : ${esc(x.mine.n)} · ${esc(dn(p))} : ${esc(x.theirs.n)})</span>`:''}${x.theirs&&x.theirs.why?`<br><span class="muted small">« ${esc(x.theirs.why)} »</span>`:''}</p>`).join('')}</div>`);

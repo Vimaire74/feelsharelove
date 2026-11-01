@@ -13,12 +13,12 @@ Pages._view=async function(S,p,preview){
     facts.push([x.k,s.v]);});
   Object.entries(F).forEach(([k,v])=>{if(typeof v==='string'&&v&&!FACTS.some(x=>x.id===k))facts.push([FACT_LABEL[k]||k,v]);});
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
-  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Cercle intime</span>':''}<p class="muted">${esc(preview?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
+  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Ta tribu</span>':''}<p class="muted">${esc(preview?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
   <div class="intent">${(p.intent||[]).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}
   ${p.limited?'':`<div class="voice-box"><p class="eyebrow" style="margin:0">${preview?'Ma voix':'Sa voix'}</p><div id="voice"></div></div>`}
-  ${preview?'':`<div class="actions2"><a class="btn flame" href="#resonances/${p.id}">Nos résonances · ${nres}</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a><button class="btn ghost" type="button" id="tribe"></button></div>`}
+  ${preview?'':`<div class="actions2"><a class="btn flame" href="#resonances/${p.id}">Nos résonances · ${nres}</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a></div><div class="tb" id="tribe"></div>`}
   ${p.types&&p.types.list&&p.types.list.length&&p.types.show!==false?`<h2>${preview?'Mon':'Son'} <em>fonctionnement</em></h2><div class="types-show">${p.types.list.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div>`:''}
   ${facts.length?`<h2>Qui ${preview?'je':il} <em>${preview?'suis':'est'}</em></h2><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`:''}
   ${Plus.viewHtml(p,me,preview,p.limited?'rep':null)}
@@ -36,8 +36,7 @@ Pages._view=async function(S,p,preview){
   else if(V)V.innerHTML=`<p class="muted small">${preview?'Pas encore enregistrée. Tu peux le faire dans ton portrait.':'Pas encore enregistrée.'}</p>`;
   if(preview)return;
   /* ma tribu */
-  const TB=$('tribe');const setT=async()=>{const t=await App.inTribe(p);TB.textContent=t?'Dans ma tribu · retirer':'Ajouter à ma tribu';TB.classList.toggle('on',!!t);};await setT();
-  TB.addEventListener('click',async()=>{const t=await App.inTribe(p);if(t)await DB.del('lists',t.id);else await App.tribeAdd(p);setT();});
+  await App.tribeBox(p,$('tribe'));
   $('red').addEventListener('click',async()=>{await DB.put('lists',{owner:'me',type:'red',target:p.id,name:p.name||p.pseudo,hint:p.city});$('done').textContent=dn(p)+' est sur ta liste rouge : '+il+' ne te verra plus. Tu peux l\'enlever dans Réglages.';});
   $('rep').addEventListener('click',async()=>{await DB.put('reports',{by:'me',target:p.id,kind:'profile',reason:'autre',status:'open',ts:Date.now()});$('done').textContent='Signalement transmis à l\'équipe FeelShareLove.';});
 };

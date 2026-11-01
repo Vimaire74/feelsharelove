@@ -12,7 +12,7 @@ Pages.portrait=async function(S){
   <p class="muted small" id="pseudo-rule" style="margin-top:8px"></p>
   <div id="pseudo-pick" hidden></div>
   <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="photo-take">Prendre ma photo</button><button class="btn ghost" type="button" id="photo-edit" hidden>Recadrer ou dessiner</button></div>
-  <label class="check" id="photo-int-l" style="margin-top:8px" hidden><input type="checkbox" id="photo-int"> Montrer ma vraie photo à mon cercle intime</label>
+  <label class="check" id="photo-int-l" style="margin-top:8px" hidden><input type="checkbox" id="photo-int"> Montrer ma vraie photo à ma tribu</label>
   <p class="muted small" id="photo-rule" style="margin-top:6px"></p>
   <div class="facts" style="margin-top:14px">
     <div class="fact"><div class="k">Prénom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à ton pseudo et à la liste rouge)</span></div><div class="v"><input class="in" id="f-name" placeholder="Prénom"></div></div>
