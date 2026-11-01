@@ -7,7 +7,10 @@ Pages.tribu=async function(S){
   const ask=inv.filter(i=>i.state==='pending'&&i.to==='me'&&byId[i.from]);
   const tribe=inv.filter(i=>i.state==='yes'&&byId[other(i)]);
   const sent=inv.filter(i=>i.from==='me'&&(i.state==='pending'||i.state==='no')&&byId[i.to]);
-  const favs=await App.favOf();
+  /* personnes préférées : celles qui sont dans la tribu en sortent */
+  const inT=new Set(tribe.map(other));let favs=await App.favOf();
+  for(const l of favs.filter(l=>inT.has(l.target)))await DB.del('lists',l.id);
+  favs=favs.filter(l=>!inT.has(l.target));
   const known=new Set(inv.map(other));
   const threads=await DB.all('threads');
   /* rencontrés ici : conversation ouverte, pas encore d'invitation */

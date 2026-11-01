@@ -145,7 +145,9 @@ window.App=(function(){
   /* boutons « Personne préférée » et « Inviter dans ma tribu », et réponse à une invitation reçue ; sur le portrait, la conversation et les résonances */
   async function tribeBox(p,el,onChange){const me=(await loadMe()).me;
     async function draw(){const inv=await inviteWith(p),fav=await isFav(p),Il=fem(p)?'Elle':'Il';let h='<div class="tb-row">',note='';
-      h+=`<button class="btn ghost small-btn tb-fav${fav?' on':''}" type="button" data-a="fav">${fav?'★':'☆'} Personne préférée</button>`;
+      /* dans la tribu, plus besoin d'être une personne préférée : la liste est purgée */
+      if(inv&&inv.state==='yes'){if(fav)await DB.del('lists',fav.id);}
+      else h+=`<button class="btn ghost small-btn tb-fav${fav?' on':''}" type="button" data-a="fav">${fav?'★':'☆'} Personne préférée</button>`;
       if(!inv||(inv.state==='no'&&inv.to==='me'))h+=`<button class="btn small-btn" type="button" data-a="inv">Inviter dans ma tribu</button>`;
       else if(inv.state==='yes')h+=`<span class="rtag t-int">Dans ta tribu</span>`;
       else if(inv.state==='pending'&&inv.from==='me'){h+=`<span class="muted small">Invitation envoyée</span>`;note=`${esc(dn(p))} reçoit un rappel chaque jour jusqu'à sa réponse.`;}
