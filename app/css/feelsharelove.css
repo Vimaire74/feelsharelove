@@ -502,3 +502,4 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .tb-pop{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,4,5,.6);padding:16px}
 .tb-pop-in{width:100%;max-width:480px;background:var(--bg);border:1px solid var(--rose);border-radius:22px;padding:18px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
 .tb-pop-who{display:flex;gap:12px;align-items:center;margin:6px 0 8px}
+.vbadge.demo{color:#2a1608;background:#f7b733}

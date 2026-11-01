@@ -19,7 +19,7 @@ function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), wh
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
-const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites']);
+const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites','notices']);
 const PRIVATE = new Set(['lists','reports','settings']);
 
 /* ---------- base ---------- */
@@ -31,6 +31,9 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS docs_owner ON docs (store, owner);
     CREATE TABLE IF NOT EXISTS files (id text PRIMARY KEY, owner text NOT NULL, mime text NOT NULL, data bytea NOT NULL, created bigint NOT NULL);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by text;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen bigint;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS no_mail boolean NOT NULL DEFAULT false;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason text;
     CREATE TABLE IF NOT EXISTS push_subs (endpoint text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, data jsonb NOT NULL, created bigint NOT NULL);
   `);
   /* clés des notifications : créées une seule fois et gardées dans la base (rien à régler dans Coolify) */
@@ -77,8 +80,12 @@ async function userFromReq(req) {
   const t = (req.headers.authorization || '').replace(/^Bearer /, '');
   if (!t) return null;
   const r = await q('SELECT u.id, u.banned FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=$1', [t]);
-  return r.rows[0] && !r.rows[0].banned ? r.rows[0].id : null;
+  if (!r.rows[0] || r.rows[0].banned) return null;
+  const id = r.rows[0].id, now = Date.now(); // dernière visite, notée au plus toutes les 10 minutes
+  if (now - (seenAt.get(id) || 0) > 6e5) { seenAt.set(id, now); q('UPDATE users SET last_seen=$1 WHERE id=$2', [now, id]).catch(() => {}); }
+  return id;
 }
+const seenAt = new Map();
 const tries = new Map(); // limite simple contre les essais de mots de passe
 function tooMany(ip) { const now = Date.now(); const a = (tries.get(ip) || []).filter(t => now - t < 15 * 60e3); a.push(now); tries.set(ip, a); return a.length > 20; }
 
@@ -190,6 +197,7 @@ async function readList(store, me, query) {
     if (query.thread) rows = rows.filter(m => m.thread === query.thread); return rows;
   }
   if (store === 'settings') return (await listDocs('settings', 'AND owner=$2', [me])).map(s => ({ key: s.key, value: s.value }));
+  if (store === 'notices') return listDocs('notices', "AND data->>'to'=$2", [me]);
   if (store === 'invites') { const { hidden } = await hiddenFor(me); return (await listDocs('invites', "AND (data->>'from'=$2 OR data->>'to'=$2)", [me])).filter(i => !hidden.has(i.from === me ? i.to : i.from)); }
   /* « moi aussi » : visibles seulement par celui qui l'a écrit et par la personne concernée */
   if (store === 'nods') { const { hidden } = await hiddenFor(me); return (await listDocs('nods', "AND (owner=$2 OR data->>'target'=$2)", [me])).filter(n => !hidden.has(n.owner) && !hidden.has(n.target)); }
@@ -216,6 +224,7 @@ async function readOne(store, me, id) {
   if (PRIVATE.has(store)) return d.owner === me ? d : null;
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
   if (store === 'invites') return d.from === me || d.to === me ? d : null;
+  if (store === 'notices') return d.to === me ? d : null;
   if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened); }
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
@@ -225,6 +234,7 @@ async function writeOne(store, me, id, body) {
   if (store === 'threads') return putThread(me, id, body);
   if (store === 'settings') { const v = { key: id, value: body.value }; await putDoc('settings', me + ':' + id, me, v); return v; }
   if (store === 'invites') return putInvite(me, body);
+  if (store === 'notices') { const n = await getDoc('notices', id); if (!n || n.to !== me) throw err(403, 'message'); n.read = true; return putDoc('notices', id, 'admin', n); }
   const old = await getDoc(store, id);
   if (store === 'messages') return putMessage(me, id, body, old);
   const data = { ...body, id };
@@ -239,8 +249,10 @@ async function writeOne(store, me, id, body) {
   if (old && old.__owner && old.__owner !== me) throw err(403, 'écriture');
   if (data[ownerField] !== me) throw err(403, 'propriétaire');
   if (store === 'reports') data.status = old ? old.status : 'open';
+  if (store === 'reports' && !old) await attachCopy(me, data);
   data.__owner = me;
   const saved = await putDoc(store, id, me, data);
+  if (store === 'reports' && !old && data.target) autoPause(data.target).catch(() => {});
   /* cercle intime : quand l'autre m'avait déjà mis dans sa tribu, on le dit à tous les deux */
   if (store === 'nods' && data.target && !old) { try { notify(data.target, (await pseudoOf(me)) + ' aime aussi « ' + String(data.title || '').slice(0, 60) + ' »', '/#portrait'); } catch (e) {} }
   if (store === 'lists' && data.type === 'tribe' && data.target && !old) {
@@ -290,6 +302,26 @@ async function migrateTribes() {
     l.type = 'fav'; await putDoc('lists', l.id, l.owner, l);
   }
 }
+/* signalement : copie de l'élément signalé, pour que l'équipe le voie sans lire le reste de la conversation */
+async function attachCopy(me, r) {
+  try {
+    if (r.messageId) { const m = await getDoc('messages', r.messageId); if (m && m.from === r.target && m.to === me) r.copy = [{ kind: m.kind, text: m.text || '', ts: m.ts, url: m.url || '' }]; }
+    else if (r.kind === 'block' || r.kind === 'message') { // les 5 derniers messages de la personne signalée à celle qui signale
+      const ms = (await listDocs('messages', "AND data->>'from'=$2 AND data->>'to'=$3", [r.target, me])).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 5);
+      r.copy = ms.map(m => ({ kind: m.kind, text: m.text || '', ts: m.ts }));
+    } else if (r.target) { const p = await getDoc('profiles', r.target); if (p) r.copy = [{ kind: 'profil', text: [p.pseudo, p.now].filter(Boolean).join(' · '), photo: p.photo || '' }]; }
+  } catch (e) {}
+}
+/* pause automatique : signalé par 3 personnes différentes (signalements ouverts) */
+async function autoPause(target) {
+  const by = new Set((await listDocs('reports', "AND data->>'target'=$2 AND data->>'status'='open'", [target])).map(r => r.by));
+  if (by.size < 3) return;
+  const p = await getDoc('profiles', target); if (!p || p.paused) return;
+  p.paused = Date.now(); p.autoPaused = true; await putDoc('profiles', target, target, p);
+  await alog('Pause automatique', target, by.size + ' personnes ont signalé ce compte');
+}
+async function alog(action, target, detail) { const id = uid(); await putDoc('adminlog', id, 'admin', { id, action, target: target || '', detail: detail || '', ts: Date.now() }); }
+async function config() { return (await getDoc('admin', 'config')) || {}; }
 async function deleteOne(store, me, id) {
   if (store === 'invites') { const d = await getDoc('invites', id); if (!d || (d.from !== me && d.to !== me)) return; if (d.state === 'pending' && d.from !== me) throw err(403, 'Réponds d\'abord à l\'invitation.'); return q("DELETE FROM docs WHERE store='invites' AND id=$1", [id]); }
   if (store === 'settings') return q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', me + ':' + id]);
@@ -338,6 +370,7 @@ async function api(req, res, url) {
     let id;
     if (parts[1] === 'register') {
       const r = await q('SELECT 1 FROM users WHERE email=$1', [e]); if (r.rowCount) throw err(409, 'Un compte existe déjà avec cette adresse.');
+      if ((await config()).closed && !invite) throw err(403, 'Les inscriptions sont fermées pour le moment. Tu peux entrer avec le lien d\'invitation d\'un membre.');
       id = uid();
       const inviter = invite ? (await q('SELECT id FROM users WHERE id=$1', [String(invite)])).rows[0] : null;
       await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(password), Date.now(), inviter ? inviter.id : null]);
@@ -386,49 +419,241 @@ async function api(req, res, url) {
 
 /* ---------- administration : /admin?key=ADMIN_KEY ---------- */
 const H = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/* ---------- e-mails à tous les inscrits (adresse d'envoi à régler dans Coolify : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM) ---------- */
+const SMTP = { host: process.env.SMTP_HOST || '', port: +(process.env.SMTP_PORT || 465), user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '' };
+const MAIL_PER_HOUR = +(process.env.MAIL_PER_HOUR || 100); // envoi par petits paquets : les comptes e-mail gratuits limitent le nombre d'envois par heure
+const SITE = process.env.SITE_URL || 'https://feelsharelove.com';
+let mailer = null;
+function mailReady() { return !!(SMTP.host && SMTP.user && SMTP.pass); }
+function getMailer() { if (!mailer && mailReady()) { const nm = require('nodemailer'); mailer = nm.createTransport({ host: SMTP.host, port: SMTP.port, secure: SMTP.port === 465, auth: { user: SMTP.user, pass: SMTP.pass } }); } return mailer; }
+const unsubToken = id => crypto.createHmac('sha256', (ADMIN_KEY || 'fsl') + ':unsub').update(id).digest('hex').slice(0, 24);
+async function sendMail(to, subject, text, uidFor) {
+  const link = uidFor ? `${SITE}/unsub?u=${encodeURIComponent(uidFor)}&t=${unsubToken(uidFor)}` : '';
+  const foot = link ? `\n\n—\nFeelShareLove · ${SITE}\nNe plus recevoir ces e-mails : ${link}` : `\n\n—\nFeelShareLove · ${SITE}`;
+  await getMailer().sendMail({ from: `FeelShareLove <${SMTP.from}>`, to, subject, text: text + foot, ...(link ? { headers: { 'List-Unsubscribe': `<${link}>` } } : {}) });
+}
+async function unsub(res, url) {
+  const u = url.searchParams.get('u') || '', t = url.searchParams.get('t') || '';
+  const ok = u && t.length === 24 && crypto.timingSafeEqual(Buffer.from(t), Buffer.from(unsubToken(u)));
+  if (ok) await q('UPDATE users SET no_mail=true WHERE id=$1', [u]);
+  send(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font:16px system-ui;background:#1c0f12;color:#fbeadb;padding:24px"><h1>FeelShareLove</h1><p>${ok ? 'C\'est noté : tu ne recevras plus nos e-mails d\'information.' : 'Lien invalide.'}</p></body>`, 'text/html; charset=utf-8');
+}
+/* file d'envoi : gardée en base, reprise après un redémarrage */
+async function mailTick() {
+  try {
+    const job = await getDoc('admin', 'mailjob'); if (!job || job.done || !mailReady()) return;
+    const id = job.ids[job.pos]; if (id === undefined) { job.done = Date.now(); await putDoc('admin', 'mailjob', 'admin', job); await alog('E-mail à tous terminé', '', job.subject + ' · ' + job.sent + ' envoyés, ' + job.failed + ' échecs'); return; }
+    const u = (await q('SELECT email, no_mail, banned FROM users WHERE id=$1', [id])).rows[0];
+    if (u && !u.no_mail && !u.banned) { try { await sendMail(u.email, job.subject, job.body, id); job.sent++; } catch (e) { job.failed++; job.lastError = e.message; } }
+    job.pos++; await putDoc('admin', 'mailjob', 'admin', job);
+  } catch (e) {}
+}
+setInterval(mailTick, Math.max(2000, Math.round(3600e3 / MAIL_PER_HOUR)));
+
+/* ---------- administration ---------- */
+const TYPE_NAME = { sens: 'Sensible', emo: 'Émotionnel', mental: 'Mental', phys: 'Physique' };
+const INTENT_NAME = { parler: 'Quelqu\'un à qui parler', amis: 'Des amis', amour: 'L\'amour' };
+const REASONS = { injures: 'injures ou harcèlement', commercial: 'usage commercial', faux: 'faux profil', inapproprie: 'comportement inapproprié', autre: 'non-respect des règles' };
+let CAT = null; // libellés du portrait (domaines du cœur, métiers/rôles/tendances), lus dans le catalogue de l'app
+function catalogue() {
+  if (CAT) return CAT;
+  try { const ctx = { window: {} }; require('vm').runInNewContext(fs.readFileSync(path.join(PUBLIC, 'js', 'catalogue-portrait.js'), 'utf8'), ctx); CAT = ctx.window.CATALOGUE; } catch (e) { CAT = { INV: {}, REPK: {} }; }
+  return CAT;
+}
+const fmtD = t => t ? new Date(+t).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—';
+const fmtDT = t => t ? new Date(+t).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', dateStyle: 'short', timeStyle: 'short' }) : '—';
+const ADMIN_CSS = `
+:root{--bg:#1c0f12;--card:#2a161a;--card2:#351c20;--line:#4a262b;--fg:#fbeadb;--muted:#c9a493;--flame:#ff6a2a;--saffron:#f7b733;--rose:#e8456e;--ok:#5fbf8f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 Figtree,system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:linear-gradient(#2a161a,#1c0f12);border-bottom:1px solid var(--line);padding:12px 16px 0}
+header h1{font:600 20px Fraunces,Georgia,serif;margin:0 0 10px}header h1 em{color:var(--flame)}
+nav{display:flex;gap:4px;overflow-x:auto}nav a{padding:8px 12px;border-radius:10px 10px 0 0;color:var(--muted);text-decoration:none;white-space:nowrap}nav a.on{background:var(--bg);color:var(--saffron);box-shadow:0 -2px 0 var(--saffron) inset}
+nav a .n{background:var(--rose);color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
+main{max-width:1100px;margin:0 auto;padding:16px}
+h2{font:600 18px Fraunces,Georgia,serif;color:var(--saffron);margin:22px 0 10px}h3{margin:14px 0 6px;font-size:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.kpi b{display:block;font:600 28px Fraunces,Georgia,serif}.kpi span{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;font-size:14px;vertical-align:top}th{color:var(--muted);font-weight:600}
+a{color:var(--saffron)}small,.muted{color:var(--muted)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:9px;border:1px solid var(--line);margin:0 4px 4px 0}.tag.red{border-color:var(--rose);color:#ffc0cf}.tag.ok{border-color:var(--ok);color:#bfeed5}.tag.y{border-color:var(--saffron);color:var(--saffron)}
+button,.btn{font:600 14px Figtree,system-ui;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--fg);padding:7px 14px;cursor:pointer}
+button.flame{background:var(--flame);border-color:var(--flame);color:#1c0f12}button.danger{border-color:var(--rose);color:#ffc0cf}
+input,select,textarea{font:15px Figtree,system-ui;background:#140a0c;color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}textarea{width:100%;min-height:180px}
+form.inline{display:inline-flex;gap:6px;align-items:center;margin:0 6px 6px 0;flex-wrap:wrap}
+.pics{display:flex;gap:10px;flex-wrap:wrap}.pics img{width:150px;height:150px;object-fit:cover;border-radius:12px;background:#000}figure{margin:0}figcaption{font-size:12px;color:var(--muted)}
+.ph{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#000;vertical-align:middle}
+.copy{background:#140a0c;border-left:3px solid var(--rose);padding:8px 10px;border-radius:8px;margin:6px 0;white-space:pre-wrap}
+.flash{background:rgba(95,191,143,.15);border:1px solid var(--ok);border-radius:12px;padding:8px 12px;margin-bottom:12px}`;
+
 async function admin(req, res, url) {
   const key = url.searchParams.get('key') || '';
   if (!ADMIN_KEY || key.length !== ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(ADMIN_KEY))) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
+  const K = encodeURIComponent(key), tab = url.searchParams.get('tab') || 'dash';
+  const go = (t, extra = '', flash = '') => { res.writeHead(303, { Location: `/admin?key=${K}&tab=${t}${extra}${flash ? '&ok=' + encodeURIComponent(flash) : ''}` }); res.end(); };
+  /* ---------- actions ---------- */
   if (req.method === 'POST') {
     const f = new URLSearchParams((await readBody(req)).toString());
-    const a = f.get('a'), id = f.get('id');
+    const a = f.get('a'), id = f.get('id') || '', back = f.get('back') || 'dash', backId = f.get('backId') ? '&id=' + encodeURIComponent(f.get('backId')) : '';
+    const reason = REASONS[f.get('reason')] || REASONS.autre;
     if (a === 'verify' || a === 'refuse') {
       const p = await getDoc('profiles', id);
       if (p) { p.verified = a === 'verify' ? { status: 'verified', at: Date.now() } : { status: 'refused', at: Date.now() }; await putDoc('profiles', id, id, p); }
       await q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', id + ':idcheck']); // la photo de la carte est supprimée dans les deux cas
+      await alog(a === 'verify' ? 'Identité vérifiée' : 'Vérification refusée', id); return go(back, backId, 'C\'est fait.');
     }
-    if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; await putDoc('reports', id, r.by, r); } }
-    if (a === 'ban') { await q('UPDATE users SET banned=true WHERE id=$1', [id]); await q('DELETE FROM sessions WHERE user_id=$1', [id]); const p = await getDoc('profiles', id); if (p) { p.paused = Date.now(); await putDoc('profiles', id, id, p); } }
-    if (a === 'unban') await q('UPDATE users SET banned=false WHERE id=$1', [id]);
+    if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('reports', id, r.by, r); await alog('Signalement traité', r.target, r.kind); } return go(back, backId, 'Signalement classé.'); }
+    if (a === 'warn') {
+      const nid = uid(); await putDoc('notices', nid, 'admin', { id: nid, to: id, ts: Date.now(), read: false,
+        text: `Nous avons reçu des signalements te concernant (${reason}). Merci de respecter les règles de FeelShareLove : en cas de récidive, ton compte sera fermé.` });
+      notify(id, 'Un message de l\'équipe FeelShareLove', '/#now');
+      await alog('Avertissement', id, reason); return go(back, backId, 'Avertissement envoyé.');
+    }
+    if (a === 'ban') {
+      await q('UPDATE users SET banned=true, ban_reason=$2 WHERE id=$1', [id, reason]); await q('DELETE FROM sessions WHERE user_id=$1', [id]);
+      const p = await getDoc('profiles', id); if (p) { p.paused = Date.now(); await putDoc('profiles', id, id, p); }
+      await alog('Compte suspendu', id, reason); return go(back, backId, 'Compte suspendu.');
+    }
+    if (a === 'unban') { await q('UPDATE users SET banned=false, ban_reason=null WHERE id=$1', [id]); const p = await getDoc('profiles', id); if (p) { delete p.paused; delete p.autoPaused; await putDoc('profiles', id, id, p); } await alog('Compte réactivé', id); return go(back, backId, 'Compte réactivé.'); }
+    if (a === 'unpause') { const p = await getDoc('profiles', id); if (p) { delete p.paused; delete p.autoPaused; await putDoc('profiles', id, id, p); } await alog('Pause levée', id); return go(back, backId, 'Pause levée.'); }
+    if (a === 'delete') {
+      if (f.get('sure') !== 'oui') return go(back, backId, 'Suppression annulée : coche la case de confirmation.');
+      const p = await getDoc('profiles', id); const u = (await q('SELECT email FROM users WHERE id=$1', [id])).rows[0];
+      await wipeUser(id); await alog('Compte supprimé', id, [(p && p.pseudo) || '', u ? u.email : '', reason].filter(Boolean).join(' · ')); return go('accounts', '', 'Compte supprimé définitivement.');
+    }
     if (a === 'fakes') { // profils de test : réécrit seulement les comptes marqués fake:true (photo et vérification gardées)
       const FK = require('./fakes.js');
       for (const old of await listDocs('profiles')) {
         if (old.fake !== true) continue;
-        const f = FK.find(x => x.from.includes(old.pseudo)); if (!f) continue;
-        const p = { ...old, ...f.p, id: old.id, fake: true }; if (!f.p.travel) delete p.travel;
+        const fk = FK.find(x => x.from.includes(old.pseudo)); if (!fk) continue;
+        const p = { ...old, ...fk.p, id: old.id, fake: true }; if (!fk.p.travel) delete p.travel;
         await putDoc('profiles', old.id, old.id, p);
         await q("DELETE FROM docs WHERE store='entries' AND data->>'profileId'=$1", [old.id]);
-        let i = 0; for (const e of f.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); }
+        let i = 0; for (const e of fk.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); }
       }
+      await alog('Profils de test remplis'); return go('settings', '', 'Profils de test remplis.');
     }
-    res.writeHead(303, { Location: '/admin?key=' + encodeURIComponent(key) }); return res.end();
+    if (a === 'fakes-delete') {
+      if (f.get('sure') !== 'oui') return go('settings', '', 'Suppression annulée : coche la case de confirmation.');
+      let n = 0; for (const p of await listDocs('profiles')) if (p.fake === true) { await wipeUser(p.id); n++; }
+      await alog('Profils de test supprimés', '', n + ' comptes'); return go('settings', '', n + ' profils de test supprimés.');
+    }
+    if (a === 'closed') { const c = await config(); c.closed = f.get('v') === '1'; await putDoc('admin', 'config', 'admin', c); await alog(c.closed ? 'Inscriptions fermées' : 'Inscriptions ouvertes'); return go('settings', '', c.closed ? 'Inscriptions fermées (sauf lien d\'invitation).' : 'Inscriptions ouvertes.'); }
+    if (a === 'mail-test' || a === 'mail-all') {
+      const subject = (f.get('subject') || '').trim(), body = (f.get('body') || '').trim();
+      if (!mailReady()) return go('mail', '', 'L\'adresse d\'envoi n\'est pas encore configurée.');
+      if (!subject || !body) return go('mail', '', 'Objet et texte sont nécessaires.');
+      if (a === 'mail-test') { try { await sendMail(f.get('to'), '[Essai] ' + subject, body, null); return go('mail', '', 'E-mail d\'essai envoyé à ' + f.get('to') + '.'); } catch (e) { return go('mail', '', 'Échec de l\'envoi : ' + e.message); } }
+      const old = await getDoc('admin', 'mailjob'); if (old && !old.done) return go('mail', '', 'Un envoi est déjà en cours.');
+      if (f.get('sure') !== 'oui') return go('mail', '', 'Envoi annulé : coche la case de confirmation.');
+      const ids = (await q('SELECT id FROM users WHERE NOT banned AND NOT no_mail ORDER BY created')).rows.map(r => r.id);
+      await putDoc('admin', 'mailjob', 'admin', { subject, body, ids, pos: 0, sent: 0, failed: 0, started: Date.now() });
+      await alog('E-mail à tous lancé', '', subject + ' · ' + ids.length + ' destinataires'); return go('mail', '', 'Envoi lancé à ' + ids.length + ' personnes.');
+    }
+    return go(back, backId);
   }
-  const users = (await q('SELECT id, email, created, banned FROM users ORDER BY created DESC')).rows;
+
+  /* ---------- données ---------- */
+  const now = Date.now(), D7 = now - 7 * 864e5, D1 = now - 864e5;
+  const users = (await q('SELECT id, email, created, banned, ban_reason, last_seen, invited_by, no_mail FROM users ORDER BY created DESC')).rows;
   const profiles = Object.fromEntries((await listDocs('profiles')).map(p => [p.id, p]));
+  const reportsAll = await listDocs('reports');
+  const reports = reportsAll.filter(r => r.status === 'open' && r.kind !== 'suggestion').sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const suggestions = reportsAll.filter(r => r.status === 'open' && r.kind === 'suggestion');
   const pend = Object.values(profiles).filter(p => p.verified && p.verified.status === 'pending');
-  const reports = (await listDocs('reports')).filter(r => r.status === 'open').sort((a, b) => b.ts - a.ts);
-  const counts = (await q('SELECT store, count(*)::int n FROM docs GROUP BY store')).rows;
-  const who = id => { const p = profiles[id]; return p ? H(p.pseudo || '(sans pseudo)') + ' <small>' + H([p.name, p.lastName].filter(Boolean).join(' ')) + '</small>' : H(id); };
-  const btn = (a, id, label) => `<form method="post" style="display:inline"><input type="hidden" name="a" value="${a}"><input type="hidden" name="id" value="${H(id)}"><button>${label}</button></form>`;
-  const card = async p => { const s = await getDoc('settings', p.id + ':idcheck'); return `<div class="card"><b>${who(p.id)}</b><div class="pics"><figure><img src="${H(p.photo)}"><figcaption>Portrait</figcaption></figure><figure>${s ? `<img src="${H(s.value && s.value.shot)}">` : '<p>(pas de photo)</p>'}<figcaption>Carte + visage</figcaption></figure></div>${btn('verify', p.id, 'Valider')} ${btn('refuse', p.id, 'Refuser')}</div>`; };
+  const flash = url.searchParams.get('ok');
+  const who = id => { const p = profiles[id]; return `<a href="/admin?key=${K}&tab=account&id=${encodeURIComponent(id)}">${H(p && p.pseudo || '(sans pseudo)')}</a>${p && p.fake ? ' <span class="tag y">test</span>' : ''}`; };
+  const btn = (a, id, label, extra = '', cls = '') => `<form method="post" class="inline"><input type="hidden" name="a" value="${a}"><input type="hidden" name="id" value="${H(id)}"><input type="hidden" name="back" value="${H(tab)}"><input type="hidden" name="backId" value="${H(url.searchParams.get('id') || '')}">${extra}<button class="${cls}">${label}</button></form>`;
+  const reasonSel = `<select name="reason">${Object.entries(REASONS).map(([k, l]) => `<option value="${k}">${H(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join('')}</select>`;
+  const sure = label => `<label class="muted" style="font-size:13px"><input type="checkbox" name="sure" value="oui"> ${label}</label>`;
+  const photoOf = p => p && p.photo ? `<img class="ph" src="${H(p.photo)}" alt="">` : '<span class="ph" style="display:inline-block"></span>';
+  const status = u => { const p = profiles[u.id] || {}; return (u.banned ? `<span class="tag red">suspendu</span>` : '') + (p.paused && !u.banned ? `<span class="tag red">en pause${p.autoPaused ? ' (auto)' : ''}</span>` : '') + (p.fake ? '<span class="tag y">test</span>' : '') + (p.verified && p.verified.status === 'verified' ? '<span class="tag ok">vérifié</span>' : '') + (!p.pseudo ? '<span class="tag">inscription pas finie</span>' : ''); };
+  const copyHtml = r => (r.copy || []).map(c => `<div class="copy">${c.photo ? `<img class="ph" src="${H(c.photo)}" alt=""> ` : ''}<small>${H(c.kind)}${c.ts ? ' · ' + fmtDT(c.ts) : ''}</small>\n${H(c.text || (c.kind === 'voice' ? '(message vocal)' : c.kind === 'ephemeral' ? '(photo éphémère)' : ''))}</div>`).join('');
+  const reportCard = r => `<div class="card"><b>${H({ photo: 'Photo éphémère', block: 'Blocage dans une conversation', profile: 'Portrait', message: 'Message' }[r.kind] || r.kind)}</b> · <small>${fmtDT(r.ts)}</small>
+    <p>Signalé par ${who(r.by)} · visé : ${who(r.target)}${r.reason ? ' · raison : ' + H(r.reason) : ''}</p>${copyHtml(r) || '<p class="muted">Pas de copie de l\'élément signalé (signalement antérieur à la nouvelle version).</p>'}
+    <div>${btn('report-done', r.id, 'Classer')} ${btn('warn', r.target, 'Avertir', reasonSel)} ${btn('ban', r.target, 'Suspendre', reasonSel, 'danger')}</div></div>`;
+  let body = '';
+
+  if (tab === 'dash') {
+    const msgs = (await q("SELECT count(*) FILTER (WHERE updated > $1)::int d1, count(*) FILTER (WHERE updated > $2)::int d7 FROM docs WHERE store='messages'", [D1, D7])).rows[0];
+    const inv = await listDocs('invites'); const threads = await listDocs('threads');
+    const real = users.filter(u => !(profiles[u.id] || {}).fake);
+    const kpi = (n, l) => `<div class="kpi"><b>${n}</b><span>${l}</span></div>`;
+    body = `<h2>Tableau de bord</h2><div class="grid">
+      ${kpi(real.length, 'inscrits (hors profils de test)')}${kpi(real.filter(u => +u.created > D7).length, 'nouveaux sur 7 jours')}${kpi(real.filter(u => +u.last_seen > D7).length, 'actifs sur 7 jours')}${kpi(real.filter(u => +u.last_seen > D1).length, 'actifs aujourd\'hui')}
+      ${kpi(msgs.d1, 'messages sur 24 h')}${kpi(msgs.d7, 'messages sur 7 jours')}${kpi(threads.filter(t => t.state === 'open').length, 'conversations ouvertes')}
+      ${kpi(inv.filter(i => i.state === 'yes').length, 'liens de tribu')}${kpi(inv.filter(i => i.state === 'pending').length, 'invitations en attente')}
+      ${kpi(reports.length, 'signalements à traiter')}${kpi(pend.length, 'vérifications en attente')}${kpi(users.filter(u => u.banned).length, 'comptes suspendus')}</div>
+      ${(await config()).closed ? '<p class="card">Les inscriptions sont <b>fermées</b> (sauf lien d\'invitation). <a href="/admin?key=' + K + '&tab=settings">Réglages</a></p>' : ''}`;
+  }
+  if (tab === 'reports') body = `<h2>Signalements à traiter (${reports.length})</h2>${reports.map(reportCard).join('') || '<p class="muted">Aucun.</p>'}
+    <h2>Suggestions (${suggestions.length})</h2>${suggestions.map(r => `<div class="card">${H(r.reason)} <small>· ${who(r.by)} · ${fmtDT(r.ts)}</small> ${btn('report-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune.</p>'}`;
+  if (tab === 'verif') {
+    const card = async p => { const st = await getDoc('settings', p.id + ':idcheck'); return `<div class="card"><b>${who(p.id)}</b> <small>${H([p.name, p.lastName].filter(Boolean).join(' '))}</small><div class="pics" style="margin:10px 0"><figure><img src="${H(p.photo)}"><figcaption>Portrait</figcaption></figure><figure>${st ? `<img src="${H(st.value && st.value.shot)}">` : '<p>(pas de photo)</p>'}<figcaption>Pièce d'identité</figcaption></figure></div>${btn('verify', p.id, 'Valider', '', 'flame')} ${btn('refuse', p.id, 'Refuser', '', 'danger')}</div>`; };
+    body = `<h2>Vérifications en attente (${pend.length})</h2>${(await Promise.all(pend.map(card))).join('') || '<p class="muted">Aucune.</p>'}`;
+  }
+  if (tab === 'accounts') {
+    const s = (url.searchParams.get('q') || '').trim().toLowerCase();
+    const recv = {}; reportsAll.forEach(r => { if (r.target && r.kind !== 'suggestion') recv[r.target] = (recv[r.target] || 0) + 1; });
+    const list = users.filter(u => { if (!s) return true; const p = profiles[u.id] || {}; return [u.email, p.pseudo, p.name, p.lastName, p.city].some(x => String(x || '').toLowerCase().includes(s)); });
+    body = `<h2>Comptes (${list.length})</h2><form method="get" class="inline"><input type="hidden" name="key" value="${H(key)}"><input type="hidden" name="tab" value="accounts"><input name="q" value="${H(s)}" placeholder="Pseudo, nom, e-mail, ville"><button>Chercher</button></form>
+      <table><tr><th></th><th>Pseudo / nom</th><th>E-mail</th><th>Inscription</th><th>Dernière visite</th><th>Signalé</th><th>Statut</th></tr>
+      ${list.map(u => { const p = profiles[u.id] || {}; return `<tr><td>${photoOf(p)}</td><td>${who(u.id)}<br><small>${H([p.name, p.lastName].filter(Boolean).join(' '))}</small></td><td>${H(u.email)}</td><td>${fmtD(u.created)}</td><td>${fmtD(u.last_seen)}</td><td>${recv[u.id] ? `<span class="tag red">${recv[u.id]}</span>` : ''}</td><td>${status(u)}</td></tr>`; }).join('')}</table>`;
+  }
+  if (tab === 'account') {
+    const id = url.searchParams.get('id') || ''; const u = users.find(x => x.id === id); const p = profiles[id] || {};
+    if (!u) body = '<p>Compte introuvable.</p>';
+    else {
+      const C = catalogue(); const entries = await listDocs('entries', "AND data->>'profileId'=$2", [id]);
+      const inv = await listDocs('invites', "AND (data->>'from'=$2 OR data->>'to'=$2)", [id]);
+      const threads = await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [id]);
+      const favs = (await listDocs('lists', "AND owner=$2", [id])).filter(l => l.type === 'fav');
+      const rin = reportsAll.filter(r => r.target === id && r.kind !== 'suggestion'), rout = reportsAll.filter(r => r.by === id && r.kind !== 'suggestion');
+      const logs = (await listDocs('adminlog', "AND data->>'target'=$2", [id])).sort((a, b) => b.ts - a.ts);
+      const row = (k, v) => v ? `<tr><th style="width:190px">${k}</th><td>${v}</td></tr>` : '';
+      const F = p.facts || {};
+      body = `<p><a href="/admin?key=${K}&tab=accounts">← Comptes</a></p>
+      <div class="card" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">${p.photo ? `<img src="${H(p.photo)}" style="width:110px;height:110px;border-radius:50%;object-fit:cover">` : ''}<div><h2 style="margin:0">${H(p.pseudo || '(sans pseudo)')}</h2><div>${status(u)}${u.ban_reason ? ` <small>raison : ${H(u.ban_reason)}</small>` : ''}</div></div></div>
+      <div class="card"><b>Actions</b><div style="margin-top:8px">${btn('warn', id, 'Avertir', reasonSel)}
+        ${u.banned ? btn('unban', id, 'Réactiver') : btn('ban', id, 'Suspendre', reasonSel, 'danger')}${p.paused && !u.banned ? btn('unpause', id, 'Lever la pause') : ''}
+        ${btn('delete', id, 'Supprimer définitivement', reasonSel + sure('Je confirme : tout sera effacé'), 'danger')}</div></div>
+      <h2>Identité</h2><table>${row('Prénom et nom', H([p.name, p.lastName].filter(Boolean).join(' ')))}${row('E-mail', H(u.email) + (u.no_mail ? ' <span class="tag">ne veut pas d\'e-mails</span>' : ''))}${row('Accord', H({ m: 'masculin', f: 'féminin', n: 'neutre' }[p.accord] || ''))}
+        ${row('Ville', H([p.npa, p.city].filter(Boolean).join(' ')) + (p.travel ? ' <small>(en voyage)</small>' : ''))}${row('Inscription', fmtDT(u.created))}${row('Dernière visite', fmtDT(u.last_seen))}${row('Invité par', u.invited_by ? who(u.invited_by) : '')}
+        ${row('Vérification', H(p.verified ? p.verified.status : 'non demandée'))}</table>
+      <h2>Portrait</h2><table>${row('Intention', H((p.intent || []).map(k => INTENT_NAME[k] || k).join(', ')))}${row('En ce moment', H(p.now))}
+        ${row('Fonctionnement', H((p.types && p.types.list || []).map(k => TYPE_NAME[k] || k).join(', ')))}
+        ${Object.entries(F).filter(([, v]) => typeof v === 'string' && v).map(([k, v]) => row(H(k), H(v))).join('')}
+        ${row('Personnages', (p.chinois || []).map(x => H(x.n) + (x.w ? ' <small>(' + H(x.w) + ')</small>' : '') + (x.why ? ' : <i>' + H(x.why) + '</i>' : '')).join('<br>'))}
+        ${row('Là où je mets mon cœur', H((p.invest || []).map(k => (C.INV[k] && C.INV[k].l) || k).join(', ')))}
+        ${row('Métiers, rôles, tendances', H((p.rep || []).map(k => (C.REPK[k] && C.REPK[k][p.accord === 'f' ? 2 : 1]) || k).join(', ')))}</table>
+      <h2>Ce qui le fait vibrer (${entries.length})</h2><table>${entries.map(e => `<tr><td style="width:110px"><small>${H(e.kind)}</small></td><td><b>${H(e.title)}</b><br><small>${H(e.why)}</small></td></tr>`).join('') || '<tr><td class="muted">Rien.</td></tr>'}</table>
+      <h2>Activité (sans les messages)</h2><table>${row('Conversations', threads.length + ' dont ' + threads.filter(t => t.state === 'open').length + ' ouvertes')}${row('Tribu', String(inv.filter(i => i.state === 'yes').length))}${row('Invitations en attente', String(inv.filter(i => i.state === 'pending').length))}${row('Personnes préférées', String(favs.length))}
+        ${row('Signalements reçus', String(rin.length))}${row('Signalements faits', String(rout.length))}</table>
+      ${rin.length ? `<h2>Signalements reçus</h2>${rin.sort((a, b) => b.ts - a.ts).map(reportCard).join('')}` : ''}
+      ${logs.length ? `<h2>Journal de ce compte</h2><table>${logs.map(l => `<tr><td>${fmtDT(l.ts)}</td><td>${H(l.action)}</td><td><small>${H(l.detail)}</small></td></tr>`).join('')}</table>` : ''}`;
+    }
+  }
+  if (tab === 'mail') {
+    const job = await getDoc('admin', 'mailjob'); const n = users.filter(u => !u.banned && !u.no_mail).length;
+    body = `<h2>E-mail à tous les inscrits</h2>
+      ${mailReady() ? `<p class="muted">Envoi depuis ${H(SMTP.from)}, par petits paquets (${MAIL_PER_HOUR} par heure au plus). Chaque e-mail contient un lien pour ne plus en recevoir.</p>` : `<div class="card"><b>L'adresse d'envoi n'est pas encore configurée.</b><p class="muted">Il faudra régler SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS et MAIL_FROM dans Coolify. Tu peux déjà préparer le texte.</p></div>`}
+      ${job ? `<div class="card"><b>${job.done ? 'Dernier envoi' : 'Envoi en cours'}</b> : « ${H(job.subject)} » · ${job.sent} envoyés, ${job.failed} échecs, ${job.ids.length - job.pos} restants${job.lastError ? `<br><small>Dernière erreur : ${H(job.lastError)}</small>` : ''}</div>` : ''}
+      <form method="post" class="card"><input type="hidden" name="back" value="mail"><p><input name="subject" placeholder="Objet" style="width:100%"></p><p><textarea name="body" placeholder="Bonjour,&#10;&#10;…"></textarea></p>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input name="to" type="email" placeholder="Ton adresse pour l'essai"><button name="a" value="mail-test">Envoyer un essai</button></p>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${sure('Je confirme l\'envoi à ' + n + ' personnes')}<button name="a" value="mail-all" class="flame">Envoyer à tous</button></p></form>`;
+  }
+  if (tab === 'log') { const logs = (await listDocs('adminlog')).sort((a, b) => b.ts - a.ts).slice(0, 300);
+    body = `<h2>Journal</h2><table><tr><th>Date</th><th>Action</th><th>Compte</th><th>Détail</th></tr>${logs.map(l => `<tr><td>${fmtDT(l.ts)}</td><td>${H(l.action)}</td><td>${l.target ? (profiles[l.target] ? who(l.target) : '<small>' + H(l.target) + '</small>') : ''}</td><td><small>${H(l.detail)}</small></td></tr>`).join('') || '<tr><td class="muted">Vide.</td></tr>'}</table>`; }
+  if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
+    body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
+      <h2>Profils de test (${nf})</h2><div class="card"><p class="muted">Brad, Sandra, Tom, Sophie et Jean-Jacques. Ils portent l'étiquette « profil de démonstration » dans l'app. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
+        ${btn('fakes', '', 'Remplir les profils de test')} ${btn('fakes-delete', '', 'Supprimer les profils de test', sure('Je confirme'), 'danger')}</div>`; }
+
+  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
-<style>body{font:15px system-ui;margin:0;padding:16px;background:#14100e;color:#f3e9df}h1{font-size:22px}h2{margin-top:28px;font-size:17px;color:#f0a35e}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #3a2f29;padding:6px;text-align:left;font-size:14px}small{color:#a8978a}.card{background:#221a16;border-radius:10px;padding:12px;margin:10px 0}.pics{display:flex;gap:10px;margin:8px 0}.pics img{width:160px;border-radius:8px}figure{margin:0}figcaption{font-size:12px;color:#a8978a}button{background:#e8613c;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}</style>
-<h1>FeelShareLove · administration</h1>
-<p>${users.length} comptes · ${counts.map(c => H(c.store) + ' ' + c.n).join(' · ')}</p>
-<h2>Vérifications en attente (${pend.length})</h2>${(await Promise.all(pend.map(card))).join('') || '<p>Aucune.</p>'}
-<h2>Signalements ouverts (${reports.length})</h2>${reports.length ? `<table><tr><th>Date</th><th>Type</th><th>Par</th><th>Visé</th><th>Raison</th><th></th></tr>${reports.map(r => `<tr><td>${new Date(r.ts || r.updatedAt).toLocaleString('fr-CH')}</td><td>${H(r.kind)}</td><td>${who(r.by)}</td><td>${who(r.target)}</td><td>${H(r.reason)}</td><td>${btn('report-done', r.id, 'Traité')} ${btn('ban', r.target, 'Suspendre la personne visée')}</td></tr>`).join('')}</table>` : '<p>Aucun.</p>'}
-<h2>Profils de test (${Object.values(profiles).filter(p => p.fake === true).length})</h2><p>Réécrit le contenu des faux profils (Brad, Sandra, Tom, Sophie, Jean-Jacques). À supprimer avant l'ouverture au public.</p>${btn('fakes', '', 'Remplir les profils de test')}
-<h2>Comptes</h2><table><tr><th>Inscription</th><th>Pseudo / nom</th><th>E-mail</th><th></th></tr>${users.map(u => `<tr><td>${new Date(+u.created).toLocaleDateString('fr-CH')}</td><td>${who(u.id)}</td><td>${H(u.email)}</td><td>${u.banned ? 'suspendu ' + btn('unban', u.id, 'Réactiver') : btn('ban', u.id, 'Suspendre')}</td></tr>`).join('')}</table>`;
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"><style>${ADMIN_CSS}</style>
+<header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
+<main>${flash ? `<div class="flash">${H(flash)}</div>` : ''}${body}</main></html>`;
   send(res, 200, html, 'text/html; charset=utf-8');
 }
 
@@ -462,6 +687,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
     if (url.pathname === '/health') return send(res, 200, { ok: true });
+    if (url.pathname === '/unsub') return await unsub(res, url);
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (url.pathname === '/admin') return await admin(req, res, url);
     if (url.pathname === '/debug' || url.pathname === '/debug/as') return await debug(req, res, url);

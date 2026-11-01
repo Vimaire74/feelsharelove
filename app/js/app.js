@@ -111,7 +111,14 @@ window.App=(function(){
   async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}
     /* invitations dans une tribu en attente de ma réponse : pastille sur « Ma tribu » et fenêtre mise en avant */
     const ask=(await invites()).filter(i=>i.state==='pending'&&i.to==='me');const tt=$('tab-badge-t');if(tt){tt.textContent=ask.length;tt.hidden=!ask.length;}
-    invitePopup(ask).catch(()=>{});}
+    invitePopup(ask).catch(()=>{});noticePopup().catch(()=>{});}
+  /* message de l'équipe (avertissement) : affiché une fois, jusqu'à ce qu'on le confirme */
+  async function noticePopup(){if(!DB.remote||document.querySelector('.tb-pop'))return;let ns=[];try{ns=(await DB.all('notices')).filter(n=>!n.read);}catch(e){return;}
+    const n=ns[0];if(!n)return;const o=document.createElement('div');o.className='tb-pop';
+    o.innerHTML=`<div class="tb-pop-in"><p class="eyebrow">Message de l'équipe FeelShareLove</p><p style="margin:8px 0 14px">${esc(n.text)}</p><div class="row" style="justify-content:space-between"><a class="linkbtn" href="#conditions">Lire les règles</a><button class="btn flame small-btn" type="button">J'ai compris</button></div></div>`;
+    (document.querySelector('.phone')||document.body).appendChild(o);
+    o.querySelector('a').addEventListener('click',()=>o.remove());
+    o.querySelector('button').addEventListener('click',async()=>{try{await DB.put('notices',{...n,read:true});}catch(e){}o.remove();});}
   const popShown=new Set();
   async function invitePopup(ask){if(document.querySelector('.tb-pop')||location.hash.startsWith('#tribu'))return;
     const i=ask.find(x=>!popShown.has(x.id));if(!i)return;popShown.add(i.id);
@@ -319,7 +326,7 @@ window.App=(function(){
     const next=(me.photoChangedAt&&me.photoChangedAt>first-MONTH?me.photoChangedAt:first)+YEAR;
     if(me.photoChangedAt&&me.photoChangedAt>=first&&Date.now()<next)return {ok:false,msg:'Ta photo pourra être changée le '+new Date(next).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+'.'};
     return {ok:true,msg:'Tu peux changer ta photo maintenant. Ensuite, la prochaine fois sera dans un an.'};}
-  const badge=p=>p&&p.verified&&p.verified.status==='verified'?'<span class="vbadge" title="Identité vérifiée">vérifié</span>':'';
+  const badge=p=>(p&&p.verified&&p.verified.status==='verified'?'<span class="vbadge" title="Identité vérifiée">vérifié</span>':'')+(p&&p.fake?' <span class="vbadge demo" title="Profil fictif pour découvrir FeelShareLove">profil de démonstration</span>':'');
   const isVerified=p=>!!(p&&p.verified&&p.verified.status==='verified');
   /* caméra en direct : pas d'import depuis la galerie. Retardateur pour une photo en pied. */
   /* dessins de la photo, calculés sur le téléphone (rien n'est envoyé ailleurs) */
