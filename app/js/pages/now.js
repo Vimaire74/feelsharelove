@@ -7,7 +7,7 @@ Pages.now=async function(S){
     <div class="avail-card" id="my-avail"></div>
     <div class="qdj" id="qdj"></div>
     <div class="search"><input id="q-search" placeholder="Un film, un livre, une passion, un pseudo…"></div>
-    <div class="filter" id="f-more" style="margin-top:0"><button class="chip on" type="button" data-f="avail">Disponibles</button><button class="chip" type="button" data-f="reso">Qui résonne avec moi</button><button class="chip" type="button" data-f="intent">Même intention</button><button class="chip" type="button" data-f="verif">Vérifiés seulement</button></div>
+    <p class="muted small" id="f-note" style="margin:6px 0 0"></p>
     <div id="people"></div>
     <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a>`;
   const h=new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
@@ -52,30 +52,27 @@ Pages.now=async function(S){
 
   /* --- personnes --- */
   /* filtres gardés en mémoire sur cet appareil : on les retrouve en revenant sur la page */
-  const KEY='fsl_now_filters';let saved={};try{saved=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
-  const fw=new Set(saved.fw||[]),ff={avail:true,reso:false,intent:false,verif:false,...(saved.ff||{})};
-  const keep=()=>{try{localStorage.setItem(KEY,JSON.stringify({fw:[...fw],ff}));}catch(e){}};
-  $('f-more').querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',!!ff[c.dataset.f]));
-  let showAll=false;
+  /* ici, seulement les personnes disponibles maintenant, de la plus forte résonance à la plus faible ; « Vérifiés seulement » se règle dans Résonances */
+  const verif=App.verifOnly(),hid=new Set((await App.hiddenList()).map(l=>l.target));
+  if(verif)$('f-note').innerHTML='Vérifiés seulement · activé (<a href="#resonances" style="color:var(--saffron)">changer dans Résonances</a>)';
+  let shown=3;
   function render(){const P=$('people');P.innerHTML='';const qs=norm($('q-search').value);
     let list=people.map(p=>{const r=App.resonance(entries,p.entries);r.n=r.common.length+r.feels.length+commonTypes(me,p).length+Plus.extraCommon(me,p).length;r.pct=Plus.similarity(me,p,entries,p.entries);return {p,r};});
     if(qs){list=list.map(x=>({...x,hits:x.p.entries.filter(e=>norm(e.title).includes(qs)||norm(e.why).includes(qs)||norm(e.desc).includes(qs)),nameHit:norm(dn(x.p)).includes(qs)||norm(x.p.city).includes(qs)})).filter(x=>x.hits.length||x.nameHit);}
-    else{if(ff.avail)list=list.filter(x=>App.isAvail(x.p));
-
-      if(ff.reso)list=list.filter(x=>x.r.common.length||x.r.feels.length);if(ff.intent)list=list.filter(x=>x.p.intent.some(i=>(me.intent||[]).includes(i)));if(ff.verif)list=list.filter(x=>App.isVerified(x.p));}
+    else list=list.filter(x=>App.isAvail(x.p)&&!hid.has(x.p.id));
+    if(verif)list=list.filter(x=>App.isVerified(x.p));
     /* ordre : d'abord les personnes qui partagent une de mes envies du moment, puis par résonance */
     const mw=isAvail(me)&&me.avail.wants||[];const same=x=>App.isAvail(x.p)&&x.p.avail.wants.some(w=>mw.includes(w))?1:0;
     list.sort((a,b)=>(same(b)-same(a))||(App.isAvail(b.p)-App.isAvail(a.p))||((b.r.pct||0)-(a.r.pct||0))||(b.r.score-a.r.score));
     if(!list.length){P.innerHTML='<div class="empty">'+(qs?'Personne n\'a encore mis ça dans son portrait. Ajoute-le au tien : la prochaine personne qui l\'écrira te verra.':'Personne avec ces filtres pour l\'instant. Élargis les filtres, ou rends-toi disponible : d\'autres te trouveront.')+'</div>';return;}
     /* trois personnes d'abord, puis « Montre-moi les autres » */
-    const all=list;if(!showAll&&!qs&&list.length>3)list=list.slice(0,3);
+    const all=list;if(!qs)list=list.slice(0,shown);
     list.forEach(({p,r,hits})=>{const sub=hits&&hits.length?`<div class="why-hit">${esc(hits[0].title)} : « ${esc(hits[0].why.slice(0,70))}… »</div>`:(App.isAvail(p)&&p.avail.note?`<div class="st">${esc(p.avail.note)}</div>`:`<div class="st">${esc(p.now)}</div>`);
       const sw=mw.length&&App.isAvail(p)?p.avail.wants.filter(w=>mw.includes(w)).map(w=>App.WANT[w]?App.WANT[w].s:'').filter(Boolean):[];
       const d=App.personEl(p,r,(sw.length?`<div class="rtags"><span class="rtag t-want">Même envie : ${esc(sw.join(', '))}</span></div>`:'')+sub);d.addEventListener('click',()=>location.hash='#personne/'+p.id);P.appendChild(d);});
-    if(list.length<all.length){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.style.cssText='width:100%;margin-top:10px';b.textContent='Montre-moi les autres ('+(all.length-list.length)+')';b.addEventListener('click',()=>{showAll=true;render();});P.appendChild(b);}}
+    if(list.length<all.length){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.style.cssText='width:100%;margin-top:10px';b.textContent='Voir plus ('+(all.length-list.length)+')';b.addEventListener('click',()=>{shown+=20;render();});P.appendChild(b);}}
   render();
   $('q-search').addEventListener('input',render);
-  $('f-more').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');ff[c.dataset.f]=c.classList.contains('on');keep();render();}));
 
   /* --- cercles --- */
   const circles=(await DB.all('circles')).sort((a,b)=>((me.circles||[]).includes(b.id))-((me.circles||[]).includes(a.id))).slice(0,3);

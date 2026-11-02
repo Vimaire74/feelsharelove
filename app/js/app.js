@@ -137,6 +137,11 @@ window.App=(function(){
   async function loadPerson(id){const p=await DB.get('profiles',id);if(!p)return null;p.entries=await DB.where('entries','profileId',id);p.qs=await DB.where('questions','profileId',id);return p;}
   async function blockedNames(){const lists=await DB.where('lists','owner','me');return lists;}
   function isListed(p,lists){return lists.some(l=>{if(l.type!=='red'&&l.type!=='black')return false;if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
+  /* « Vérifiés seulement » : réglé dans Résonances, appliqué partout (sur cet appareil) */
+  const verifOnly=v=>{try{if(v!==undefined)localStorage.setItem('fsl_verif',v?'1':'');return localStorage.getItem('fsl_verif')==='1';}catch(e){return false;}};
+  /* personnes cachées pour le moment (un mois), pour voir d'autres profils */
+  async function hiddenList(){const now=Date.now();return (await DB.where('lists','owner','me')).filter(l=>l.type==='hide'&&(!l.until||l.until>now));}
+  async function hideAdd(p){await DB.put('lists',{owner:'me',type:'hide',target:p.id,name:p.pseudo||p.name,until:Date.now()+30*864e5});}
   /* mes personnes préférées : liste privée, personne ne sait qu'il y est */
   async function favOf(){return (await DB.where('lists','owner','me')).filter(l=>l.type==='fav');}
   async function isFav(p){return (await favOf()).find(l=>l.target===p.id)||null;}
@@ -395,7 +400,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,refreshMsgCount,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

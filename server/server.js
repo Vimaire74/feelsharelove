@@ -121,8 +121,25 @@ async function hiddenFor(me) {
   return { hidden, byId, intimate, opened };
 }
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
-function publicProfile(p, intimate, opened) {
-  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, ...rest } = p;
+/* distance : coordonnées de la ville (service gratuit Open-Meteo), arrondies à environ 5 km ; jamais envoyées aux autres, seulement la distance */
+const geoCache = new Map();
+async function geocode(city, npa) {
+  const name = String(city || '').replace(/\s+[A-Z]{2}$/, '').trim(); if (!name) return null;
+  const cc = (String(city).match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
+  const k = name.toLowerCase() + '|' + cc; if (geoCache.has(k)) return geoCache.get(k);
+  try {
+    const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=fr&format=json&name=' + encodeURIComponent(name));
+    const res = ((await r.json()).results || []); const x = (cc && res.find(y => y.country_code === cc)) || res[0];
+    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20 } : null; geoCache.set(k, v); return v;
+  } catch (e) { return null; }
+}
+async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; } } else if (!p.city) { delete p.geo; delete p.geoCity; } return p; }
+function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
+function publicProfile(p, intimate, opened, myGeo) {
+  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, ...rest } = p;
+  const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
   /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
   rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
@@ -212,7 +229,7 @@ async function readList(store, me, query) {
     if (store === 'profiles') rows = rows.filter(p => p.id === me || p.pseudo);
     if (store === 'voices') rows = rows.filter(v => v.owner === me || (v.kind === 'presentation' && opened.has(v.owner)));
     if (store === 'questions') rows = rows.filter(r => r.profileId === me || opened.has(r.profileId));
-    if (store === 'profiles') rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened));
+    if (store === 'profiles') { const mg = (rows.find(p => p.id === me) || {}).geo; rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened, mg)); }
   }
   return rows;
 }
@@ -225,7 +242,7 @@ async function readOne(store, me, id) {
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
   if (store === 'invites') return d.from === me || d.to === me ? d : null;
   if (store === 'notices') return d.to === me ? d : null;
-  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened); }
+  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened, (byId[me] || {}).geo); }
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
   return d;
@@ -241,6 +258,8 @@ async function writeOne(store, me, id, body) {
   if (store === 'profiles') {
     if (id !== me) throw err(403, 'portrait');
     if (data.pseudo) { const r = await q("SELECT 1 FROM docs WHERE store='profiles' AND id<>$1 AND lower(data->>'pseudo')=lower($2)", [me, data.pseudo]); if (r.rowCount) throw err(409, 'Ce pseudo est déjà pris.'); }
+    if (old && old.geo && old.geoCity === data.city && !data.geo) { data.geo = old.geo; data.geoCity = old.geoCity; }
+    await withGeo(data);
     if (old && old.verified && old.verified.status === 'verified') data.verified = old.verified; // seul l'admin valide
     else if (data.verified && data.verified.status === 'verified') data.verified = old && old.verified || null;
     return putDoc(store, id, me, data);
@@ -527,7 +546,7 @@ async function admin(req, res, url) {
         if (old.fake !== true) continue;
         const fk = FK.find(x => x.from.includes(old.pseudo)); if (!fk) continue;
         const p = { ...old, ...fk.p, id: old.id, fake: true }; if (!fk.p.travel) delete p.travel;
-        await putDoc('profiles', old.id, old.id, p);
+        await withGeo(p); await putDoc('profiles', old.id, old.id, p);
         await q("DELETE FROM docs WHERE store='entries' AND data->>'profileId'=$1", [old.id]);
         let i = 0; for (const e of fk.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); }
       }
@@ -700,6 +719,7 @@ http.createServer(async (req, res) => {
 }).listen(PORT, async () => {
   for (let i = 0; i < 30; i++) { try { await initDb(); break; } catch (e) { console.error('Base pas encore prête…', e.message); await new Promise(r => setTimeout(r, 2000)); } }
   try { await migrateTribes(); } catch (e) { console.error('migration tribu', e.message); }
+  backfillGeo().catch(e => console.error('distances', e.message));
   setInterval(remindInvites, 36e5); setTimeout(remindInvites, 6e4);
   console.log('FeelShareLove sur le port ' + PORT);
 });

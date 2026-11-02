@@ -11,7 +11,7 @@ const LATER = () => Date.now() + 864e5 * 30;
 
 module.exports = [
   { from: ['ThéoLoup', 'BradOcre'],
-    p: { name: 'Brad', lastName: 'Test', pseudo: 'BradOcre', g: 'm', accord: 'm', city: 'Genève', npa: '1204', intent: ['amis', 'parler'],
+    p: { name: 'Brad', lastName: 'Test', pseudo: 'BradOcre', g: 'm', accord: 'm', city: 'Genève', npa: '1204', intent: ['amis', 'amour'],
       types: { list: ['phys', 'sens'], show: true },
       facts: { age: '62 ans', langs: 'anglais, un peu de français', sign: 'Sagittaire', work: 'Acteur et producteur', roots: 'Le Missouri, les Ozarks', pets: 'Des chiens, toujours' },
       now: 'Je retape une vieille maison en pierre. Les mains dans le plâtre, la tête tranquille.',
@@ -67,7 +67,7 @@ module.exports = [
       E('Souvenir', 'Les déménagements de mon enfance', ['vecu', 'mavie'], 'Une nouvelle école chaque année. J\'ai appris à faire rire pour qu\'on m\'adopte.')] },
 
   { from: ['MaëlleJasmin', 'SophieAube'],
-    p: { name: 'Sophie', lastName: 'Test', pseudo: 'SophieAube', g: 'f', accord: 'f', city: 'Lausanne', npa: '1003', intent: ['amour', 'parler'],
+    p: { name: 'Sophie', lastName: 'Test', pseudo: 'SophieAube', g: 'f', accord: 'f', city: 'Lausanne', npa: '1003', intent: ['amour', 'parler'], verified: { status: 'verified', at: Date.now() },
       types: { list: ['sens', 'emo'], show: true },
       facts: { age: '59 ans', langs: 'français, anglais, un peu de polonais', sign: 'Scorpion', work: 'Actrice, réalisatrice, écrivaine', roots: 'Paris, la banlieue sud', pets: 'Aucun pour l\'instant' },
       now: 'Je termine un livre. Je n\'arrive à écrire que la nuit.',
@@ -86,7 +86,7 @@ module.exports = [
       E('Lieu', 'La Bretagne', ['calme', 'console'], 'Le vent qui nettoie tout. Je marche sur la plage jusqu\'à ne plus penser.')] },
 
   { from: ['AlexOpale', 'JeanJacquesSol'],
-    p: { name: 'Jean-Jacques', lastName: 'Test', pseudo: 'JeanJacquesSol', g: 'm', accord: 'm', city: 'Lausanne', npa: '1006', intent: ['amis', 'parler'],
+    p: { name: 'Jean-Jacques', lastName: 'Test', pseudo: 'JeanJacquesSol', g: 'm', accord: 'm', city: 'Lausanne', npa: '1006', intent: ['amis', 'parler'], verified: { status: 'verified', at: Date.now() },
       types: { list: ['sens', 'mental'], show: true },
       facts: { age: '75 ans', langs: 'français, anglais', sign: 'Balance', work: 'Auteur, compositeur, interprète (retiré)', roots: 'Paris, parents venus de Pologne et d\'Allemagne', pets: 'Un chat' },
       now: 'Une vie loin de la scène. Je joue de la guitare pour moi, le soir, et ça me suffit.',

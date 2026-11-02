@@ -1,18 +1,11 @@
-# FeelShareLove — lot 17 (à envoyer APRÈS les lots 15 et 16)
+# FeelShareLove — lot 18
 
-Version 1.7.0 (01/11/2026)
-- Admin : nouveau look aux couleurs du site, avec onglets Tableau de bord, Signalements, Vérifications, Comptes, E-mails, Journal, Réglages
-- Tableau de bord : inscrits, nouveaux et actifs, messages, conversations, tribus, invitations, signalements, vérifications, suspensions
-- Comptes : recherche par pseudo, nom, e-mail ou ville, dernière visite, nombre de signalements reçus
-- Fiche de compte : identité, portrait complet, passions avec leur pourquoi, activité en chiffres (sans les messages), signalements reçus, journal du compte
-- Actions sur un compte : Avertir, Suspendre, Réactiver, Lever la pause, Supprimer définitivement (avec raison et confirmation)
-- Avertissement : message de l'équipe affiché dans l'app de la personne, avec notification
-- Signalements : copie de l'élément signalé jointe (portrait, ou 5 derniers messages de la personne signalée lors d'un blocage)
-- Pause automatique d'un compte signalé par 3 personnes différentes
-- Journal de toutes les actions d'administration
-- E-mails à tous les inscrits depuis l'admin : essai, puis envoi par paquets, lien de désinscription (inactif tant que l'adresse OVH n'est pas configurée)
-- Réglages : fermer ou ouvrir les inscriptions (le lien d'invitation d'un membre marche toujours), remplir ou supprimer les profils de test
-- Profils de test : étiquette « profil de démonstration » dans l'app
-- Aide et conditions : avertissement (responsabilité, prudence avant une rencontre, profils de démonstration), signalements, sanctions, e-mails
-- Inscription : case à cocher « 18 ans ou plus, avertissement et conditions lus »
-- Serveur : nouvelle dépendance nodemailer (installée automatiquement par Coolify)
+Version 1.7.1 (02/11/2026)
+- Présent : suppression des choix « Disponibles », « Qui résonne avec moi », « Même intention », « Vérifiés seulement »
+- Présent : seulement les personnes disponibles, de la plus forte résonance à la plus faible ; 3 d'abord, puis « Voir plus » par 20
+- « Vérifiés seulement » se règle dans Résonances et s'applique aussi à Présent (petite ligne de rappel sur Présent)
+- Résonances : « À moins de 100 km » remplace « Proche de chez moi », avec une vraie distance (coordonnées des villes via Open-Meteo, arrondies à 5 km, jamais montrées aux autres)
+- Résonances : nouveau choix « Résonance d'au moins » 100 % à 10 %
+- Résonances : bouton « Cacher pour le moment » (un mois) et lien « Montre-moi ceux que j'ai cachés » pour les faire revenir
+- Résonances : 20 personnes d'abord, puis « Voir plus »
+- Profils de test : SophieAube et JeanJacquesSol vérifiés ; Brad, Sandra et Sophie cherchent l'amour

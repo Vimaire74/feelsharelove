@@ -15,30 +15,38 @@ Pages.resonances=async function(S,id){
     /* critères : dans un même groupe, l'un OU l'autre ; entre les groupes, tous à la fois */
     const GROUPS=[
       {k:'intent',l:'Ce que je cherche',o:[['parler','Quelqu\'un à qui parler'],['amis','Des amis'],['amour','L\'amour']]},
-      {k:'near',l:'Où',o:[['ville','Proche de chez moi'],['pays','Dans mon pays']]},
-      {k:'more',l:'Et aussi',o:[['verif','Vérifiés seulement'],['reso','Au moins un point commun']]}];
+      {k:'near',l:'Où',o:[['ville','À moins de 100 km'],['pays','Dans mon pays']]},
+      {k:'min',l:'Résonance d\'au moins',one:true,o:[100,90,80,70,60,50,40,30,20,10].map(n=>[String(n),n+' %'])},
+      {k:'more',l:'Et aussi',o:[['verif','Vérifiés seulement (partout)'],['reso','Au moins un point commun']]}];
     const KEY='fsl_res_filters';let sel={};try{sel=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
     GROUPS.forEach(g=>{sel[g.k]=new Set(sel[g.k]||[]);});
-    const keep=()=>{try{localStorage.setItem(KEY,JSON.stringify(Object.fromEntries(GROUPS.map(g=>[g.k,[...sel[g.k]]]))));}catch(e){}};
+    /* « Vérifiés seulement » est commun à toute l'app */
+    if(App.verifOnly())sel.more.add('verif');else sel.more.delete('verif');
+    let hid=await App.hiddenList(),shown=20,showHidden=false;
+    const keep=()=>{App.verifOnly(sel.more.has('verif'));try{localStorage.setItem(KEY,JSON.stringify(Object.fromEntries(GROUPS.map(g=>[g.k,[...sel[g.k]]]))));}catch(e){}};
     const cityOf=s=>norm(String(s||'').replace(/\s+[A-Z]{2}$/,'')),countryOf=s=>(String(s||'').match(/\s([A-Z]{2})$/)||[])[1]||'';
     const myCity=cityOf(me.city),myCountry=countryOf(me.city);
     /* force de la résonance : chaque point commun a son poids */
     const all=people.map(p=>{const r=App.resonance(entries,p.entries);const ct=commonTypes(me,p);const ex=Plus.extraCommon(me,p);
       r.n=r.common.length+r.feels.length+ct.length+ex.length;r.pct=Plus.similarity(me,p,entries,p.entries);
-      const near=myCity&&cityOf(p.city)===myCity,samec=myCountry&&countryOf(p.city)===myCountry;
+      const near=p.km!=null?p.km<=100:(myCity&&cityOf(p.city)===myCity),samec=myCountry&&countryOf(p.city)===myCountry;
       const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.sub?1:.4):1),0)+(near?2:samec?.5:0);
       const text=norm([dn(p),p.city,p.now,...p.entries.flatMap(e=>[e.title,e.why,e.desc,e.kind]),...(p.chinois||[]).flatMap(x=>[x.n,x.w]),...C.fixInv(p.invest).map(k=>C.INV[k]&&C.INV[k].l),...(p.rep||[]).map(k=>Plus.repLabel(k,p))].filter(Boolean).join(' | '));
       return {p,r,ct,ex,w,near,samec,text};});
     function panel(){const P=$('r-panel');P.innerHTML=GROUPS.map(g=>`<p class="crit-g">${g.l}</p><div class="crit-o">${g.o.map(([k,l])=>`<button class="chip${sel[g.k].has(k)?' on':''}" type="button" data-g="${g.k}" data-k="${k}">${esc(l)}</button>`).join('')}</div>`).join('')+
       `<div class="row" style="justify-content:space-between;margin-top:12px"><button class="linkbtn" type="button" id="r-clear">Tout enlever</button><button class="btn" type="button" id="r-ok">Voir les résonances</button></div>`;
-      P.querySelectorAll('[data-g]').forEach(b=>b.addEventListener('click',()=>{const s=sel[b.dataset.g];s.has(b.dataset.k)?s.delete(b.dataset.k):s.add(b.dataset.k);b.classList.toggle('on');keep();label();draw();}));
+      P.querySelectorAll('[data-g]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.g,s=sel[g],one=GROUPS.find(x=>x.k===g).one,had=s.has(b.dataset.k);
+        if(one){s.clear();P.querySelectorAll(`[data-g="${g}"]`).forEach(x=>x.classList.remove('on'));}
+        if(had)s.delete(b.dataset.k);else{s.add(b.dataset.k);b.classList.add('on');}if(had&&!one)b.classList.remove('on');keep();label();shown=20;draw();}));
       $('r-clear').addEventListener('click',()=>{GROUPS.forEach(g=>sel[g.k].clear());keep();panel();label();draw();});
       $('r-ok').addEventListener('click',()=>toggle(false));}
-    function label(){const ls=GROUPS.flatMap(g=>g.o.filter(([k])=>sel[g.k].has(k)).map(([,l])=>l));$('r-crit-l').textContent=ls.length?ls.join(' · '):'Choisir ce que je cherche';$('r-crit').classList.toggle('on',!!ls.length);}
+    function label(){const ls=GROUPS.flatMap(g=>g.o.filter(([k])=>sel[g.k].has(k)).map(([,l])=>g.k==='min'?'au moins '+l:l));$('r-crit-l').textContent=ls.length?ls.join(' · '):'Choisir ce que je cherche';$('r-crit').classList.toggle('on',!!ls.length);}
     function toggle(open){$('r-panel').hidden=!open;$('r-crit').setAttribute('aria-expanded',open);if(open)panel();}
     $('r-crit').addEventListener('click',()=>toggle($('r-panel').hidden));
     function draw(){L.innerHTML='';const q=norm($('r-q').value);
+      const hidSet=new Set(hid.map(l=>l.target)),minP=sel.min.size?+[...sel.min][0]:0;
       let list=all.filter(x=>{const p=x.p,a=App.isAvail(p);
+        if(hidSet.has(p.id))return false;if(minP&&(x.r.pct||0)<minP)return false;
         if(q&&!q.split(' ').every(w=>x.text.includes(w)))return false;
         if(sel.intent.size&&!(p.intent||[]).some(k=>sel.intent.has(k)))return false;
         if(sel.near.size&&!((sel.near.has('ville')&&x.near)||(sel.near.has('pays')&&(x.samec||x.near))))return false;
@@ -47,11 +55,25 @@ Pages.resonances=async function(S,id){
       const n=GROUPS.reduce((s,g)=>s+sel[g.k].size,0);
       $('r-info').textContent=list.length?(list.length+' personne'+(list.length>1?'s':'')+(q||n?' trouvée'+(list.length>1?'s':''):'')+', de la plus forte à la plus faible'):'';
       if(!entries.length&&!q&&!n)L.insertAdjacentHTML('beforeend','<div class="empty">Ton portrait n\'a pas encore de passions. Ajoute par exemple un film, ce qu\'il te fait et pourquoi : les résonances partent de là.</div>');
-      if(!list.length){L.insertAdjacentHTML('beforeend','<div class="empty">Personne ne correspond pour l\'instant. Enlève un critère, ou essaie un autre mot.</div>');return;}
+      if(!list.length){L.insertAdjacentHTML('beforeend','<div class="empty">Personne ne correspond pour l\'instant. Enlève un critère, ou essaie un autre mot.</div>');hiddenBlock();return;}
+      const total=list.length;list=list.slice(0,shown);
       list.forEach(({p,r,ct,ex})=>{let sub=Plus.tagsHtml(r,ct,ex);
         if(q){const e=p.entries.find(e=>norm(e.title+' '+e.why+' '+e.desc).includes(q));if(e)sub=`<div class="rtags"><span class="rtag t-oeuvre">${esc(e.title)}</span></div>`;}
-        const d=App.personEl(p,r,sub);d.addEventListener('click',()=>location.hash='#resonances/'+p.id);L.appendChild(d);});}
-    $('r-q').addEventListener('input',draw);label();draw();
+        sub+=`<button class="linkbtn r-hide" type="button" style="font-size:13px;margin-top:4px">Cacher pour le moment</button>`;
+        const d=App.personEl(p,r,sub);d.addEventListener('click',ev=>{if(ev.target.closest('.r-hide'))return;location.hash='#resonances/'+p.id;});
+        d.querySelector('.r-hide').addEventListener('click',async ev=>{ev.stopPropagation();await App.hideAdd(p);hid=await App.hiddenList();draw();});L.appendChild(d);});
+      if(total>list.length){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.style.cssText='width:100%;margin-top:10px';b.textContent='Voir plus ('+(total-list.length)+')';b.addEventListener('click',()=>{shown+=20;draw();});L.appendChild(b);}
+      hiddenBlock();}
+    /* personnes cachées pour le moment : on peut les faire revenir */
+    function hiddenBlock(){if(!hid.length)return;const w=document.createElement('div');w.style.marginTop='18px';
+      w.innerHTML=`<button class="linkbtn" type="button">${showHidden?'Ne plus montrer':'Montre-moi'} ceux que j'ai cachés (${hid.length})</button><div></div>`;
+      w.querySelector('button').addEventListener('click',()=>{showHidden=!showHidden;draw();});
+      if(showHidden){const box=w.querySelector('div');hid.forEach(l=>{const x=all.find(a=>a.p.id===l.target);if(!x)return;
+        const d=App.personEl(x.p,x.r,`<p class="muted small" style="margin:2px 0 0">Caché jusqu'au ${new Date(l.until).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})}</p><button class="linkbtn r-show" type="button" style="font-size:13px">Ne plus cacher</button>`);
+        d.addEventListener('click',ev=>{if(ev.target.closest('.r-show'))return;location.hash='#resonances/'+x.p.id;});
+        d.querySelector('.r-show').addEventListener('click',async ev=>{ev.stopPropagation();await DB.del('lists',l.id);hid=await App.hiddenList();draw();});box.appendChild(d);});}
+      L.appendChild(w);}
+    $('r-q').addEventListener('input',()=>{shown=20;draw();});label();draw();
     return;}
   const p=await App.loadPerson(id);if(!p||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#resonances">← Toutes les résonances</a><div class="empty">Personne introuvable.</div>';return;}
   const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const ex=Plus.extraCommon(me,p);const n=r.common.length+r.feels.length+commonTypes(me,p).length+ex.length;const pct=Plus.similarity(me,p,entries,p.entries);
