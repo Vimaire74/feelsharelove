@@ -156,7 +156,7 @@ window.Plus=(function(){
     (ct||[]).forEach(k=>t.push(['type',window.TYPES?TYPES.name(k):k]));
     (ex||[]).forEach(x=>t.push([x.k==='pc'||x.k==='pcw'?'perso':x.k,x.kw||x.l]));
     return t;}
-  function tagsHtml(r,ct,ex,max=8){const t=tagList(r,ct,ex);if(!t.length)return (r.echo&&r.echo.length)?`<div class="rtags"><span class="rtag t-echo">${esc(r.echo[0].theirs.title)}</span></div>`:'<div class="st muted" style="font-style:normal;font-family:var(--body)">Rien en commun pour l\'instant</div>';
+  function tagsHtml(r,ct,ex,max=8){const t=tagList(r,ct,ex);if(!t.length)return '<div class="st muted" style="font-style:normal;font-family:var(--body)">Rien en commun pour l\'instant</div>';
     return `<div class="rtags">${t.slice(0,max).map(([c,w])=>`<span class="rtag t-${c}" title="${esc(CAT[c]||'')}">${esc(w)}</span>`).join('')}${t.length>max?`<span class="rtag t-more">+${t.length-max}</span>`:''}</div>`;}
   const legendHtml=()=>`<div class="rlegend">${Object.entries(CAT).map(([c,l])=>`<span class="rtag t-${c}">${l}</span>`).join('')}</div>`;
   /* ---------- « moi aussi » : reprendre la passion de quelqu'un dans son propre portrait ---------- */

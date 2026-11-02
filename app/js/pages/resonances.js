@@ -80,7 +80,7 @@ Pages.resonances=async function(S,id){
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
   <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
-  <div class="pair">${App.avatarHtml(me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
+  <div class="pair">${App.avatarHtml(p.intimate&&me.photoIntimate===true&&me.photoReal?{...me,photo:me.photoReal}:me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
   const B=$('body');App.tribeBox(p,$('tribe'));
   const ct=commonTypes(me,p);
   if(ct.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Vous fonctionnez tous les deux ${ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et ')}</div><div class="types-show">${ct.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div></div>`);
@@ -93,11 +93,10 @@ Pages.resonances=async function(S,id){
     d.querySelector('.reply').addEventListener('click',()=>{d.querySelector('.compose').classList.toggle('on');d.querySelector('textarea').focus();});
     d.querySelector('.compose .btn').addEventListener('click',async()=>{const v=d.querySelector('textarea').value.trim();if(!v)return;const s=d.querySelector('.sent');s.style.display='block';s.innerHTML=await reply(c.theirs)(v);});
     return d;}
-  if(!n&&!r.echo.length)B.insertAdjacentHTML('beforeend',`<div class="empty">Rien en commun pour l'instant. ${f?'Elle':'Il'} aime : ${esc(p.entries.map(e=>e.title).join(', '))}. Si l'une de ces choses te parle, ajoute-la à ton portrait avec ce qu'elle te fait.</div>`);
+  if(!n)B.insertAdjacentHTML('beforeend',`<div class="empty">Rien en commun pour l'instant. ${f?'Elle':'Il'} aime : ${esc(p.entries.map(e=>e.title).join(', '))}. Si l'une de ces choses te parle, ajoute-la à ton portrait avec ce qu'elle te fait.</div>`);
   if(r.common.length){const h=document.createElement('h2');h.innerHTML='Vous aimez <em>la même chose</em>';B.appendChild(h);r.common.forEach(c=>B.appendChild(pairBlock(esc(c.theirs.title),c)));}
   if(r.feels.length){const h=document.createElement('h2');h.innerHTML='Vous cherchez <em>la même chose</em>';B.appendChild(h);r.feels.forEach(c=>B.appendChild(pairBlock('Vous aimez tous les deux '+c.feel.both,c,'Pas la même œuvre, le même effet.')));}
-  if(r.echo.length){const h=document.createElement('h2');h.innerHTML='Des <em>échos</em>';B.appendChild(h);r.echo.forEach(c=>B.appendChild(pairBlock(`${esc(c.mine.title)} · ${esc(c.theirs.title)}`,c,'Un mot en commun dans vos titres.')));}
-  const used=new Set([...r.common,...r.feels,...r.echo].map(c=>c.theirs.id));const rest=p.entries.filter(e=>!used.has(e.id));
+  const used=new Set([...r.common,...r.feels].map(c=>c.theirs.id));const rest=p.entries.filter(e=>!used.has(e.id));
   if(rest.length){const h=document.createElement('h2');h.innerHTML=`Ce qu'${il} a et <em>pas toi</em>`;B.appendChild(h);const L=document.createElement('div');L.className='list';rest.forEach(e=>L.appendChild(App.entryEl(e,{reply:reply(e),metoo:d=>Plus.meToo(d,e,p)})));B.appendChild(L);}
   const act=document.createElement('div');act.className='actions2';act.innerHTML=`<a class="btn ghost" href="#personne/${p.id}">Voir le portrait</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a>`;B.appendChild(act);
 };

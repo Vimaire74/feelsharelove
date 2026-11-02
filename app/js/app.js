@@ -195,7 +195,7 @@ window.App=(function(){
   function sameWork(a,b){if(a.workId&&b.workId)return a.workId===b.workId;const na=norm(a.title),nb=norm(b.title);return !!na&&!!nb&&(na===nb||na.includes(nb)||nb.includes(na));}
   function resonance(mine,theirs){const common=[],echo=[],feels=[];const used=new Set();
     theirs.forEach(t=>{const m=mine.find(x=>sameWork(x,t));if(m){common.push({mine:m,theirs:t});used.add(t.id);used.add(m.id);return;}
-      const tw=words(t.title);const near=mine.find(x=>words(x.title).some(w=>tw.includes(w)));if(near){echo.push({mine:near,theirs:t});}});
+      });/* « échos » (un mot en commun dans les titres) supprimés : ça ne voulait rien dire */
     /* ressentis communs (ça me passionne, ça m'hallucine…) : plus montrés comme points communs, trop banals (décision de Marc).
        Seuls les ressentis dominants comptent encore, discrètement, dans le pourcentage. */
     return {common,echo,feels,score:common.length*3+feels.length*2+echo.length};}
