@@ -23,7 +23,7 @@ Pages.messages=async function(S,id){
     if(!threads.length)S.insertAdjacentHTML('beforeend','<div class="empty" style="margin-top:14px">Pas encore de conversation. Va dans Résonances et réponds à une entrée qui te touche.</div>');
     return;}
 
-  const p=await App.loadPerson(id);
+  const p=await App.loadPerson(id);if(p)S.classList.toggle('tribe-bg',!!p.intimate);
   if(!p||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#messages">← Conversations</a><div class="empty">Conversation indisponible.</div>';return;}
   const waiting=await App.pendingIn();
   if(waiting.length&&!waiting.some(t=>t.id===p.id)){location.hash='#messages/'+waiting[0].id;return;}

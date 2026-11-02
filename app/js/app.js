@@ -133,7 +133,12 @@ window.App=(function(){
     await tribeBox(p,o.querySelector('#tb-pop-box'),async()=>{const inv=await inviteWith(p);if(inv&&inv.state!=='pending')setTimeout(close,1200);});}
 
   /* ---------- données ---------- */
-  async function loadMe(){const me=await DB.get('profiles','me');const entries=await DB.where('entries','profileId','me');const qs=await DB.where('questions','profileId','me');return {me,entries,qs};}
+  /* couleur de ma tribu : je la choisis dans mon portrait ; les membres de ma tribu m'apparaissent sur ce fond, et personne d'autre ne la voit */
+  const TRIBE_COLORS=[['rubis','Rubis','#6e1630'],['bordeaux','Bordeaux','#4f1424'],['prune','Prune','#55163f'],['rose','Rose ancien','#7a2450'],['braise','Braise','#7a2a12'],['terre','Terre cuite','#7a3b1e'],
+    ['ocre','Ocre','#6e4a12'],['olive','Olive','#3f4a1a'],['foret','Forêt','#1f4030'],['lagon','Lagon','#164a4a'],['nuit','Nuit','#1e2a4f'],['amethyste','Améthyste','#3e1f55']];
+  const tribeColor=me=>(TRIBE_COLORS.find(c=>c[0]===(me&&me.tribeColor))||TRIBE_COLORS[0])[2];
+  const applyTribeColor=me=>{try{document.documentElement.style.setProperty('--tribe',tribeColor(me));}catch(e){}};
+  async function loadMe(){const me=await DB.get('profiles','me');applyTribeColor(me);const entries=await DB.where('entries','profileId','me');const qs=await DB.where('questions','profileId','me');return {me,entries,qs};}
   async function loadPerson(id){const p=await DB.get('profiles',id);if(!p)return null;p.entries=await DB.where('entries','profileId',id);p.qs=await DB.where('questions','profileId',id);return p;}
   async function blockedNames(){const lists=await DB.where('lists','owner','me');return lists;}
   function isListed(p,lists){return lists.some(l=>{if(l.type!=='red'&&l.type!=='black')return false;if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
@@ -213,7 +218,7 @@ window.App=(function(){
   function avatarHtml(p,cls=''){return `<div class="avatar ${p.av||''} ${cls}" aria-hidden="true">${p.photo?`<img src="${p.photo}" alt="">`:''}</div>`;}
   /* lieu affiché : le pays seulement tant que la conversation n'est pas ouverte */
   function place(p){if(!p)return '';if(p.limited&&!p.travel){try{return p.country?new Intl.DisplayNames([I18N.lang],{type:'region'}).of(p.country):'';}catch(e){return p.country||'';}}return p.city||'';}
-  function personEl(p,r,sub){const d=document.createElement('div');d.className='person';
+  function personEl(p,r,sub){const d=document.createElement('div');d.className='person'+(p&&p.intimate?' in-tribe':'');
     const wants=isAvail(p)?`<div class="wants">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').filter(Boolean).join(' · ')}</div>`:'';
     d.innerHTML=`${avatarHtml(p)}<div class="i"><div class="nm">${esc(dn(p))}${badge(p)} <small>${esc(place(p))}${p.travel?' · en voyage':''} · ${localTime(p)}</small></div>${wants}${sub||''}</div>`+(r?(r.pct!=null?`<div class="r"><b>${r.pct}%</b><span>similitude</span></div>`:'pct' in r&&!r.n?`<div class="r"><b>—</b><span>nouveau</span></div>`:`<div class="r"><b>${r.n!=null?r.n:r.common.length+r.feels.length}</b><span>résonne</span></div>`):'')+`<div class="dot ${isAvail(p)?'':'off'}" aria-hidden="true"></div>`;
     return d;}
@@ -400,7 +405,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,refreshMsgCount,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

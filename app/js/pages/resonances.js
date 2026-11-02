@@ -75,7 +75,7 @@ Pages.resonances=async function(S,id){
       L.appendChild(w);}
     $('r-q').addEventListener('input',()=>{shown=20;draw();});label();draw();
     return;}
-  const p=await App.loadPerson(id);if(!p||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#resonances">← Toutes les résonances</a><div class="empty">Personne introuvable.</div>';return;}
+  const p=await App.loadPerson(id);if(p)S.classList.toggle('tribe-bg',!!p.intimate);if(!p||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#resonances">← Toutes les résonances</a><div class="empty">Personne introuvable.</div>';return;}
   const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const ex=Plus.extraCommon(me,p);const n=r.common.length+r.feels.length+commonTypes(me,p).length+ex.length;const pct=Plus.similarity(me,p,entries,p.entries);
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}

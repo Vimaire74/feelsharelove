@@ -26,6 +26,7 @@ Pages.portrait=async function(S){
   <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="f-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea></div>
   <div class="voice-box"><p class="eyebrow" style="margin:0">Ma voix · une minute pour me présenter</p><div id="voice"></div></div>
 
+  <h2>La couleur de <em>ma tribu</em></h2><p class="muted small" style="margin:-4px 0 8px">Les membres de ta tribu t'apparaissent sur ce fond, partout dans l'app. Toi seul la vois.</p><div class="col-sw" id="col-box"></div>
   <h2>Mon <em>fonctionnement</em></h2>
   <div class="sec" id="types-box"></div>
   <h2>Qui je <em>suis</em></h2>
@@ -50,6 +51,10 @@ Pages.portrait=async function(S){
   <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div>`;
 
   let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});},300);}
+  /* couleur de ma tribu */
+  function renderCol(){const B=$('col-box');B.innerHTML=App.TRIBE_COLORS.map(([k,l,c])=>`<button type="button" class="${(me.tribeColor||'rubis')===k?'on':''}" data-k="${k}" style="background:${c}">${l}</button>`).join('');
+    B.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{me.tribeColor=b.dataset.k;App.applyTribeColor(me);saveMe();renderCol();}));}
+  renderCol();
   $('f-name').value=me.name||'';$('f-place').value=(me.travel?me.travel.homeCity:me.city)||'';$('f-last').value=me.lastName||'';$('f-npa').value=me.npa||'';
   $('f-last').addEventListener('input',e=>{me.lastName=e.target.value;saveMe();});$('f-npa').addEventListener('input',e=>{me.npa=e.target.value;saveMe();});$('f-now').value=me.now||'';grow($('f-now'));
   $('f-name').addEventListener('input',e=>{me.name=e.target.value;saveMe();});

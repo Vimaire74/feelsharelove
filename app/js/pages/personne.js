@@ -41,7 +41,7 @@ Pages._view=async function(S,p,preview){
   $('rep').addEventListener('click',async()=>{await DB.put('reports',{by:'me',target:p.id,kind:'profile',reason:'autre',status:'open',ts:Date.now()});$('done').textContent='Signalement transmis à l\'équipe FeelShareLove.';});
 };
 Pages.personne=async function(S,id){
-  const p=await App.loadPerson(id);
+  const p=await App.loadPerson(id);if(p)S.classList.toggle('tribe-bg',!!p.intimate);
   if(!p||p.isMe||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#now">← Maintenant</a><div class="empty">Ce portrait n\'est pas disponible.</div>';return;}
   await Pages._view(S,p,false);
 };

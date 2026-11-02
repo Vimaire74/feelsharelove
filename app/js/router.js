@@ -25,7 +25,7 @@
     document.body.classList.toggle('onboarding',name==='accueil');
     document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===TAB[name]));
     App.closeMenu();await App.tickThreads();
-    const S=document.getElementById('screen');S.innerHTML='<div class="empty">Chargement…</div>';
+    const S=document.getElementById('screen');S.classList.remove('tribe-bg');S.innerHTML='<div class="empty">Chargement…</div>';
     try{await page(S,param&&decodeURIComponent(param));}catch(e){S.innerHTML='<div class="empty">Erreur : '+App.esc(e.message)+'</div>';console.error(e);
       /* l'erreur part au serveur avec le fichier et la ligne, pour le débogage */
       if(DB.remote)try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:'Page '+name+' : '+e.message,stack:String(e.stack||''),url:location.hash})}).catch(()=>{});}catch(x){}}

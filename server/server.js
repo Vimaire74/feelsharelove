@@ -138,7 +138,7 @@ function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
 async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
 function publicProfile(p, intimate, opened, myGeo) {
-  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, ...rest } = p;
+  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, ...rest } = p; // la couleur de tribu reste privée
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
   /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
