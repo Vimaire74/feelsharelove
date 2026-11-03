@@ -2,7 +2,7 @@
   "name": "FeelShareLove",
   "short_name": "FeelShareLove",
   "description": "Se rencontrer par ce qui nous fait vibrer.",
-  "start_url": "/#now",
+  "start_url": "/app#now",
   "scope": "/",
   "display": "standalone",
   "background_color": "#14100e",

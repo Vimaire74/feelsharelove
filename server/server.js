@@ -1,5 +1,5 @@
 /* FeelShareLove — serveur (Node.js + PostgreSQL)
-   Sert l'application web (dossier public/) et l'API (/api/...), plus la page d'administration (/admin?key=...).
+   Sert les pages d'accueil publiques (/, /de, /en…), l'application web (/app, dossier public/) et l'API (/api/...), plus la page d'administration (/admin?key=...).
    Variables d'environnement : DATABASE_URL (obligatoire), ADMIN_KEY (obligatoire pour /admin), PORT (8080 par défaut).
    Les données sont rangées par « table » (store) comme dans la version locale : profiles, entries, questions,
    threads, messages, voices, lists, reports, circles, circlePosts, settings. */
@@ -178,14 +178,14 @@ async function putThread(me, other, body) {
     if (!free && mineToday >= FIRST_PER_DAY) throw err(429, 'Limite de trois premiers messages par jour atteinte.');
     const n = { a: me, b: other, state: 'pending', firstAt: Date.now(), free };
     await putDoc('threads', id, null, n);
-    notify(other, (await pseudoOf(me)) + ' a répondu à ton portrait', '/#messages/' + me);
+    notify(other, (await pseudoOf(me)) + ' a répondu à ton portrait', '/app#messages/' + me);
     return threadView(n, me);
   }
   if (!t) throw err(404, 'conversation');
   if (s === 'open') { if (t.state === 'pending' && t.b !== me) throw err(403, 'Seule la personne qui reçoit peut ouvrir.'); if (t.state === 'declined') throw err(409, 'Conversation close.'); t.state = 'open'; }
   else if (s === 'declined') { t.state = 'declined'; t.decliner = me; }
   else throw err(400, 'statut');
-  if (s === 'open' && t.a !== me) notify(t.a, (await pseudoOf(me)) + ' a ouvert la conversation', '/#messages/' + me);
+  if (s === 'open' && t.a !== me) notify(t.a, (await pseudoOf(me)) + ' a ouvert la conversation', '/app#messages/' + me);
   await putDoc('threads', id, null, t); return threadView(t, me);
 }
 async function myThreads(me) { return (await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).map(t => threadView(t, me)); }
@@ -202,7 +202,7 @@ async function putMessage(me, id, body, old) {
   if (!ok) throw err(403, 'Conversation fermée.');
   const m = { ...body, id, pairId: pair(me, other), ts: Date.now() };
   delete m.thread; await putDoc('messages', id, me, m);
-  if (!(t.state === 'pending' && t.a === me)) notify(other, (body.kind === 'decline' ? 'Réponse de ' : 'Nouveau message de ') + (await pseudoOf(me)), '/#messages/' + me);
+  if (!(t.state === 'pending' && t.a === me)) notify(other, (body.kind === 'decline' ? 'Réponse de ' : 'Nouveau message de ') + (await pseudoOf(me)), '/app#messages/' + me);
   return msgView(m, me);
 }
 
@@ -274,10 +274,10 @@ async function writeOne(store, me, id, body) {
   const saved = await putDoc(store, id, me, data);
   if (store === 'reports' && !old && data.target) autoPause(data.target).catch(() => {});
   /* cercle intime : quand l'autre m'avait déjà mis dans sa tribu, on le dit à tous les deux */
-  if (store === 'nods' && data.target && !old) { try { notify(data.target, (await pseudoOf(me)) + ' aime aussi « ' + String(data.title || '').slice(0, 60) + ' »', '/#portrait'); } catch (e) {} }
+  if (store === 'nods' && data.target && !old) { try { notify(data.target, (await pseudoOf(me)) + ' aime aussi « ' + String(data.title || '').slice(0, 60) + ' »', '/app#portrait'); } catch (e) {} }
   if (store === 'lists' && data.type === 'tribe' && data.target && !old) {
     try { const back = (await listDocs('lists')).some(l => l.type === 'tribe' && l.owner === data.target && l.target === me);
-      if (back) { notify(data.target, (await pseudoOf(me)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); notify(me, (await pseudoOf(data.target)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/#tribu'); } } catch (e) {}
+      if (back) { notify(data.target, (await pseudoOf(me)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/app#tribu'); notify(me, (await pseudoOf(data.target)) + ' et toi êtes dans le cercle intime l\'un de l\'autre', '/app#tribu'); } } catch (e) {}
   }
   return saved;
 }
@@ -292,7 +292,7 @@ async function putInvite(me, body) {
     if (old && old.state === 'no' && old.from === me && now - (old.answeredAt || 0) < 30 * DAY) throw err(429, 'Tu pourras proposer à nouveau dans un mois.');
     const inv = { id, from: me, to: other, state: 'pending', ts: now };
     await putDoc('invites', id, me, inv);
-    notify(other, (await pseudoOf(me)) + ' t\'invite dans sa tribu', '/#tribu');
+    notify(other, (await pseudoOf(me)) + ' t\'invite dans sa tribu', '/app#tribu');
     return inv;
   }
   if (old && old.to === me && old.state === 'pending' && (body.state === 'yes' || body.state === 'no')) {
@@ -300,7 +300,7 @@ async function putInvite(me, body) {
     if (body.state === 'no' && ![1, 2, 3].includes(reason)) throw err(400, 'Choisis une des trois réponses.');
     const inv = { ...old, state: body.state, answeredAt: now, ...(body.state === 'no' ? { reason } : {}) };
     await putDoc('invites', id, old.from, inv);
-    notify(old.from, (await pseudoOf(me)) + (body.state === 'yes' ? ' a accepté : vous êtes dans la même tribu' : ' a répondu à ton invitation'), '/#tribu');
+    notify(old.from, (await pseudoOf(me)) + (body.state === 'yes' ? ' a accepté : vous êtes dans la même tribu' : ' a répondu à ton invitation'), '/app#tribu');
     return inv;
   }
   throw err(400, 'Action impossible.');
@@ -310,7 +310,7 @@ async function remindInvites() {
     for (const i of await listDocs('invites', "AND data->>'state'='pending'")) {
       if (now - (i.lastRemind || i.ts) < DAY - 36e5) continue;
       i.lastRemind = now; await putDoc('invites', i.id, i.from, i);
-      notify(i.to, (await pseudoOf(i.from)) + ' attend ta réponse pour entrer dans ta tribu', '/#tribu');
+      notify(i.to, (await pseudoOf(i.from)) + ' attend ta réponse pour entrer dans ta tribu', '/app#tribu');
     } } catch (e) {}
 }
 /* une fois : l'ancienne tribu à sens unique devient « personnes préférées », les choix réciproques deviennent la tribu */
@@ -366,9 +366,14 @@ function readBody(req, max = 8e6) {
     req.on('end', () => ok(Buffer.concat(parts))); req.on('error', ko); });
 }
 const json = async req => { const b = await readBody(req); return b.length ? JSON.parse(b.toString('utf8')) : {}; };
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.ttf': 'font/ttf', '.webp': 'image/webp' };
+const SITE_LANGS = ['fr', 'de', 'en', 'it', 'es', 'pt']; // pages d'accueil publiques : / (fr), /de, /en…
 function serveStatic(req, res, p) {
-  const file = path.normalize(path.join(PUBLIC, p === '/' ? 'index.html' : decodeURIComponent(p)));
+  if (p === '/app/' || p === '/index.html') { res.writeHead(301, { Location: '/app' }); return res.end(); }
+  if (p === '/app') p = '/index.html';                                   // l'application elle-même
+  else if (p === '/') p = '/site/fr.html';                               // page d'accueil publique
+  else if (/^\/[a-z]{2}$/.test(p) && SITE_LANGS.includes(p.slice(1))) p = '/site/' + p.slice(1) + '.html';
+  const file = path.normalize(path.join(PUBLIC, decodeURIComponent(p)));
   if (!file.startsWith(PUBLIC)) return send(res, 403, { error: 'interdit' });
   fs.readFile(file, (e, data) => {
     if (e) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
@@ -396,7 +401,7 @@ async function api(req, res, url) {
       await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(password), Date.now(), inviter ? inviter.id : null]);
       if (inviter) { // la personne qui invite entre directement dans la tribu de la nouvelle, et elle est prévenue
         const iid = 'inv-' + pair(id, inviter.id); await putDoc('invites', iid, inviter.id, { id: iid, from: inviter.id, to: id, state: 'yes', ts: Date.now(), answeredAt: Date.now() });
-        notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/#tribu');
+        notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/app#tribu');
       }
     } else if (parts[1] === 'login') {
       const r = await q('SELECT id, pass, banned FROM users WHERE email=$1', [e]);
@@ -526,7 +531,7 @@ async function admin(req, res, url) {
     if (a === 'warn') {
       const nid = uid(); await putDoc('notices', nid, 'admin', { id: nid, to: id, ts: Date.now(), read: false,
         text: `Nous avons reçu des signalements te concernant (${reason}). Merci de respecter les règles de FeelShareLove : en cas de récidive, ton compte sera fermé.` });
-      notify(id, 'Un message de l\'équipe FeelShareLove', '/#now');
+      notify(id, 'Un message de l\'équipe FeelShareLove', '/app#now');
       await alog('Avertissement', id, reason); return go(back, backId, 'Avertissement envoyé.');
     }
     if (a === 'ban') {
@@ -689,7 +694,7 @@ async function debug(req, res, url) {
     const r = await q("SELECT u.id FROM users u LEFT JOIN docs d ON d.store='profiles' AND d.id=u.id WHERE u.id=$1 OR u.email=lower($1) OR lower(d.data->>'pseudo')=lower($1) LIMIT 1", [w]);
     if (!r.rowCount) return send(res, 404, { error: 'compte introuvable' });
     const token = crypto.randomBytes(32).toString('hex'); await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, r.rows[0].id, Date.now()]);
-    return send(res, 200, `<!doctype html><meta charset="utf-8"><script>localStorage.setItem('fsl_token',${JSON.stringify(token)});localStorage.setItem('fsl_uid',${JSON.stringify(r.rows[0].id)});location.href='/#now';</script>`, 'text/html; charset=utf-8');
+    return send(res, 200, `<!doctype html><meta charset="utf-8"><script>localStorage.setItem('fsl_token',${JSON.stringify(token)});localStorage.setItem('fsl_uid',${JSON.stringify(r.rows[0].id)});location.href='/app#now';</script>`, 'text/html; charset=utf-8');
   }
   const full = url.searchParams.get('full') === '1';
   const users = (await q('SELECT id, email, created, banned, invited_by FROM users ORDER BY created')).rows;
