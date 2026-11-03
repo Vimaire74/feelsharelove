@@ -81,8 +81,8 @@ window.App=(function(){
     for(let i=0;i<z.length-1;i++){if(m===z[i][0]&&day<z[i][1])return z[i][2];if(m===z[i][0]&&day>=z[i][1])return z[i+1][2];}return'';}
   function chineseAnimal(d){if(!d)return'';let [y,m,day]=d.split('-').map(Number);if(m<2||(m===2&&day<5))y--;return ['Rat','Buffle','Tigre','Lapin','Dragon','Serpent','Cheval','Chèvre','Singe','Coq','Chien','Cochon'][((y-4)%12+12)%12];}
   function chinese(d){if(!d)return'';let [y,m,day]=d.split('-').map(Number);if(m<2||(m===2&&day<5))y--;const el=['Bois','Feu','Terre','Métal','Eau'];return chineseAnimal(d)+' de '+el[Math.floor((((y-4)%10+10)%10)/2)];}
-  function localTime(p){const d=new Date(Date.now()+(p.tz||0)*3600e3);return d.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});}
-  const hhmm=ts=>new Date(ts).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
+  function localTime(p){const d=new Date(Date.now()+(p.tz||0)*3600e3);return d.toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});}
+  const hhmm=ts=>new Date(ts).toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});
   const fem=p=>p.g?p.g==='f':(p.accord==='f'||p.accord==='m')?p.accord==='f':/a$/i.test(norm(p.name)); // accord choisi par la personne, sinon son prénom (version locale)
   const dn=p=>p?(p.pseudo||p.name||'Toi'):'';                 // nom affiché : toujours le pseudo
   const isAvail=p=>!!(p&&p.avail&&p.avail.until>Date.now());
@@ -142,6 +142,14 @@ window.App=(function(){
   async function loadPerson(id){const p=await DB.get('profiles',id);if(!p)return null;p.entries=await DB.where('entries','profileId',id);p.qs=await DB.where('questions','profileId',id);return p;}
   async function blockedNames(){const lists=await DB.where('lists','owner','me');return lists;}
   function isListed(p,lists){return lists.some(l=>{if(l.type!=='red'&&l.type!=='black')return false;if(l.target&&l.target===p.id)return true;const ln=norm(l.name);return l.type==='red'?(norm(p.name).split(' ').includes(ln.split(' ')[0])||ln===norm(p.pseudo)):(ln===norm(p.name)||ln===norm(p.pseudo));});}
+  /* langues : la langue de mon portrait (celle de mes textes) et les portraits que je veux voir */
+  const textLangOf=p=>(p&&p.textLang)||'fr';
+  const readLangsOf=me=>{const l=me&&me.readLangs&&me.readLangs.length?me.readLangs:[I18N.lang,...(me&&me.langs||[])];return [...new Set(l)];};
+  /* true si je peux lire ce portrait ; sinon, s'il résonne à 90 % ou plus, on le montre quand même avec une étiquette */
+  const canRead=(me,p)=>readLangsOf(me).includes(textLangOf(p));
+  function langTag(me,p){if(canRead(me,p))return '';const mine=readLangsOf(me);const spoken=(p.langs||[]).find(c=>mine.includes(c));
+    return `<span class="rtag t-lang">Portrait en ${esc(I18N.name(textLangOf(p)).toLowerCase())}${spoken?' · parle '+esc(I18N.name(spoken).toLowerCase()):''}</span>`;}
+  const langOk=(me,p,pct)=>canRead(me,p)||(pct||0)>=90;
   /* « Vérifiés seulement » : réglé dans Résonances, appliqué partout (sur cet appareil) */
   const verifOnly=v=>{try{if(v!==undefined)localStorage.setItem('fsl_verif',v?'1':'');return localStorage.getItem('fsl_verif')==='1';}catch(e){return false;}};
   /* personnes cachées pour le moment (un mois), pour voir d'autres profils */
@@ -331,26 +339,57 @@ window.App=(function(){
   const startOf=me=>me.onboardedAt||me.adultAt||Date.now();
   function pseudoRule(me){const end=startOf(me)+MONTH;if(me.pseudoChangedAt)return {ok:false,msg:'Tu as déjà utilisé ton changement de pseudo.'};
     if(Date.now()>end)return {ok:false,msg:'Le pseudo ne peut plus être changé : c\'était possible une fois pendant le premier mois.'};
-    return {ok:true,msg:'Tu peux changer ton pseudo une seule fois, jusqu\'au '+new Date(end).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})+'.'};}
-  function photoRule(me){const first=startOf(me)+MONTH;if(!me.photo||Date.now()<first)return {ok:true,msg:me.photo?'Tu peux changer ta photo librement jusqu\'au '+new Date(first).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})+', ensuite une fois par an.':''};
+    return {ok:true,msg:'Tu peux changer ton pseudo une seule fois, jusqu\'au '+new Date(end).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long'})+'.'};}
+  function photoRule(me){const first=startOf(me)+MONTH;if(!me.photo||Date.now()<first)return {ok:true,msg:me.photo?'Tu peux changer ta photo librement jusqu\'au '+new Date(first).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long'})+', ensuite une fois par an.':''};
     const next=(me.photoChangedAt&&me.photoChangedAt>first-MONTH?me.photoChangedAt:first)+YEAR;
-    if(me.photoChangedAt&&me.photoChangedAt>=first&&Date.now()<next)return {ok:false,msg:'Ta photo pourra être changée le '+new Date(next).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+'.'};
+    if(me.photoChangedAt&&me.photoChangedAt>=first&&Date.now()<next)return {ok:false,msg:'Ta photo pourra être changée le '+new Date(next).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long',year:'numeric'})+'.'};
     return {ok:true,msg:'Tu peux changer ta photo maintenant. Ensuite, la prochaine fois sera dans un an.'};}
   const badge=p=>(p&&p.verified&&p.verified.status==='verified'?'<span class="vbadge" title="Identité vérifiée">vérifié</span>':'')+(p&&p.fake?' <span class="vbadge demo" title="Profil fictif pour découvrir FeelShareLove">profil de démonstration</span>':'');
   const isVerified=p=>!!(p&&p.verified&&p.verified.status==='verified');
   /* caméra en direct : pas d'import depuis la galerie. Retardateur pour une photo en pied. */
   /* dessins de la photo, calculés sur le téléphone (rien n'est envoyé ailleurs) */
-  const STYLES=[['real','Ma vraie photo'],['crayon','Crayon'],['affiche','Affiche'],['aquarelle','Aquarelle'],['points','Peinture de points']];
+  const STYLES=[['real','Ma vraie photo'],['crayon','Crayon'],['affiche','Affiche'],['aquarelle','Aquarelle'],['points','Peinture de points'],['pointillisme','Pointillisme'],['artdeco','Art déco'],['mosaique','Mosaïque']];
   function blur1(a,W,H,r){const t=new Float32Array(a.length),o=new Float32Array(a.length),n=2*r+1;
     for(let y=0;y<H;y++){let s=0;const R=y*W;for(let x=-r;x<=r;x++)s+=a[R+Math.min(W-1,Math.max(0,x))];
       for(let x=0;x<W;x++){t[R+x]=s/n;s+=a[R+Math.min(W-1,x+r+1)]-a[R+Math.max(0,x-r)];}}
     for(let x=0;x<W;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[Math.min(H-1,Math.max(0,y))*W+x];
       for(let y=0;y<H;y++){o[y*W+x]=s/n;s+=t[Math.min(H-1,y+r+1)*W+x]-t[Math.max(0,y-r)*W+x];}}
     return o;}
+  /* ---- trois styles de plus : pointillisme, art déco, mosaïque (calculés sur le téléphone, comme les autres) ---- */
+  const rgb2hsl=(r,g,b)=>{r/=255;g/=255;b/=255;const M=Math.max(r,g,b),m=Math.min(r,g,b);let h=0,s=0;const l=(M+m)/2;if(M!==m){const d=M-m;s=l>.5?d/(2-M-m):d/(M+m);h=M===r?((g-b)/d+(g<b?6:0)):M===g?(b-r)/d+2:(r-g)/d+4;h/=6;}return [h,s,l];};
+  const hslStr=(h,s,l)=>`hsl(${Math.round(((h%1)+1)%1*360)},${Math.round(Math.max(0,Math.min(1,s))*100)}%,${Math.round(Math.max(0,Math.min(1,l))*100)}%)`;
+  function gradOf(g,W,H){const N=W*H,gs=blur1(g,W,H,2),mag=new Float32Array(N);
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const i=y*W+x;const a=gs[i-W-1],b=gs[i-W],c=gs[i-W+1],d=gs[i-1],f=gs[i+1],gg=gs[i+W-1],h=gs[i+W],k=gs[i+W+1];mag[i]=Math.hypot((c+2*f+k)-(a+2*d+gg),(gg+2*h+k)-(a+2*b+c));}return mag;}
+  function moreStyles(style,c,x,W,H,p,g){const N=W*H;let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
+    if(style==='pointillisme'){x.filter='blur(6px) saturate(1.3) brightness(1.08)';x.drawImage(c,0,0);x.filter='none';const st=Math.max(2,Math.round(W/200));
+      for(let y=0;y<H;y+=st)for(let xx=0;xx<W;xx+=st){const px=Math.min(W-1,Math.round(xx+(rnd()-.5)*st*1.4)),py=Math.min(H-1,Math.round(y+(rnd()-.5)*st*1.4));const i=4*(py*W+px);
+        let [h,s,l]=rgb2hsl(p[i],p[i+1],p[i+2]);s=Math.min(1,s*1.5+.1);const comp=l<.45&&rnd()<.18;
+        x.fillStyle=hslStr(comp?h+.5:h+(rnd()-.5)*.04,s,comp?l*.9+.15:l*.96+.04);x.globalAlpha=comp?.35:.9;x.beginPath();x.arc(px,py,st*(.6+rnd()*.45),0,7);x.fill();}
+      x.globalAlpha=1;return;}
+    if(style==='artdeco'){const mag=gradOf(g,W,H),s=blur1(blur1(g,W,H,3),W,H,3);let lo=255,hi=0;for(let i=0;i<N;i+=7){lo=Math.min(lo,s[i]);hi=Math.max(hi,s[i]);}
+      const pal=[[27,20,16],[122,38,28],[196,142,54],[232,203,140],[245,232,204]];const out=x.createImageData(W,H),o=out.data;
+      for(let i=0;i<N;i++){const t=Math.max(0,Math.min(.999,(s[i]-lo)/Math.max(1,hi-lo)));const q=pal[Math.floor(Math.pow(t,1.1)*pal.length)];o[4*i]=q[0];o[4*i+1]=q[1];o[4*i+2]=q[2];o[4*i+3]=255;}
+      const edge=blur1(mag,W,H,2);for(let i=0;i<N;i++)if(edge[i]>95){o[4*i]=27;o[4*i+1]=20;o[4*i+2]=16;}
+      x.putImageData(out,0,0);x.save();x.globalAlpha=.3;x.fillStyle='#c48e36';const cx=W/2,cy=-H*.1;
+      for(let k=0;k<18;k++){const a0=Math.PI*(k/18),a1=a0+Math.PI/36;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.cos(a0)*W*2,cy+Math.sin(a0)*W*2);x.lineTo(cx+Math.cos(a1)*W*2,cy+Math.sin(a1)*W*2);x.closePath();x.fill();}
+      x.restore();x.strokeStyle='#c48e36';x.lineWidth=Math.max(6,W/60);x.strokeRect(x.lineWidth/2,x.lineWidth/2,W-x.lineWidth,H-x.lineWidth);x.lineWidth=2;x.strokeRect(12,12,W-24,H-24);return;}
+    if(style==='mosaique'){seed=5;const mag=gradOf(g,W,H),em=blur1(mag,W,H,5);let mx=0;for(let i=0;i<N;i+=3)mx=Math.max(mx,em[i]);const pts=[];let tries=0;
+      while(pts.length<1700&&tries++<300000){const px=rnd()*W,py=rnd()*H;const i=Math.round(py)*W+Math.round(px);const dc=Math.hypot(px-W/2,py-H*.42)/(W*.6),cw=Math.max(.15,1-dc*dc);
+        if(rnd()<cw*(.15+.85*Math.sqrt(em[Math.min(N-1,i)]/mx)))pts.push([px,py,(rnd()-.5)*.06]);}
+      const G=24,gw=Math.ceil(W/G),gh=Math.ceil(H/G),bins=Array.from({length:gw*gh},()=>[]);pts.forEach((q,k)=>bins[Math.floor(q[1]/G)*gw+Math.floor(q[0]/G)].push(k));
+      const cell=new Int16Array(N),sum=pts.map(()=>[0,0,0,0]);
+      for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++){let best=-1,bd=1e12;const bx=Math.floor(xx/G),by=Math.floor(y/G);
+        for(let r=1;best<0||r<=1;r++){for(let yy=by-r;yy<=by+r;yy++)for(let xb=bx-r;xb<=bx+r;xb++){if(xb<0||yy<0||xb>=gw||yy>=gh)continue;for(const k of bins[yy*gw+xb]){const dx=pts[k][0]-xx,dy=pts[k][1]-y,dd=dx*dx+dy*dy;if(dd<bd){bd=dd;best=k;}}}if(r>6)break;}
+        const i=y*W+xx;cell[i]=best;const sm=sum[best];sm[0]+=p[4*i];sm[1]+=p[4*i+1];sm[2]+=p[4*i+2];sm[3]++;}
+      const col=sum.map((sm,k)=>{if(!sm[3])return [40,30,28];const f=1+pts[k][2];return [Math.min(255,sm[0]/sm[3]*f),Math.min(255,sm[1]/sm[3]*f),Math.min(255,sm[2]/sm[3]*f)];});
+      const out=x.createImageData(W,H),o=out.data;for(let i=0;i<N;i++){const r=col[cell[i]];o[4*i]=r[0];o[4*i+1]=r[1];o[4*i+2]=r[2];o[4*i+3]=255;}
+      for(let y=1;y<H-1;y++)for(let xx=1;xx<W-1;xx++){const i=y*W+xx;if(cell[i]!==cell[i+1]||cell[i]!==cell[i+W]){o[4*i]=58;o[4*i+1]=46;o[4*i+2]=40;}}
+      x.putImageData(out,0,0);}}
   function stylize(url,style){return new Promise(res=>{const im=new Image();im.onload=()=>{
     const W=im.naturalWidth,H=im.naturalHeight,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);
     const d=x.getImageData(0,0,W,H),p=d.data,N=W*H,g=new Float32Array(N),R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
     for(let i=0;i<N;i++){R[i]=p[4*i];G[i]=p[4*i+1];B[i]=p[4*i+2];g[i]=.3*R[i]+.59*G[i]+.11*B[i];}
+    if(style==='pointillisme'||style==='artdeco'||style==='mosaique'){moreStyles(style,c,x,W,H,p,g);res(c.toDataURL('image/jpeg',.88));return;}
     const sketch=()=>{const inv=new Float32Array(N);for(let i=0;i<N;i++)inv[i]=255-g[i];const b=blur1(inv,W,H,8),k=new Float32Array(N);
       for(let i=0;i<N;i++)k[i]=Math.min(255,g[i]*255/(256-b[i]));return k;};
     if(style==='crayon'){const k=sketch();for(let i=0;i<N;i++){const v=Math.pow(k[i]/255,2.2)*255;p[4*i]=Math.min(255,v*1.02+4);p[4*i+1]=v;p[4*i+2]=Math.max(0,v*.94);}}
@@ -405,7 +444,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

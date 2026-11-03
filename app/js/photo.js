@@ -63,7 +63,7 @@ window.Photo=(function(){
   async function check(){try{const me=await DB.get('profiles','me');if(me&&me.travel&&me.travel.until&&Date.now()>me.travel.until){end(me);await DB.put('profiles',me);}}catch(e){}}
   /* bloc « en voyage » dans Mon portrait */
   function travelBox(el,me,save,refresh){
-    const fmt=t=>new Date(t).toLocaleDateString('fr-CH',{day:'numeric',month:'long'});
+    const fmt=t=>new Date(t).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long'});
     if(me.travel){el.innerHTML=`<p class="small"><b style="color:var(--saffron)">En voyage à ${esc(me.travel.city)}</b>${me.travel.until?' jusqu\'au '+fmt(me.travel.until):''}. Les autres te voient là-bas ; chez toi : ${esc(me.travel.homeCity||'—')}.</p><button class="btn ghost small-btn" type="button" id="tv-end" style="margin-top:8px">Je suis rentré${App.fem(me)?'e':''}</button>`;
       el.querySelector('#tv-end').addEventListener('click',()=>{end(me);save();refresh();});return;}
     el.innerHTML=`<button class="linkbtn" type="button" id="tv-open">Je suis en voyage : me localiser ici pour le moment</button><div id="tv-form" hidden></div>`;

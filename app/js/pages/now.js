@@ -10,7 +10,7 @@ Pages.now=async function(S){
     <p class="muted small" id="f-note" style="margin:6px 0 0"></p>
     <div id="people"></div>
     <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a>`;
-  const h=new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
+  const h=new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});
   /* phrase du titre selon le moment de la journée ; elle change chaque jour, pas à chaque visite */
   const f=App.fem(me),seul=f?'seule':'seul',hr=new Date().getHours(),day=Math.floor(Date.now()/864e5);
   const T=hr<5?['La nuit est longue. Ailleurs dans le monde, d\'autres sont éveillés.','Tu ne dors pas ? D\'autres non plus.','Au cœur de la nuit, quelqu\'un a peut-être envie de parler.']
@@ -59,7 +59,7 @@ Pages.now=async function(S){
   function render(){const P=$('people');P.innerHTML='';const qs=norm($('q-search').value);
     let list=people.map(p=>{const r=App.resonance(entries,p.entries);r.n=r.common.length+r.feels.length+commonTypes(me,p).length+Plus.extraCommon(me,p).length;r.pct=Plus.similarity(me,p,entries,p.entries);return {p,r};});
     if(qs){list=list.map(x=>({...x,hits:x.p.entries.filter(e=>norm(e.title).includes(qs)||norm(e.why).includes(qs)||norm(e.desc).includes(qs)),nameHit:norm(dn(x.p)).includes(qs)||norm(x.p.city).includes(qs)})).filter(x=>x.hits.length||x.nameHit);}
-    else list=list.filter(x=>App.isAvail(x.p)&&!hid.has(x.p.id));
+    else list=list.filter(x=>App.isAvail(x.p)&&!hid.has(x.p.id)&&App.langOk(me,x.p,x.r.pct));
     if(verif)list=list.filter(x=>App.isVerified(x.p));
     /* ordre : d'abord les personnes qui partagent une de mes envies du moment, puis par résonance */
     const mw=isAvail(me)&&me.avail.wants||[];const same=x=>App.isAvail(x.p)&&x.p.avail.wants.some(w=>mw.includes(w))?1:0;
@@ -69,7 +69,7 @@ Pages.now=async function(S){
     const all=list;if(!qs)list=list.slice(0,shown);
     list.forEach(({p,r,hits})=>{const sub=hits&&hits.length?`<div class="why-hit">${esc(hits[0].title)} : « ${esc(hits[0].why.slice(0,70))}… »</div>`:(App.isAvail(p)&&p.avail.note?`<div class="st">${esc(p.avail.note)}</div>`:`<div class="st">${esc(p.now)}</div>`);
       const sw=mw.length&&App.isAvail(p)?p.avail.wants.filter(w=>mw.includes(w)).map(w=>App.WANT[w]?App.WANT[w].s:'').filter(Boolean):[];
-      const d=App.personEl(p,r,(sw.length?`<div class="rtags"><span class="rtag t-want">Même envie : ${esc(sw.join(', '))}</span></div>`:'')+sub);d.addEventListener('click',()=>location.hash='#personne/'+p.id);P.appendChild(d);});
+      const lt=App.langTag(me,p);const d=App.personEl(p,r,(sw.length||lt?`<div class="rtags">${sw.length?`<span class="rtag t-want">Même envie : ${esc(sw.join(', '))}</span>`:''}${lt}</div>`:'')+sub);d.addEventListener('click',()=>location.hash='#personne/'+p.id);P.appendChild(d);});
     if(list.length<all.length){const b=document.createElement('button');b.className='btn ghost';b.type='button';b.style.cssText='width:100%;margin-top:10px';b.textContent='Voir plus ('+(all.length-list.length)+')';b.addEventListener('click',()=>{shown+=20;render();});P.appendChild(b);}}
   render();
   $('q-search').addEventListener('input',render);

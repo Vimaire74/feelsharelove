@@ -46,7 +46,7 @@ Pages.resonances=async function(S,id){
     function draw(){L.innerHTML='';const q=norm($('r-q').value);
       const hidSet=new Set(hid.map(l=>l.target)),minP=sel.min.size?+[...sel.min][0]:0;
       let list=all.filter(x=>{const p=x.p,a=App.isAvail(p);
-        if(hidSet.has(p.id))return false;if(minP&&(x.r.pct||0)<minP)return false;
+        if(hidSet.has(p.id))return false;if(minP&&(x.r.pct||0)<minP)return false;if(!App.langOk(me,p,x.r.pct))return false;
         if(q&&!q.split(' ').every(w=>x.text.includes(w)))return false;
         if(sel.intent.size&&!(p.intent||[]).some(k=>sel.intent.has(k)))return false;
         if(sel.near.size&&!((sel.near.has('ville')&&x.near)||(sel.near.has('pays')&&(x.samec||x.near))))return false;
@@ -57,7 +57,7 @@ Pages.resonances=async function(S,id){
       if(!entries.length&&!q&&!n)L.insertAdjacentHTML('beforeend','<div class="empty">Ton portrait n\'a pas encore de passions. Ajoute par exemple un film, ce qu\'il te fait et pourquoi : les résonances partent de là.</div>');
       if(!list.length){L.insertAdjacentHTML('beforeend','<div class="empty">Personne ne correspond pour l\'instant. Enlève un critère, ou essaie un autre mot.</div>');hiddenBlock();return;}
       const total=list.length;list=list.slice(0,shown);
-      list.forEach(({p,r,ct,ex})=>{let sub=Plus.tagsHtml(r,ct,ex);
+      list.forEach(({p,r,ct,ex})=>{let sub=Plus.tagsHtml(r,ct,ex);const lt=App.langTag(me,p);if(lt)sub=`<div class="rtags">${lt}</div>`+sub;
         if(q){const e=p.entries.find(e=>norm(e.title+' '+e.why+' '+e.desc).includes(q));if(e)sub=`<div class="rtags"><span class="rtag t-oeuvre">${esc(e.title)}</span></div>`;}
         sub+=`<button class="linkbtn r-hide" type="button" style="font-size:13px;margin-top:4px">Cacher pour le moment</button>`;
         const d=App.personEl(p,r,sub);d.addEventListener('click',ev=>{if(ev.target.closest('.r-hide'))return;location.hash='#resonances/'+p.id;});
@@ -69,7 +69,7 @@ Pages.resonances=async function(S,id){
       w.innerHTML=`<button class="linkbtn" type="button">${showHidden?'Ne plus montrer':'Montre-moi'} ceux que j'ai cachés (${hid.length})</button><div></div>`;
       w.querySelector('button').addEventListener('click',()=>{showHidden=!showHidden;draw();});
       if(showHidden){const box=w.querySelector('div');hid.forEach(l=>{const x=all.find(a=>a.p.id===l.target);if(!x)return;
-        const d=App.personEl(x.p,x.r,`<p class="muted small" style="margin:2px 0 0">Caché jusqu'au ${new Date(l.until).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})}</p><button class="linkbtn r-show" type="button" style="font-size:13px">Ne plus cacher</button>`);
+        const d=App.personEl(x.p,x.r,`<p class="muted small" style="margin:2px 0 0">Caché jusqu'au ${new Date(l.until).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long'})}</p><button class="linkbtn r-show" type="button" style="font-size:13px">Ne plus cacher</button>`);
         d.addEventListener('click',ev=>{if(ev.target.closest('.r-show'))return;location.hash='#resonances/'+x.p.id;});
         d.querySelector('.r-show').addEventListener('click',async ev=>{ev.stopPropagation();await DB.del('lists',l.id);hid=await App.hiddenList();draw();});box.appendChild(d);});}
       L.appendChild(w);}
@@ -80,7 +80,7 @@ Pages.resonances=async function(S,id){
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
   <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${(p.intent||[]).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
-  <div class="pair">${App.avatarHtml(p.intimate&&me.photoIntimate===true&&me.photoReal?{...me,photo:me.photoReal}:me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
+  <div class="pair">${App.avatarHtml(p.intimate&&me.photoIntimate===true&&me.photoReal?{...me,photo:me.photoReal}:me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${App.langTag(me,p)?`<div class="rtags">${App.langTag(me,p)}</div>`:''}${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
   const B=$('body');App.tribeBox(p,$('tribe'));
   const ct=commonTypes(me,p);
   if(ct.length)B.insertAdjacentHTML('beforeend',`<div class="res"><div class="title">Vous fonctionnez tous les deux ${ct.map(k=>TYPES.list.find(t=>t.k===k).both).join(' et ')}</div><div class="types-show">${ct.map(k=>`<span class="ttag t-${k}">${TYPES.name(k)}</span>`).join('')}</div></div>`);

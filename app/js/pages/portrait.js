@@ -26,6 +26,7 @@ Pages.portrait=async function(S){
   <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="f-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea></div>
   <div class="voice-box"><p class="eyebrow" style="margin:0">Ma voix · une minute pour me présenter</p><div id="voice"></div></div>
 
+  <h2>Mes <em>langues</em></h2><div class="sec" id="lang-box"></div>
   <h2>La couleur de <em>ma tribu</em></h2><p class="muted small" style="margin:-4px 0 8px">Les membres de ta tribu t'apparaissent sur ce fond, partout dans l'app. Toi seul la vois.</p><div class="col-sw" id="col-box"></div>
   <h2>Mon <em>fonctionnement</em></h2>
   <div class="sec" id="types-box"></div>
@@ -50,7 +51,22 @@ Pages.portrait=async function(S){
   <div class="add" id="add-q" style="margin-top:12px">+ Ajouter ma propre question</div>
   <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div>`;
 
-  let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});},300);}
+  let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
+  /* langues : app, portrait, portraits que je veux voir */
+  function renderLangs(){const B=$('lang-box');if(!me.textLang)me.textLang=I18N.lang;if(!me.readLangs||!me.readLangs.length)me.readLangs=App.readLangsOf(me);
+    const name=c=>I18N.name(c);const pool=[...new Set([I18N.lang,...I18N.available(),...(me.langs||[]),me.textLang,...me.readLangs])];
+    B.innerHTML=`<p class="muted small" style="margin:0 0 6px"><b>La langue de l'app</b> · par défaut, celle du téléphone</p><div class="intent" id="l-ui" style="margin:0 0 14px"><button class="chip${I18N.choice?'':' on'}" type="button" data-l="">Langue du téléphone</button>${I18N.available().map(c=>`<button class="chip${I18N.choice===c?' on':''}" type="button" data-l="${c}">${esc(name(c))}</button>`).join('')}</div>
+      <p class="muted small" style="margin:0 0 6px"><b>La langue de mon portrait</b> · celle dans laquelle j'écris mes textes</p><div class="intent" id="l-text" style="margin:0 0 14px">${pool.map(c=>`<button class="chip${me.textLang===c?' on':''}" type="button" data-c="${c}">${esc(name(c))}</button>`).join('')}</div>
+      <p class="muted small" style="margin:0 0 6px"><b>Les portraits que je veux voir</b> · écrits dans ces langues</p><div class="intent" id="l-read" style="margin:0 0 8px">${pool.map(c=>`<button class="chip${me.readLangs.includes(c)?' on':''}" type="button" data-c="${c}">${esc(name(c))}</button>`).join('')}</div>
+      <div class="lang-add" style="position:relative"><input class="in lang-in" placeholder="Ajouter une langue…" autocomplete="off"><div class="lang-sug"></div></div>
+      <p class="muted small" style="margin:8px 0 0">Un portrait écrit dans une autre langue t'est quand même montré s'il résonne à 90 % ou plus.</p>`;
+    B.querySelectorAll('#l-ui .chip').forEach(b=>b.addEventListener('click',()=>{I18N.set(b.dataset.l);location.reload();}));
+    B.querySelectorAll('#l-text .chip').forEach(b=>b.addEventListener('click',()=>{me.textLang=b.dataset.c;if(!me.readLangs.includes(me.textLang))me.readLangs.push(me.textLang);saveMe();renderLangs();}));
+    B.querySelectorAll('#l-read .chip').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.c;if(me.readLangs.includes(c)){if(me.readLangs.length>1)me.readLangs=me.readLangs.filter(x=>x!==c);}else me.readLangs.push(c);saveMe();renderLangs();}));
+    const I=B.querySelector('.lang-in'),S=B.querySelector('.lang-sug');
+    I.addEventListener('input',()=>{const r=I18N.search(I.value,pool);S.innerHTML=r.map(x=>`<button class="chip" type="button" data-c="${x.code}">${esc(x.label)}${x.native&&x.native!==x.label?` <span class="muted">${esc(x.native)}</span>`:''}</button>`).join('');});
+    S.addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;me.readLangs.push(b.dataset.c);saveMe();renderLangs();});}
+  renderLangs();
   /* couleur de ma tribu */
   function renderCol(){const B=$('col-box');B.innerHTML=App.TRIBE_COLORS.map(([k,l,c])=>`<button type="button" class="${(me.tribeColor||'rubis')===k?'on':''}" data-k="${k}" style="background:${c}">${l}</button>`).join('');
     B.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{me.tribeColor=b.dataset.k;App.applyTribeColor(me);saveMe();renderCol();}));}

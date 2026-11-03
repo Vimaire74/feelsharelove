@@ -138,7 +138,8 @@ function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
 async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
 function publicProfile(p, intimate, opened, myGeo) {
-  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, ...rest } = p; // la couleur de tribu reste privée
+  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, ...rest } = p; // couleur de tribu et langues de lecture restent privées
+  if (!rest.textLang) rest.textLang = 'fr'; // anciens portraits : écrits en français
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
   /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
@@ -639,7 +640,7 @@ async function admin(req, res, url) {
       <h2>Identité</h2><table>${row('Prénom et nom', H([p.name, p.lastName].filter(Boolean).join(' ')))}${row('E-mail', H(u.email) + (u.no_mail ? ' <span class="tag">ne veut pas d\'e-mails</span>' : ''))}${row('Accord', H({ m: 'masculin', f: 'féminin', n: 'neutre' }[p.accord] || ''))}
         ${row('Ville', H([p.npa, p.city].filter(Boolean).join(' ')) + (p.travel ? ' <small>(en voyage)</small>' : ''))}${row('Inscription', fmtDT(u.created))}${row('Dernière visite', fmtDT(u.last_seen))}${row('Invité par', u.invited_by ? who(u.invited_by) : '')}
         ${row('Vérification', H(p.verified ? p.verified.status : 'non demandée'))}</table>
-      <h2>Portrait</h2><table>${row('Intention', H((p.intent || []).map(k => INTENT_NAME[k] || k).join(', ')))}${row('En ce moment', H(p.now))}
+      <h2>Portrait</h2><table>${row('Langue du portrait', H(p.textLang || 'fr'))}${row('Intention', H((p.intent || []).map(k => INTENT_NAME[k] || k).join(', ')))}${row('En ce moment', H(p.now))}
         ${row('Fonctionnement', H((p.types && p.types.list || []).map(k => TYPE_NAME[k] || k).join(', ')))}
         ${Object.entries(F).filter(([, v]) => typeof v === 'string' && v).map(([k, v]) => row(H(k), H(v))).join('')}
         ${row('Personnages', (p.chinois || []).map(x => H(x.n) + (x.w ? ' <small>(' + H(x.w) + ')</small>' : '') + (x.why ? ' : <i>' + H(x.why) + '</i>' : '')).join('<br>'))}

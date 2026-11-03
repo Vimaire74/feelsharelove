@@ -52,7 +52,7 @@ Pages.accueil=async function(S){
       <p class="muted" style="margin:12px 0 18px">Pas de photos à faire défiler. Tu te présentes par ce que tu aimes, et pourquoi.</p>
       <div class="fact"><div class="k">Ton prénom <span class="muted" style="text-transform:none;letter-spacing:0">(il reste privé)</span></div><div class="v"><input class="in" id="a-name" placeholder="Prénom"></div></div>
       <div class="fact" style="margin-top:8px"><div class="k">Ton nom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à la vérification)</span></div><div class="v"><input class="in" id="a-last" placeholder="Nom de famille"></div></div>
-      <div class="fact" style="margin-top:8px"><div class="k">Écris-moi</div><div class="intent" id="a-acc" style="margin-top:4px"><button class="chip" type="button" data-a="m">au masculin</button><button class="chip" type="button" data-a="f">au féminin</button><button class="chip" type="button" data-a="n">de façon neutre</button></div></div>
+      <div class="fact" style="margin-top:8px"><div class="k">Écris-moi</div><div class="intent" id="a-acc" style="margin-top:4px;grid-column:1/-1"><button class="chip" type="button" data-a="m">au masculin</button><button class="chip" type="button" data-a="f">au féminin</button><button class="chip" type="button" data-a="n">de façon neutre</button></div></div>
       <label class="check"><input type="checkbox" id="a-18"> J'ai 18 ans ou plus, et j'accepte les <a href="#conditions">conditions d'utilisation</a>.</label>
       <div class="row"><button class="btn" type="button" id="next">Continuer</button></div><p class="muted small" id="err"></p>`;
       $('a-name').value=me.name||'';
