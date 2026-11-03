@@ -56,11 +56,11 @@ window.I18N=(function(){
       if(SKIP.has(el.tagName)||isUser(el))continue;
       /* élément « simple » (texte + mise en forme) : on traduit la phrase entière, balises comprises */
       const kids=[...el.children];if(kids.length&&kids.every(c=>INLINE.has(c.tagName)&&!c.children.length&&!c.id)){const tr=lookup(el.textContent);
-        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else el.textContent=tr;}}}
+        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else el.textContent=tr;[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
     const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const list=[];let n;while(n=w.nextNode())list.push(n);
-    for(const tn of list){const par=tn.parentNode;if(!par||SKIP.has(par.tagName)||(par.closest&&par.closest('svg')))continue;const v=tn.nodeValue;if(!v||!v.trim())continue;
+    for(const tn of list){const par=tn.parentNode;if(!par||SKIP.has(par.tagName)||(par.closest&&par.closest('svg')))continue;const v=tn.nodeValue;if(!v||!v.trim()||tn.__tr===v)continue; /* déjà traduit : on ne retraduit pas une traduction */
       /* dans ce que les gens ont écrit, seule une phrase entière de l'app (longue, exacte) est traduite */
-      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+tr+trail;}}}
+      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+tr+trail;tn.__tr=tn.nodeValue;}}}
     if(window.__fitTabs)try{window.__fitTabs();}catch(e){}}
   let observing=false;
   function watch(){if(observing||lang==='fr')return;observing=true;

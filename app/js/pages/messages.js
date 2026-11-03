@@ -86,6 +86,8 @@ Pages.messages=async function(S,id){
     $('block').addEventListener('click',async()=>{await DB.put('lists',{owner:'me',type:'black',target:p.id,name:p.name||p.pseudo});await DB.put('reports',{by:'me',target:p.id,kind:'block',status:'open',ts:Date.now()});location.hash='#reglages';});
   }
   await render();
+  /* on arrive directement sur le dernier message (après que le routeur a remis la page en haut) */
+  const toEnd=()=>{if(!S.isConnected)return;S.scrollTop=S.scrollHeight;};setTimeout(toEnd,0);setTimeout(toEnd,120);setTimeout(toEnd,500);
   /* version en ligne : on regarde toutes les 8 secondes s'il y a du nouveau dans la conversation */
   if(DB.remote){clearInterval(window.__fslPoll);let last=null;const here=location.hash;
     window.__fslPoll=setInterval(async()=>{if(location.hash!==here){clearInterval(window.__fslPoll);return;}if(document.hidden)return;
