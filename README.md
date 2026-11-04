@@ -1,6 +1,6 @@
-# FeelShareLove — lot 24 (à envoyer APRÈS le lot 23)
+# FeelShareLove — lot 25 (à envoyer APRÈS le lot 24)
 
-Version 1.10.1 (04/11/2026)
-- Page d'accueil : captures d'écran de l'app rendues en résolution triple (1170 px de large au lieu de 780) et affichées un peu plus grandes, pour rester nettes sur les écrans haute résolution et au zoom
+Version 1.10.2 (04/11/2026)
+- Portrait, « Mes langues » : « Langue du téléphone » devient « Langue du système » (l'app tourne aussi dans un navigateur d'ordinateur), dans les 6 langues
 
-Fichiers : app/site/*.html, app/site/shot-*.jpg
+Fichiers : app/js/pages/portrait.js, app/js/lang/*.js
