@@ -54,9 +54,10 @@ window.I18N=(function(){
     for(const el of els){if(el.closest&&el.closest('svg'))continue;
       ATTRS.forEach(a=>{const v=el.getAttribute&&el.getAttribute(a);if(v){const tr=lookup(v);if(tr!=null&&tr!==v)el.setAttribute(a,tr);}});
       if(SKIP.has(el.tagName)||isUser(el))continue;
-      /* élément « simple » (texte + mise en forme) : on traduit la phrase entière, balises comprises */
+      /* élément « simple » (texte + mise en forme) : on traduit la phrase entière, balises comprises.
+         Jamais en texte brut si l'élément contient des liens (sinon deux boutons côte à côte seraient fondus en un seul texte) */
       const kids=[...el.children];if(kids.length&&kids.every(c=>INLINE.has(c.tagName)&&!c.children.length&&!c.id)){const tr=lookup(el.textContent);
-        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else el.textContent=tr;[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
+        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else if(kids.some(c=>c.tagName==='A'))continue;else el.textContent=tr;[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
     const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const list=[];let n;while(n=w.nextNode())list.push(n);
     for(const tn of list){const par=tn.parentNode;if(!par||SKIP.has(par.tagName)||(par.closest&&par.closest('svg')))continue;const v=tn.nodeValue;if(!v||!v.trim()||tn.__tr===v)continue; /* déjà traduit : on ne retraduit pas une traduction */
       /* dans ce que les gens ont écrit, seule une phrase entière de l'app (longue, exacte) est traduite */

@@ -1,7 +1,6 @@
-# FeelShareLove — lot 25 (à envoyer APRÈS le lot 24)
+# FeelShareLove — lot 26 (à envoyer APRÈS le lot 25)
 
-Version 1.9.5 (04/11/2026)
-- Aide et conditions, « Tes données » : plus de mention de la loi suisse ; responsable du traitement = TitanCorp, Inc. (contact@feelsharelove.com) ; référence au RGPD et aux lois applicables
-- Même phrase mise à jour dans les 5 traductions
+Version 1.9.6 (04/11/2026)
+- Traduction : sur le portrait d'une personne, les deux boutons « Nos résonances · n » et « Conversation » étaient fondus en un seul texte (« 8Conversation ») et ne réagissaient plus, dans toutes les langues sauf le français — corrigé (le traducteur ne touche plus un bloc qui contient des liens, il traduit chaque bouton séparément)
 
-Fichiers : app/js/pages/conditions.js, app/js/lang/*.js
+Fichiers : app/js/i18n.js
