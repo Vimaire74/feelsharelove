@@ -510,3 +510,9 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .col-sw button{min-width:92px;padding:12px 10px;border-radius:14px;border:2px solid transparent;color:#fbeadb;font:600 13px var(--body);cursor:pointer}
 .col-sw button.on{border-color:var(--saffron);box-shadow:0 0 0 3px rgba(247,183,51,.25)}
 .rtag.t-lang{color:#dfe9ff;border-color:#6f86c9;background:rgba(111,134,201,.18)}
+
+/* bêta */
+.beta-tag{display:inline-block;font:700 10px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;padding:4px 7px 3px;border:1px solid var(--saffron);border-radius:999px;color:var(--saffron);vertical-align:middle;margin-left:6px}
+.beta-tag.soft{font-weight:600;opacity:.75;letter-spacing:.1em}
+.steps-row{display:flex;justify-content:space-between;align-items:center}
+.rk-beta{margin:12px 0 0;padding:10px 12px;border:1px dashed rgba(216,132,58,.55);border-radius:12px;background:rgba(216,132,58,.10);font-size:13px;line-height:1.45;color:var(--fg)}.rk-beta a{color:var(--saffron)}

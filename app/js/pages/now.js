@@ -3,7 +3,7 @@ Pages.now=async function(S){
   const {$,esc,norm,WANTS,WANT,isAvail,hhmm,dn}=App;
   let {me,entries}=await App.loadMe();
   const people=await App.others();for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
-  S.innerHTML=`<p class="eyebrow">Maintenant</p><h1 id="now-title"></h1>
+  S.innerHTML=`<p class="eyebrow">Maintenant <span class="beta-tag soft">bêta</span></p><h1 id="now-title"></h1>
     <div class="avail-card" id="my-avail"></div>
     <div class="qdj" id="qdj"></div>
     <div class="search"><input id="q-search" placeholder="Un film, un livre, une passion, un pseudo…"></div>

@@ -47,7 +47,7 @@ Pages.accueil=async function(S){
       S.insertAdjacentHTML('beforeend','<div class="row" style="justify-content:center;margin-top:22px"><button class="linkbtn" type="button" id="later">Enregistrer et reprendre plus tard</button></div>');
       $('later').addEventListener('click',later);}}
   async function draw(){S.scrollTop=0;
-    const head=`<div class="steps"><span>Étape ${step} sur ${N}</span><div class="bar-p"><i style="width:${step/N*100}%"></i></div></div>`;
+    const head=`<div class="steps"><span class="steps-row"><span>Étape ${step} sur ${N}</span><span class="beta-tag">BÊTA</span></span><div class="bar-p"><i style="width:${step/N*100}%"></i></div></div>`;
     if(step===1){S.innerHTML=head+`<p class="eyebrow">Bienvenue</p><h1>FeelShareLove relie les gens par ce qui les touche.</h1>
       <p class="muted" style="margin:12px 0 18px">Pas de photos à faire défiler. Tu te présentes par ce que tu aimes, et pourquoi.</p>
       <div class="fact"><div class="k">Ton prénom <span class="muted" style="text-transform:none;letter-spacing:0">(il reste privé)</span></div><div class="v"><input class="in" id="a-name" placeholder="Prénom"></div></div>

@@ -120,7 +120,7 @@ window.Plus=(function(){
 
   /* pourcentage de similitude : chaque similitude ajoute des points selon son importance, total plafonné à 100.
      Plus deux portraits sont remplis, plus ils peuvent se ressembler. Les ressentis ne comptent pas. */
-  const PTS={type:15,typeNear:10,work:8,perso:8,rep:6,invSub:5,univers:4,invCat:2,intent:2};
+  const PTS={type:15,typeNear:10,work:6,perso2:4,perso3:10,rep:6,invSub:5,univers:4,invCat:2,lang:2,langMax:8,question:6,questionMax:12,intent:{amis:2,parler:4,amour:6}};
   const TYPE_MATCH={sens:{sens:1,emo:.7},emo:{emo:1,sens:.7},mental:{mental:1},phys:{phys:1}};
   function similarity(me,p,mine,theirs){
     const wk=e=>e.workId||('t:'+App.norm(e.title));
@@ -130,7 +130,7 @@ window.Plus=(function(){
     pts+=PTS.work*inter((mine||[]).map(wk),(theirs||[]).map(wk)).length;
     /* personnages : le même personnage, sinon le même univers */
     const mc=me.chinois||[],pc=p.chinoisShow===false?[]:(p.chinois||[]);
-    const ids=inter(mc.map(x=>x.id),pc.map(x=>x.id));pts+=PTS.perso*ids.length;
+    const ids=inter(mc.map(x=>x.id),pc.map(x=>x.id));pts+=ids.length>=3?PTS.perso3:ids.length===2?PTS.perso2:0; // un seul personnage commun : rien ; deux : 4 ; trois ou plus : 10
     const wSeen=new Set(mc.filter(x=>ids.includes(x.id)).map(x=>x.wid));
     pts+=PTS.univers*inter(mc.map(x=>x.wid).filter(w=>w&&!wSeen.has(w)),pc.map(x=>x.wid).filter(Boolean)).length;
     /* ce qui me représente */
@@ -146,7 +146,12 @@ window.Plus=(function(){
         if(bi>=0){pts+=bv===1?PTS.type:PTS.typeNear;left.splice(bi,1);}});}
     /* rien en commun à part l'intention : pas de pourcentage */
     if(!pts)return null;
-    pts+=PTS.intent*inter(me.intent||[],p.intent||[]).length;
+    /* langues parlées en commun : la première va de soi (on se lit déjà), chaque langue de plus compte 2, au plus 8 */
+    const nl=inter(me.langs||[],p.langs||[]).length;if(nl>1)pts+=Math.min(PTS.langMax,PTS.lang*(nl-1));
+    /* questions ouvertes : même question et réponses qui se ressemblent (comparé par le serveur, sans dévoiler le texte) : 6 chacune, au plus 12 */
+    if(p.qmatch)pts+=Math.min(PTS.questionMax,PTS.question*p.qmatch);
+    /* même intention : des amis 2, quelqu'un à qui parler 4, l'amour 6 */
+    inter(me.intent||[],p.intent||[]).forEach(k=>{pts+=PTS.intent[k]||0;});
     return Math.min(100,Math.round(pts));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
   const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos métiers, nos rôles, nos tendances'};

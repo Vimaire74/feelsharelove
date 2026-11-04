@@ -3,7 +3,9 @@ Pages.portrait=async function(S){
   const {$,esc,grow,FACTS,zodiac,chinese}=App;
   let {me,entries,qs}=await App.loadMe();
   me.facts=me.facts||{};FACTS.forEach(f=>{if(!me.facts[f.id])me.facts[f.id]={v:'',show:!f.hiddenDefault,year:false};});
-  if(!qs.length){for(const k of ["Un moment où j'ai pleuré devant un écran","L'odeur de mon enfance","La chose que je referais mille fois"])qs.push(await DB.put('questions',{profileId:'me',k,a:''}));}
+  const Q4="Qu'est-ce qui fait que mon cœur s'emballe";
+  if(!qs.length){for(const k of ["Un moment où j'ai pleuré devant un écran","L'odeur de mon enfance","La chose que je referais mille fois",Q4])qs.push(await DB.put('questions',{profileId:'me',k,a:''}));}
+  else if(!me.q4Added){me.q4Added=true;await DB.put('profiles',me);if(!qs.some(q=>App.norm(q.k)===App.norm(Q4)))qs.push(await DB.put('questions',{profileId:'me',k:Q4,a:''}));} // ajoutée une fois aux portraits existants
   S.innerHTML=`<p class="eyebrow">Mon portrait</p>
   <div class="hero">
     <div class="avatar"><img id="photo" alt="" hidden></div>

@@ -137,11 +137,20 @@ async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city)) { co
 function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
 async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
-function publicProfile(p, intimate, opened, myGeo) {
+/* questions ouvertes : même question, réponses qui se ressemblent. Seul le nombre de concordances sort du serveur, jamais le texte. */
+const QSTOP = new Set(['dans', 'avec', 'pour', 'sans', 'sous', 'chez', 'vers', 'mais', 'donc', 'puis', 'quand', 'comme', 'cette', 'cela', 'celui', 'celle', 'ceux', 'elle', 'elles', 'nous', 'vous', 'leur', 'leurs', 'mon', 'ma', 'mes', 'ton', 'tes', 'son', 'ses', 'notre', 'votre', 'tout', 'tous', 'toute', 'toutes', 'plus', 'moins', 'tres', 'bien', 'fois', 'etre', 'avoir', 'fait', 'faire', 'suis', 'etais', 'etait', 'quelque', 'chose', 'jamais', 'toujours', 'encore', 'aussi', 'meme', 'alors', 'parce', 'lorsque', 'that', 'this', 'with', 'from', 'when', 'what', 'have', 'been', 'were', 'they', 'them', 'their', 'your', 'there', 'where', 'which', 'about', 'nicht', 'aber', 'auch', 'dass', 'wenn', 'eine', 'einer', 'einem', 'einen', 'mein', 'meine', 'dein', 'deine', 'sein', 'seine', 'ihre', 'noch', 'immer', 'sehr', 'oder', 'como', 'pero', 'para', 'cuando', 'donde', 'esta', 'este', 'esto', 'esos', 'esas', 'todo', 'toda', 'todos', 'nunca', 'siempre', 'anche', 'come', 'quando', 'dove', 'questo', 'questa', 'sempre', 'tutto', 'tutti', 'della', 'delle', 'dello', 'degli', 'nella', 'nelle', 'sono', 'essere', 'mais', 'quando', 'onde', 'esse', 'essa', 'isso', 'tudo', 'todos', 'sempre', 'nunca']);
+const qFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function qWords(a) { return new Set(qFold(a).split(' ').filter(w => w.length >= 4 && !QSTOP.has(w)).map(w => w.replace(/(es|s|x)$/, ''))); }
+function qSame(a, b) { const fa = qFold(a), fb = qFold(b); if (!fa || !fb || fa.length < 4 || fb.length < 4) return false;
+  if (fa === fb || fa.includes(fb) || fb.includes(fa)) return true;
+  const wa = qWords(a), wb = qWords(b); let n = 0; for (const w of wa) if (wb.has(w)) n++; return n >= 2; }
+function qMatches(mine, theirs) { let n = 0; for (const q of mine || []) { if (!q.a) continue; const t = (theirs || []).find(x => x.a && qFold(x.k) === qFold(q.k)); if (t && qSame(q.a, t.a)) n++; } return n; }
+function publicProfile(p, intimate, opened, myGeo, qmatch) {
   const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, ...rest } = p; // couleur de tribu et langues de lecture restent privées
   if (!rest.textLang) rest.textLang = 'fr'; // anciens portraits : écrits en français
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
+  if (qmatch) rest.qmatch = qmatch; // nombre de questions ouvertes où nos réponses se ressemblent
   /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
   rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
   /* avant que la conversation soit ouverte : pas de « Qui il est » (âge, langues, métier…) */
@@ -230,7 +239,8 @@ async function readList(store, me, query) {
     if (store === 'profiles') rows = rows.filter(p => p.id === me || p.pseudo);
     if (store === 'voices') rows = rows.filter(v => v.owner === me || (v.kind === 'presentation' && opened.has(v.owner)));
     if (store === 'questions') rows = rows.filter(r => r.profileId === me || opened.has(r.profileId));
-    if (store === 'profiles') { const mg = (rows.find(p => p.id === me) || {}).geo; rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened, mg)); }
+    if (store === 'profiles') { const mg = (rows.find(p => p.id === me) || {}).geo; const qs = await listDocs('questions'); const byP = {}; for (const x of qs) (byP[x.profileId] = byP[x.profileId] || []).push(x);
+      rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened, mg, qMatches(byP[me], byP[p.id]))); }
   }
   return rows;
 }
@@ -243,7 +253,7 @@ async function readOne(store, me, id) {
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
   if (store === 'invites') return d.from === me || d.to === me ? d : null;
   if (store === 'notices') return d.to === me ? d : null;
-  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); return hidden.has(d.id) ? null : publicProfile(d, intimate, opened, (byId[me] || {}).geo); }
+  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); if (hidden.has(d.id)) return null; const qs = await listDocs('questions'); return publicProfile(d, intimate, opened, (byId[me] || {}).geo, qMatches(qs.filter(x => x.profileId === me), qs.filter(x => x.profileId === d.id))); }
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
   return d;

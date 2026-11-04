@@ -39,13 +39,14 @@ Pages.connexion=function(S){
   <p class="rk-no">Ici, <b>pas de publicité</b>, <b>pas de vidéos</b> à faire défiler, et <b>personne ne choisit à ta place</b> qui tu rencontres.</p>`],
   ['Comment ça marche',`<h1>De la résonance <em>à la tribu</em></h1><div class="rk-steps">
   ${step('port',"<b>1. Ton portrait.</b> Comment tu fonctionnes, tes goûts, tes passions : <i>qui tu es, avec précision</i>. Tout ne sera pas visible : l'essentiel sert à calculer ta <b>résonance</b> avec d'autres, près de chez toi ou ailleurs dans le monde.")}
-  ${step('res',"<b>2. Tes résonances.</b> Tu vois avec qui tu résonnes et tu découvres une partie de son profil, mais pas tout.")}
-  ${step('msg',"<b>3. Le premier message.</b> Si un goût commun t'emballe (le même film, la même chanson, le même jeu vidéo, le même musée ou la même région du monde), écris-lui. Dès que cette personne te répond, vous voyez davantage l'un de l'autre.")}
-  ${step('tribu',"<b>4. La tribu.</b> L'un de vous invite l'autre dans sa tribu, l'autre répond toujours. S'il accepte, vous êtes de la même tribu : la plupart de ce que vous avez choisi de partager devient visible l'un pour l'autre. Vous devenez <i>intimes de passions, de sentiments, de fonctionnement</i>, et il y a de bonnes chances que vous deveniez de vrais amis, ou plus si vous le souhaitez. ❤️")}</div>`]];
+  ${step('res',"<b>2. Tes résonances.</b> Tu vois avec qui tu résonnes et tu découvres une partie de son profil : tu peux alors <i>comprendre pourquoi vous êtes similaires</i> et choisir si tu veux la contacter.")}
+  ${step('msg',"<b>3. Le premier message.</b> Si un goût commun t'emballe (le même film, la même chanson, le même jeu vidéo, le même musée ou la même région du monde), écris-lui. Dès que cette personne te répond, vous pourrez voir une plus grande partie de vos profils mutuels.")}
+  ${step('tribu',"<b>4. La tribu.</b> Quand vous vous connaissez mieux, vous pouvez inviter l'autre dans votre tribu, et l'autre <b>doit</b> répondre. <i>Fini les rejets silencieux</i> : un choix de réponses appropriées et polies lui est proposé s'il refuse. S'il accepte, vous êtes de la même tribu : la plupart de ce que vous avez choisi de partager devient visible l'un pour l'autre. Vous devenez <i>intimes de passions, de sentiments, de fonctionnement</i>, et il y a de bonnes chances que vous deveniez de vrais amis, ou plus si vous le souhaitez. ❤️")}</div>`]];
   let pg=0;
   function intro(){const last=pg===PAGES.length-1;
-    S.innerHTML=`<div class="rock">${DEFS}<div class="rk-top"><span class="rk-brand">${PAGES[pg][0]}</span><button class="linkbtn" type="button" id="c-have">J'ai déjà un compte</button></div>
+    S.innerHTML=`<div class="rock">${DEFS}<div class="rk-top"><span class="rk-brand">${PAGES[pg][0]} <span class="beta-tag">BÊTA</span></span><button class="linkbtn" type="button" id="c-have">J'ai déjà un compte</button></div>
     ${ART[pg]}<div class="rk-txt">${PAGES[pg][1]}</div>
+    ${last?`<p class="rk-beta">L'application est en phase de test. Tes retours comptent : <a href="mailto:contact@feelsharelove.com">contact@feelsharelove.com</a></p>`:''}
     <div class="rk-dots">${PAGES.map((x,i)=>`<i class="${i===pg?'on':''}"></i>`).join('')}</div>
     <div class="row" style="justify-content:space-between;margin:14px 0 4px">${pg?'<button class="linkbtn" type="button" id="c-prev">← Retour</button>':'<span></span>'}
       <button class="btn flame" type="button" id="c-next">${last?'Commencer':'Suivant →'}</button></div></div>`;
@@ -54,7 +55,7 @@ Pages.connexion=function(S){
     const pv=$('c-prev');if(pv)pv.addEventListener('click',()=>{pg--;intro();});
     $('c-have').addEventListener('click',()=>form(false));}
   function form(isNew){
-  S.innerHTML=`<p class="eyebrow">FeelShareLove</p><h1>${isNew?'Créer mon compte':'Me reconnecter'}</h1>
+  S.innerHTML=`<p class="eyebrow">FeelShareLove <span class="beta-tag">BÊTA</span></p><h1>${isNew?'Créer mon compte':'Me reconnecter'}</h1>
   <p class="muted" style="margin:10px 0 18px">Ici, on se rencontre par ce qui nous fait vibrer. Ton adresse e-mail reste privée : personne ne la voit, jamais de publicité.</p>
   <div class="sec" style="margin-top:0">
     <label class="muted small" for="c-mail">Adresse e-mail</label><input class="in" id="c-mail" type="email" autocomplete="email" style="margin:6px 0 12px">
