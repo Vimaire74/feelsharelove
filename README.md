@@ -1,6 +1,6 @@
-# FeelShareLove — lot 25 (à envoyer APRÈS le lot 24)
+# FeelShareLove — lot 26 (à envoyer APRÈS le lot 25)
 
-Version 1.10.2 (04/11/2026)
-- Portrait, « Mes langues » : « Langue du téléphone » devient « Langue du système » (l'app tourne aussi dans un navigateur d'ordinateur), dans les 6 langues
+Version 1.10.3 (04/11/2026)
+- Page d'accueil : les captures d'écran de l'app étaient écrasées en largeur (hauteur fixe, largeur réduite), ce qui déformait les lettres — proportions corrigées
 
-Fichiers : app/js/pages/portrait.js, app/js/lang/*.js
+Fichiers : app/site/*.html
