@@ -11,7 +11,8 @@
   /* lien d'invitation : feelsharelove.com/?invite=… ; gardé jusqu'à l'inscription */
   try{const sp=new URLSearchParams(location.search);const inv=sp.get('invite');if(inv)store.set('fsl_invite',inv);
     const vf=sp.get('verify');if(vf&&/^[0-9a-f]{48}$/.test(vf))store.set('fsl_verify',vf); // lien de l'e-mail de vérification : on garde le code, on nettoie l'adresse
-    if(inv||vf)history.replaceState(null,'',location.pathname+location.hash);}catch(e){}
+    const rs=sp.get('reset');if(rs&&/^[0-9a-f]{48}$/.test(rs))store.set('fsl_reset',rs); // lien « mot de passe oublié »
+    if(inv||vf||rs)history.replaceState(null,'',location.pathname+location.hash);}catch(e){}
   /* erreurs de l'app envoyées au serveur pour le débogage */
   const NET=/failed to fetch|load failed|networkerror|network request failed/i;
   const report=(msg,stack)=>{if(NET.test(String(msg)))return;try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({msg:String(msg),stack:String(stack||''),url:location.hash})}).catch(()=>{});}catch(e){}};
@@ -55,6 +56,7 @@
       if(name==='settings')return call('PUT','/api/settings/'+enc(obj.key),{value:obj.value});
       if(!obj.id)obj.id=LOCAL.uid();obj.updatedAt=Date.now();
       let body=toServer(name,obj);
+      if(name==='profiles'&&window.I18N)body={...body,uiLang:I18N.lang}; // langue des e-mails envoyés à la personne
       if(name==='voices'&&obj.blob){const f=await call('POST','/api/files',obj.blob,true);const {blob,...rest}=body;body={...rest,url:f.url};}
       const id=name==='threads'?body.id:body.id;
       const saved=await call('PUT','/api/'+name+'/'+enc(id),body);
@@ -69,6 +71,11 @@
     verifyToken:()=>store.get('fsl_verify')||'',
     finish:async(password)=>{const r=await call('POST','/api/auth/finish',{token:store.get('fsl_verify')||'',password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);store.set('fsl_verify',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     forgetVerify:()=>store.set('fsl_verify',null),
+    /* mot de passe oublié */
+    forgot:(email)=>call('POST','/api/auth/forgot',{email,lang:(window.I18N&&I18N.lang)||'fr'}),
+    resetToken:()=>store.get('fsl_reset')||'',
+    resetPass:async(password)=>{const r=await call('POST','/api/auth/reset',{token:store.get('fsl_reset')||'',password});store.set('fsl_reset',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
+    forgetReset:()=>store.set('fsl_reset',null),
     register:async(email,password)=>{const r=await call('POST','/api/auth/register',{email,password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     login:async(email,password)=>{const r=await call('POST','/api/auth/login',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     inviteLink:()=>location.origin+'/?invite='+encodeURIComponent(myId),

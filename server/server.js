@@ -56,6 +56,7 @@ const START_CIRCLES = [
 /* notification sur le téléphone : jamais le contenu du message, seulement qui et quoi */
 async function pseudoOf(id) { const p = await getDoc('profiles', id); return (p && p.pseudo) || 'Quelqu\'un'; }
 async function notify(userId, title, url) {
+  if (String(url || '').startsWith('/app#messages/')) mailIfAway(userId, url.split('/').pop()).catch(e => logErr('mail', 'avis de message : ' + e.message, { to: userId }));
   if (!VAPID_PUBLIC) return;
   const subs = (await q('SELECT endpoint, data FROM push_subs WHERE user_id=$1', [userId])).rows;
   for (const s of subs) {
@@ -454,6 +455,32 @@ async function api(req, res, url) {
       const token = crypto.randomBytes(32).toString('hex'); await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, id, Date.now()]);
       return send(res, 200, { token, id });
     }
+    /* mot de passe oublié : un lien par e-mail (valable 1 heure). La réponse est la même que le compte existe ou non. */
+    if (parts[1] === 'forgot') {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw err(400, 'Adresse e-mail invalide.');
+      if (!mailReady()) throw err(503, 'L\'envoi d\'e-mails n\'est pas disponible pour le moment. Écris à ' + (SMTP.from || 'contact@feelsharelove.com') + '.');
+      const u = (await q('SELECT id, banned, redlisted FROM users WHERE email=$1', [e])).rows[0];
+      if (u && !u.banned && !u.redlisted) {
+        const token = crypto.randomBytes(24).toString('hex');
+        await q("DELETE FROM docs WHERE store='pwreset' AND data->>'user'=$1", [u.id]);
+        await putDoc('pwreset', token, 'system', { id: token, user: u.id, created: Date.now() });
+        const lang = ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(body.lang) ? body.lang : mailLang(await getDoc('profiles', u.id)); const M = RESET_MAIL[lang];
+        try { await sendMail(e, M.subject, M.body.replace('{link}', `${SITE}/app?reset=${token}`), null); } catch (x) { logErr('mail', 'mot de passe oublié : ' + x.message, { to: e }); throw err(500, 'L\'e-mail n\'a pas pu partir. Réessaie dans un moment.'); }
+        await alog('Mot de passe oublié', u.id, 'lien envoyé');
+      }
+      return send(res, 200, { sent: true });
+    }
+    if (parts[1] === 'reset') {
+      const t = String(body.token || ''); const r = /^[0-9a-f]{48}$/.test(t) ? await getDoc('pwreset', t) : null;
+      if (!r || Date.now() - r.created > 36e5) { if (r) await q("DELETE FROM docs WHERE store='pwreset' AND id=$1", [t]); throw err(410, 'Ce lien n\'est plus valable (1 heure). Demande un nouvel e-mail.'); }
+      if (!STRONG.test(password || '')) throw err(400, 'Mot de passe : 10 caractères au moins, une majuscule, une minuscule et un chiffre ou un signe.');
+      const u = (await q('SELECT id, banned FROM users WHERE id=$1', [r.user])).rows[0]; if (!u || u.banned) throw err(403, 'Ce compte n\'est pas disponible.');
+      await q('UPDATE users SET pass=$2 WHERE id=$1', [u.id, hashPass(password)]);
+      await q('DELETE FROM sessions WHERE user_id=$1', [u.id]); // les autres appareils sont déconnectés
+      await q("DELETE FROM docs WHERE store='pwreset' AND id=$1", [t]); await alog('Mot de passe changé', u.id, 'par le lien e-mail');
+      const token = crypto.randomBytes(32).toString('hex'); await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, u.id, Date.now()]);
+      return send(res, 200, { token, id: u.id });
+    }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw err(400, 'Adresse e-mail invalide.');
     if (!password || password.length < 8) throw err(400, 'Le mot de passe doit avoir au moins 8 caractères.');
     let id;
@@ -513,6 +540,34 @@ const VERIFY_MAIL = {
   it: { subject: 'FeelShareLove: conferma il tuo indirizzo e-mail', body: 'Ciao,\n\nper continuare la tua iscrizione a FeelShareLove, clicca su questo link (valido 24 ore):\n{link}\n\nSceglierai poi la tua password.\nSe non hai fatto tu questa richiesta, ignora semplicemente questa e-mail.' },
   es: { subject: 'FeelShareLove: confirma tu dirección de correo', body: 'Hola,\n\npara continuar tu inscripción en FeelShareLove, haz clic en este enlace (válido 24 horas):\n{link}\n\nDespués elegirás tu contraseña.\nSi no has hecho esta solicitud, simplemente ignora este correo.' },
   pt: { subject: 'FeelShareLove: confirma o teu endereço de e-mail', body: 'Olá,\n\npara continuares a tua inscrição no FeelShareLove, clica neste link (válido 24 horas):\n{link}\n\nDepois escolherás a tua palavra-passe.\nSe não fizeste este pedido, ignora simplesmente este e-mail.' } };
+const RESET_MAIL = {
+  fr: { subject: 'FeelShareLove : nouveau mot de passe', body: 'Bonjour,\n\nPour choisir un nouveau mot de passe sur FeelShareLove, clique sur ce lien (valable 1 heure) :\n{link}\n\nSi tu n\'as rien demandé, ignore cet e-mail : ton mot de passe actuel reste valable.' },
+  de: { subject: 'FeelShareLove: neues Passwort', body: 'Hallo,\n\num ein neues Passwort für FeelShareLove zu wählen, klicke auf diesen Link (1 Stunde gültig):\n{link}\n\nFalls du nichts angefordert hast, ignoriere diese E-Mail: Dein aktuelles Passwort bleibt gültig.' },
+  en: { subject: 'FeelShareLove: new password', body: 'Hello,\n\nTo choose a new password on FeelShareLove, click this link (valid for 1 hour):\n{link}\n\nIf you did not ask for this, ignore this e-mail: your current password stays valid.' },
+  it: { subject: 'FeelShareLove: nuova password', body: 'Ciao,\n\nper scegliere una nuova password su FeelShareLove, clicca su questo link (valido 1 ora):\n{link}\n\nSe non hai chiesto nulla, ignora questa e-mail: la tua password attuale resta valida.' },
+  es: { subject: 'FeelShareLove: nueva contraseña', body: 'Hola,\n\npara elegir una nueva contraseña en FeelShareLove, haz clic en este enlace (válido 1 hora):\n{link}\n\nSi no has pedido nada, ignora este correo: tu contraseña actual sigue siendo válida.' },
+  pt: { subject: 'FeelShareLove: nova palavra-passe', body: 'Olá,\n\npara escolheres uma nova palavra-passe no FeelShareLove, clica neste link (válido 1 hora):\n{link}\n\nSe não pediste nada, ignora este e-mail: a tua palavra-passe atual continua válida.' } };
+const MSG_MAIL = {
+  fr: { subject: '{p} t\'a écrit sur FeelShareLove', body: 'Bonjour,\n\n{p} t\'a écrit sur FeelShareLove. Sur FeelShareLove, personne ne reste sans réponse : ouvre la conversation pour lire et répondre.\n{link}' },
+  de: { subject: '{p} hat dir auf FeelShareLove geschrieben', body: 'Hallo,\n\n{p} hat dir auf FeelShareLove geschrieben. Auf FeelShareLove bleibt niemand ohne Antwort: Öffne das Gespräch, um zu lesen und zu antworten.\n{link}' },
+  en: { subject: '{p} wrote to you on FeelShareLove', body: 'Hello,\n\n{p} wrote to you on FeelShareLove. On FeelShareLove, nobody is left without an answer: open the conversation to read and reply.\n{link}' },
+  it: { subject: '{p} ti ha scritto su FeelShareLove', body: 'Ciao,\n\n{p} ti ha scritto su FeelShareLove. Su FeelShareLove nessuno resta senza risposta: apri la conversazione per leggere e rispondere.\n{link}' },
+  es: { subject: '{p} te ha escrito en FeelShareLove', body: 'Hola,\n\n{p} te ha escrito en FeelShareLove. En FeelShareLove nadie se queda sin respuesta: abre la conversación para leer y responder.\n{link}' },
+  pt: { subject: '{p} escreveu-te no FeelShareLove', body: 'Olá,\n\n{p} escreveu-te no FeelShareLove. No FeelShareLove ninguém fica sem resposta: abre a conversa para ler e responder.\n{link}' } };
+const mailLang = p => { const l = p && (p.uiLang || p.textLang); return ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(l) ? l : 'fr'; };
+/* avis par e-mail d'un message : seulement si la personne n'est pas venue depuis 6 heures, et un seul e-mail par absence */
+const AWAY = 6 * 36e5;
+async function mailIfAway(userId, fromId) {
+  if (!mailReady()) return;
+  const u = (await q('SELECT email, last_seen, no_mail, redlisted, banned FROM users WHERE id=$1', [userId])).rows[0];
+  if (!u || u.no_mail || u.redlisted || u.banned) return;
+  const seen = +u.last_seen || 0; if (Date.now() - seen < AWAY) return;
+  const note = await getDoc('mailnote', userId); if (note && note.at > seen) return; // déjà prévenue depuis sa dernière visite
+  const p = await getDoc('profiles', userId); if (!p || p.fake) return;
+  const M = MSG_MAIL[mailLang(p)], who = await pseudoOf(fromId);
+  await putDoc('mailnote', userId, 'system', { id: userId, at: Date.now() });
+  await sendMail(u.email, M.subject.replace('{p}', who), M.body.replace('{p}', who).replace('{link}', `${SITE}/app#messages/${fromId}`), userId);
+}
 /* ---------- e-mails à tous les inscrits (adresse d'envoi à régler dans Coolify : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM) ---------- */
 const SMTP = { host: process.env.SMTP_HOST || '', port: +(process.env.SMTP_PORT || 465), user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '' };
 const MAIL_PER_HOUR = +(process.env.MAIL_PER_HOUR || 100); // envoi par petits paquets : les comptes e-mail gratuits limitent le nombre d'envois par heure

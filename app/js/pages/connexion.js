@@ -70,12 +70,14 @@ Pages.connexion=function(S){
     <label class="muted small" for="c-pass">Mot de passe</label><input class="in" id="c-pass" type="password" autocomplete="current-password" style="margin:6px 0 14px">
     <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-log">Me connecter</button><button class="btn ghost" type="button" id="c-new">Créer un compte</button></div>
     <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p>
+    <button class="linkbtn" type="button" id="c-forgot" style="margin-top:6px">Mot de passe oublié ?</button>
   </div>
   <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;
   async function go(){const e=$('c-mail').value.trim(),p=$('c-pass').value;$('c-err').textContent='';$('c-log').disabled=true;
     try{await DB.login(e,p);location.hash='#now';location.reload();}catch(x){$('c-err').textContent=x.message;$('c-log').disabled=false;}}
   $('c-log').addEventListener('click',go);$('c-pass').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
-  $('c-new').addEventListener('click',()=>signup());$('c-back').addEventListener('click',intro);}
+  $('c-new').addEventListener('click',()=>signup());$('c-back').addEventListener('click',intro);
+  $('c-forgot').addEventListener('click',()=>forgot($('c-mail').value.trim()));}
   /* créer un compte, étape 1 : l'adresse e-mail seule ; un lien part par e-mail */
   function signup(mail){
   S.innerHTML=head('Créer mon compte')+`
@@ -126,6 +128,38 @@ Pages.connexion=function(S){
     catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;if(x.code===410){DB.forgetVerify();setTimeout(()=>signup(),2500);}}}
   $('c-go').addEventListener('click',go);$('c-pass2').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
   $('c-restart').addEventListener('click',()=>{DB.forgetVerify();signup();});}
+  /* mot de passe oublié, étape 1 : l'adresse ; un lien part par e-mail */
+  function forgot(mail){
+  S.innerHTML=head('Mot de passe oublié')+`
+  <div class="sec" style="margin-top:14px"><p class="exp">Indique l'adresse e-mail de ton compte. On t'envoie un lien pour choisir un nouveau mot de passe (valable 1 heure).</p>
+    <label class="muted small" for="c-mail" style="display:block;margin-top:12px">Adresse e-mail</label><input class="in" id="c-mail" type="email" autocomplete="email" style="margin:6px 0 12px">
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-send">Recevoir le lien par e-mail</button></div>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p></div>
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;
+  if(mail)$('c-mail').value=mail;
+  async function go(){const e=$('c-mail').value.trim();$('c-err').textContent='';$('c-send').disabled=true;
+    try{await DB.forgot(e);S.innerHTML=head('Regarde tes e-mails')+`<div class="sec" style="margin-top:14px"><p class="exp">Si un compte existe avec l'adresse <b>${esc(e)}</b>, un e-mail vient de partir avec un lien pour choisir un nouveau mot de passe. Le lien est valable 1 heure.</p><p class="muted small" style="margin-top:10px">Rien reçu après quelques minutes ? Regarde dans les indésirables.</p></div><div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;$('c-back').addEventListener('click',()=>form(false));}
+    catch(x){$('c-err').textContent=x.message;$('c-send').disabled=false;}}
+  $('c-send').addEventListener('click',go);$('c-mail').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
+  $('c-back').addEventListener('click',()=>form(false));}
+  /* mot de passe oublié, étape 2 : le lien a été cliqué */
+  function newPass(){
+  S.innerHTML=head('Nouveau mot de passe')+`
+  <div class="sec" style="margin-top:14px">
+    <label class="muted small" for="c-pass">Mot de passe</label><input class="in" id="c-pass" type="password" autocomplete="new-password" style="margin:6px 0 8px">
+    <ul class="rules" id="c-rules">${rulesHtml('')}</ul>
+    <label class="muted small" for="c-pass2" style="display:block;margin-top:12px">Le même, une deuxième fois</label><input class="in" id="c-pass2" type="password" autocomplete="new-password" style="margin:6px 0 14px">
+    <div class="row" style="justify-content:flex-start"><button class="btn flame" type="button" id="c-go">Enregistrer le mot de passe</button></div>
+    <p class="muted small" style="margin-top:10px">Les autres appareils connectés à ton compte seront déconnectés.</p>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p></div>`;
+  $('c-pass').addEventListener('input',()=>{$('c-rules').innerHTML=rulesHtml($('c-pass').value);});
+  async function go(){const p=$('c-pass').value;$('c-err').textContent='';
+    if(!strong(p)){$('c-err').textContent='Le mot de passe ne respecte pas encore les quatre règles.';return;}
+    if(p!==$('c-pass2').value){$('c-err').textContent='Les deux mots de passe ne sont pas identiques.';return;}
+    $('c-go').disabled=true;
+    try{await DB.resetPass(p);location.hash='#now';location.reload();}
+    catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;if(x.code===410){DB.forgetReset();setTimeout(()=>forgot(),2500);}}}
+  $('c-go').addEventListener('click',go);$('c-pass2').addEventListener('keydown',k=>{if(k.key==='Enter')go();});}
   /* sans serveur d'e-mails (secours) : mot de passe tout de suite */
   function direct(mail){
   S.innerHTML=head('Choisis ton mot de passe')+`
@@ -135,5 +169,5 @@ Pages.connexion=function(S){
   $('c-pass').addEventListener('input',()=>{$('c-rules').innerHTML=rulesHtml($('c-pass').value);});
   $('c-go').addEventListener('click',async()=>{const p=$('c-pass').value;if(!strong(p)){$('c-err').textContent='Le mot de passe ne respecte pas encore les quatre règles.';return;}$('c-go').disabled=true;
     try{await DB.register(mail,p);location.hash='#accueil';location.reload();}catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;}});}
-  if(DB.verifyToken&&DB.verifyToken())password();else intro();
+  if(DB.resetToken&&DB.resetToken())newPass();else if(DB.verifyToken&&DB.verifyToken())password();else intro();
 };
