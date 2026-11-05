@@ -1,8 +1,10 @@
-# FeelShareLove — lot 29 (à envoyer APRÈS le lot 28)
+# FeelShareLove — lot 30 (à envoyer APRÈS le lot 29)
 
-Version 1.12.0 (05/11/2026)
-- « Mot de passe oublié ? » sur l'écran de connexion : lien par e-mail (valable 1 heure, dans la langue de la personne), nouveau mot de passe avec les quatre règles, autres appareils déconnectés ; même réponse que le compte existe ou non ; rien n'est envoyé aux comptes suspendus ou en liste rouge
-- E-mail « X t'a écrit sur FeelShareLove » quand quelqu'un écrit, ouvre la conversation ou répond, si la personne n'est pas venue depuis 6 heures ; un seul e-mail par absence ; jamais aux profils de démonstration, aux comptes en liste rouge ou à ceux qui ont choisi de ne plus recevoir d'e-mails ; le contenu du message n'est jamais dans l'e-mail
-- La langue de l'app est retenue sur le compte pour écrire les e-mails dans la bonne langue
+Version 1.12.1 (05/11/2026)
+- Profils de démonstration : les cinq profils inspirés de personnes célèbres deviennent des personnages entièrement inventés (Elio, Nora, Paul, Claire, André) ; photo et vérification gardées
+- Cinq nouveaux personnages inventés, un par langue, portrait écrit dans leur langue : Lena (allemand, Berlin), Owen (anglais, Manchester), Giulia (italien, Rome), Mateo (espagnol, Séville), Inês (portugais, Lisbonne)
+- Admin, Réglages : le bouton « Remplir les profils de démonstration » met à jour les dix personnages et crée ceux qui manquent (adresse en .invalid, aucune connexion possible, aucun e-mail)
 
-Fichiers : server/server.js, app/js/db-remote.js, app/js/pages/connexion.js, app/js/lang/*.js
+Après l'upload : admin → onglet « Réglages » → bouton « Remplir les profils de démonstration », une fois.
+
+Fichiers : server/server.js, server/fakes.js

@@ -671,16 +671,24 @@ async function admin(req, res, url) {
       await wipeUser(id); await alog('Compte supprimé', id, [(p && p.pseudo) || '', u ? u.email : '', reason].filter(Boolean).join(' · ')); return go('accounts', '', 'Compte supprimé définitivement.');
     }
     if (a === 'fakes') { // profils de test : réécrit seulement les comptes marqués fake:true (photo et vérification gardées)
-      const FK = require('./fakes.js');
-      for (const old of await listDocs('profiles')) {
-        if (old.fake !== true) continue;
-        const fk = FK.find(x => x.from.includes(old.pseudo)); if (!fk) continue;
+      const FK = require('./fakes.js'); const done = new Set(); let created = 0;
+      const fill = async (old, fk) => {
         const p = { ...old, ...fk.p, id: old.id, fake: true }; if (!fk.p.travel) delete p.travel;
         await withGeo(p); await putDoc('profiles', old.id, old.id, p);
         await q("DELETE FROM docs WHERE store='entries' AND data->>'profileId'=$1", [old.id]);
-        let i = 0; for (const e of fk.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); }
+        let i = 0; for (const e of fk.entries) { const eid = 'fk-' + old.id + '-' + (++i); await putDoc('entries', eid, old.id, { ...e, id: eid, profileId: old.id, __owner: old.id, ts: Date.now() - i * 864e5 }); } };
+      for (const old of await listDocs('profiles')) {
+        if (old.fake !== true) continue;
+        const fk = FK.find(x => x.from.includes(old.pseudo)); if (!fk) continue;
+        await fill(old, fk); done.add(fk);
       }
-      await alog('Profils de test remplis'); return go('settings', '', 'Profils de test remplis.');
+      /* personnages qui n'ont pas encore de compte : on le crée (adresse en .invalid, mot de passe aléatoire : personne ne peut s'y connecter) */
+      for (const fk of FK) { if (done.has(fk) || !fk.create) continue;
+        const id = uid(); const email = 'demo-' + norm(fk.p.pseudo).replace(/[^a-z0-9]/g, '') + '@demo.invalid';
+        if ((await q('SELECT 1 FROM users WHERE email=$1', [email])).rowCount) continue;
+        await q('INSERT INTO users (id,email,pass,created,no_mail) VALUES ($1,$2,$3,$4,true)', [id, email, hashPass(crypto.randomBytes(24).toString('hex')), Date.now()]);
+        await fill({ id, onboardedAt: Date.now(), adultAt: Date.now() }, fk); created++; }
+      await alog('Profils de démonstration remplis', '', created ? created + ' créés' : ''); return go('settings', '', 'Profils de démonstration remplis' + (created ? ` (${created} nouveaux)` : '') + '.');
     }
     if (a === 'fakes-delete') {
       if (f.get('sure') !== 'oui') return go('settings', '', 'Suppression annulée : coche la case de confirmation.');
@@ -814,8 +822,8 @@ async function admin(req, res, url) {
       <h2>Comptes concernés (${flagged.length})</h2>${flagged.length ? `<table><tr><th>Compte</th><th>Prénom, nom, mobile</th><th>État</th><th></th></tr>${flagged.map(row).join('')}</table>` : '<p class="muted">Aucun.</p>'}`; }
   if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
     body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
-      <h2>Profils de test (${nf})</h2><div class="card"><p class="muted">Brad, Sandra, Tom, Sophie et Jean-Jacques. Ils portent l'étiquette « profil de démonstration » dans l'app. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
-        ${btn('fakes', '', 'Remplir les profils de test')} ${btn('fakes-delete', '', 'Supprimer les profils de test', sure('Je confirme'), 'danger')}</div>`; }
+      <h2>Profils de démonstration (${nf})</h2><div class="card"><p class="muted">Dix personnages inventés : Elio, Nora, Paul, Claire et André (portraits en français), Lena (allemand), Owen (anglais), Giulia (italien), Mateo (espagnol) et Inês (portugais). Ils portent l'étiquette « profil de démonstration » dans l'app. Le bouton les met à jour et crée ceux qui manquent. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
+        ${btn('fakes', '', 'Remplir les profils de démonstration')} ${btn('fakes-delete', '', 'Supprimer les profils de démonstration', sure('Je confirme'), 'danger')}</div>`; }
 
   const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
