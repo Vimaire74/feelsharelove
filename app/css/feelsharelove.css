@@ -516,3 +516,6 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .beta-tag.soft{font-weight:600;opacity:.75;letter-spacing:.1em}
 .steps-row{display:flex;justify-content:space-between;align-items:center}
 .rk-beta{margin:12px 0 0;padding:10px 12px;border:1px dashed rgba(216,132,58,.55);border-radius:12px;background:rgba(216,132,58,.10);font-size:13px;line-height:1.45;color:var(--fg)}.rk-beta a{color:var(--saffron)}
+
+/* règles du mot de passe */
+.rules{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.rules li{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}.rules li.ok{color:#bfeed5;border-color:#5fbf8f}.rules li.ok::before{content:'✓ '}

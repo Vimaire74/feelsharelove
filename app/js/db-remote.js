@@ -9,7 +9,9 @@
   const store={get:k=>{try{return localStorage.getItem(k);}catch(e){return null;}},set:(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}}};
   let token=store.get(T),myId=store.get(U);
   /* lien d'invitation : feelsharelove.com/?invite=… ; gardé jusqu'à l'inscription */
-  try{const inv=new URLSearchParams(location.search).get('invite');if(inv){store.set('fsl_invite',inv);history.replaceState(null,'',location.pathname+location.hash);}}catch(e){}
+  try{const sp=new URLSearchParams(location.search);const inv=sp.get('invite');if(inv)store.set('fsl_invite',inv);
+    const vf=sp.get('verify');if(vf&&/^[0-9a-f]{48}$/.test(vf))store.set('fsl_verify',vf); // lien de l'e-mail de vérification : on garde le code, on nettoie l'adresse
+    if(inv||vf)history.replaceState(null,'',location.pathname+location.hash);}catch(e){}
   /* erreurs de l'app envoyées au serveur pour le débogage */
   const NET=/failed to fetch|load failed|networkerror|network request failed/i;
   const report=(msg,stack)=>{if(NET.test(String(msg)))return;try{fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({msg:String(msg),stack:String(stack||''),url:location.hash})}).catch(()=>{});}catch(e){}};
@@ -35,7 +37,7 @@
     const r=await fetch(url,{method,headers:h,body:body===undefined?undefined:raw?body:JSON.stringify(body)});
     if(r.status===401&&token){logoutLocal();location.reload();throw new Error('Session expirée.');}
     const data=await r.json().catch(()=>null);
-    if(!r.ok)throw new Error((data&&data.error)||('Erreur '+r.status));
+    if(!r.ok){const e=new Error((data&&data.error)||('Erreur '+r.status));e.code=r.status;throw e;}
     return data;}
   function logoutLocal(){token=null;myId=null;store.set(T,null);store.set(U,null);}
   const blobCache=new Map();
@@ -62,6 +64,11 @@
     clear:async()=>{},
     setting:async(key,value)=>{if(value===undefined){const r=await call('GET','/api/settings/'+enc(key));return r&&r.value;}return call('PUT','/api/settings/'+enc(key),{value});},
     /* comptes */
+    /* inscription en deux temps : l'adresse (un lien part par e-mail), puis le mot de passe quand le lien est cliqué */
+    start:(email)=>call('POST','/api/auth/start',{email,lang:(window.I18N&&I18N.lang)||'fr',invite:store.get('fsl_invite')||undefined}),
+    verifyToken:()=>store.get('fsl_verify')||'',
+    finish:async(password)=>{const r=await call('POST','/api/auth/finish',{token:store.get('fsl_verify')||'',password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);store.set('fsl_verify',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
+    forgetVerify:()=>store.set('fsl_verify',null),
     register:async(email,password)=>{const r=await call('POST','/api/auth/register',{email,password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     login:async(email,password)=>{const r=await call('POST','/api/auth/login',{email,password});token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     inviteLink:()=>location.origin+'/?invite='+encodeURIComponent(myId),

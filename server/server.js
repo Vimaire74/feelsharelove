@@ -34,6 +34,7 @@ async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen bigint;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS no_mail boolean NOT NULL DEFAULT false;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason text;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS redlisted boolean NOT NULL DEFAULT false;
     CREATE TABLE IF NOT EXISTS push_subs (endpoint text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE, data jsonb NOT NULL, created bigint NOT NULL);
   `);
   /* clés des notifications : créées une seule fois et gardées dans la base (rien à régler dans Coolify) */
@@ -91,6 +92,20 @@ function tooMany(ip) { const now = Date.now(); const a = (tries.get(ip) || []).f
 
 /* ---------- visibilité entre personnes ---------- */
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+/* ---------- liste rouge de l'administration : adresses, numéros de mobile et noms qui n'entrent pas (sans que la personne le sache) ---------- */
+const rlPhone = p => { let d = String(p || '').replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); return d.length > 9 ? d.slice(-9) : d; };
+const rlName = (first, last) => norm(first) + '|' + norm(last);
+async function redlist() { const c = await config(); return Object.assign({ emails: [], phones: [], names: [] }, c.redlist || {}); }
+async function redHits(email, phone, first, last) { const r = await redlist(); const h = [];
+  if (email && r.emails.includes(norm(email))) h.push('email');
+  if (phone && rlPhone(phone).length >= 7 && r.phones.includes(rlPhone(phone))) h.push('phone');
+  if (first && last && r.names.includes(rlName(first, last))) h.push('name');
+  return h; }
+/* marque un compte : invisible pour les autres, et il ne voit plus personne ; une concordance de nom seule est signalée à l'admin pour confirmation */
+async function redMark(uid, hits, note) { if (!hits.length) return;
+  await q('UPDATE users SET redlisted=true, no_mail=true WHERE id=$1', [uid]);
+  const p = await getDoc('profiles', uid); if (p) { p.redlisted = true; if (hits.includes('name') && hits.length === 1) p.redlistCheck = p.redlistCheck || Date.now(); await putDoc('profiles', uid, uid, p); }
+  await alog('Liste rouge', uid, (note || '') + hits.join(', ')); }
 function listHits(l, p) {
   if (!p) return false;
   if (l.target && l.target === p.id) return true;
@@ -111,7 +126,8 @@ async function hiddenFor(me) {
     if (l.owner === me) { for (const p of profiles) if (p.id !== me && listHits(l, p)) hidden.add(p.id); }
     else if (mine && listHits(l, mine)) hidden.add(l.owner);
   }
-  for (const p of profiles) if (p.paused && p.id !== me) hidden.add(p.id);
+  for (const p of profiles) if ((p.paused || p.redlisted) && p.id !== me) hidden.add(p.id);
+  if (mine && mine.redlisted) for (const p of profiles) if (p.id !== me && !p.fake) hidden.add(p.id);
   /* cercle intime : les personnes qui m'ont mis dans leur tribu et que j'ai mises dans la mienne */
   /* tribu : invitation acceptée des deux côtés */
   const intimate = new Set((await listDocs('invites', "AND data->>'state'='yes' AND (data->>'from'=$2 OR data->>'to'=$2)", [me])).map(i => i.from === me ? i.to : i.from));
@@ -145,8 +161,9 @@ function qSame(a, b) { const fa = qFold(a), fb = qFold(b); if (!fa || !fb || fa.
   if (fa === fb || fa.includes(fb) || fb.includes(fa)) return true;
   const wa = qWords(a), wb = qWords(b); let n = 0; for (const w of wa) if (wb.has(w)) n++; return n >= 2; }
 function qMatches(mine, theirs) { let n = 0; for (const q of mine || []) { if (!q.a) continue; const t = (theirs || []).find(x => x.a && qFold(x.k) === qFold(q.k)); if (t && qSame(q.a, t.a)) n++; } return n; }
+const selfView = p => { const { redlisted, redlistCheck, ...rest } = p; return rest; }; // la marque de la liste rouge ne sort jamais du serveur
 function publicProfile(p, intimate, opened, myGeo, qmatch) {
-  const { name, lastName, npa, email, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, ...rest } = p; // couleur de tribu et langues de lecture restent privées
+  const { name, lastName, npa, email, phone, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, redlisted, redlistCheck, ...rest } = p; // couleur de tribu et langues de lecture restent privées
   if (!rest.textLang) rest.textLang = 'fr'; // anciens portraits : écrits en français
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
@@ -240,7 +257,7 @@ async function readList(store, me, query) {
     if (store === 'voices') rows = rows.filter(v => v.owner === me || (v.kind === 'presentation' && opened.has(v.owner)));
     if (store === 'questions') rows = rows.filter(r => r.profileId === me || opened.has(r.profileId));
     if (store === 'profiles') { const mg = (rows.find(p => p.id === me) || {}).geo; const qs = await listDocs('questions'); const byP = {}; for (const x of qs) (byP[x.profileId] = byP[x.profileId] || []).push(x);
-      rows = rows.map(p => p.id === me ? p : publicProfile(p, intimate, opened, mg, qMatches(byP[me], byP[p.id]))); }
+      rows = rows.map(p => p.id === me ? selfView(p) : publicProfile(p, intimate, opened, mg, qMatches(byP[me], byP[p.id]))); }
   }
   return rows;
 }
@@ -254,6 +271,7 @@ async function readOne(store, me, id) {
   if (store === 'invites') return d.from === me || d.to === me ? d : null;
   if (store === 'notices') return d.to === me ? d : null;
   if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); if (hidden.has(d.id)) return null; const qs = await listDocs('questions'); return publicProfile(d, intimate, opened, (byId[me] || {}).geo, qMatches(qs.filter(x => x.profileId === me), qs.filter(x => x.profileId === d.id))); }
+  if (store === 'profiles' && d.id === me) return selfView(d);
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }
   return d;
@@ -271,9 +289,13 @@ async function writeOne(store, me, id, body) {
     if (data.pseudo) { const r = await q("SELECT 1 FROM docs WHERE store='profiles' AND id<>$1 AND lower(data->>'pseudo')=lower($2)", [me, data.pseudo]); if (r.rowCount) throw err(409, 'Ce pseudo est déjà pris.'); }
     if (old && old.geo && old.geoCity === data.city && !data.geo) { data.geo = old.geo; data.geoCity = old.geoCity; }
     await withGeo(data);
+    /* liste rouge : numéro de mobile ou prénom + nom ; la pause ne peut pas être levée par la personne */
+    const ru = (await q('SELECT redlisted FROM users WHERE id=$1', [me])).rows[0];
+    if (ru && ru.redlisted) { data.redlisted = true; if (old && old.redlistCheck) data.redlistCheck = old.redlistCheck; }
+    else { const hits = await redHits(null, data.phone, data.name, data.lastName); if (hits.length) { data.redlisted = true; if (hits.includes('name') && !hits.includes('phone')) data.redlistCheck = Date.now(); await q('UPDATE users SET redlisted=true, no_mail=true WHERE id=$1', [me]); await alog('Liste rouge', me, 'portrait : ' + hits.join(', ')); } }
     if (old && old.verified && old.verified.status === 'verified') data.verified = old.verified; // seul l'admin valide
     else if (data.verified && data.verified.status === 'verified') data.verified = old && old.verified || null;
-    return putDoc(store, id, me, data);
+    return selfView(await putDoc(store, id, me, data));
   }
   const ownerField = { entries: 'profileId', questions: 'profileId', circlePosts: 'author', reports: 'by', circles: 'createdBy' }[store] || 'owner';
   if (old && old.__owner && old.__owner !== me) throw err(403, 'écriture');
@@ -399,20 +421,49 @@ async function api(req, res, url) {
     if (req.method !== 'POST') throw err(405, 'méthode');
     if (parts[1] === 'logout') { const t = (req.headers.authorization || '').replace(/^Bearer /, ''); await q('DELETE FROM sessions WHERE token=$1', [t]); return send(res, 200, { ok: true }); }
     if (tooMany(ip)) throw err(429, 'Trop d\'essais. Réessaie dans un quart d\'heure.');
-    const { email, password, invite } = await json(req); const e = norm(email);
+    const body = await json(req); const { password } = body; let { email, invite } = body; let e = norm(email);
+    const STRONG = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z]).{10,}$/; // 10 caractères, une majuscule, une minuscule, un caractère non alphabétique
+    const create = async (pass, inv) => { // crée le compte et, s'il y a un parrain, le met dans la tribu de la nouvelle personne
+      const id = uid(); const inviter = inv ? (await q('SELECT id FROM users WHERE id=$1', [String(inv)])).rows[0] : null;
+      await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(pass), Date.now(), inviter ? inviter.id : null]);
+      if (inviter) { const iid = 'inv-' + pair(id, inviter.id); await putDoc('invites', iid, inviter.id, { id: iid, from: inviter.id, to: id, state: 'yes', ts: Date.now(), answeredAt: Date.now() }); notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/app#tribu'); }
+      return id; };
+    /* étape 1 de l'inscription : l'adresse seule ; on envoie un lien, le mot de passe vient après */
+    if (parts[1] === 'start') {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw err(400, 'Adresse e-mail invalide.');
+      const r = await q('SELECT 1 FROM users WHERE email=$1', [e]); if (r.rowCount) throw err(409, 'Un compte existe déjà avec cette adresse. Connecte-toi.');
+      if ((await config()).closed && !invite) throw err(403, 'Les inscriptions sont fermées pour le moment. Tu peux entrer avec le lien d\'invitation d\'un membre.');
+      if (!mailReady()) return send(res, 200, { direct: true }); // pas d'envoi possible : l'app demande le mot de passe tout de suite (ancien parcours)
+      if ((await redHits(e)).length) { await alog('Liste rouge', '', 'inscription refusée en silence : ' + e); return send(res, 200, { sent: true }); } // rien ne part, et la personne ne le sait pas
+      const token = crypto.randomBytes(24).toString('hex'); const lang = ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(body.lang) ? body.lang : 'fr';
+      await q("DELETE FROM docs WHERE store='pending' AND data->>'email'=$1", [e]);
+      await putDoc('pending', token, 'system', { id: token, email: e, invite: invite || null, lang, created: Date.now() });
+      const link = `${SITE}/app?verify=${token}`; const M = VERIFY_MAIL[lang];
+      try { await sendMail(e, M.subject, M.body.replace('{link}', link), null); } catch (x) { logErr('mail', 'vérification : ' + x.message, { to: e }); throw err(500, 'L\'e-mail n\'a pas pu partir. Réessaie dans un moment.'); }
+      return send(res, 200, { sent: true });
+    }
+    /* étape 2 : le lien a été cliqué, la personne choisit son mot de passe */
+    if (parts[1] === 'finish') {
+      const t = String(body.token || ''); const pend = /^[0-9a-f]{48}$/.test(t) ? await getDoc('pending', t) : null;
+      if (!pend) throw err(410, 'Ce lien n\'est plus valable. Demande un nouvel e-mail.');
+      if (Date.now() - pend.created > 24 * 36e5) { await q("DELETE FROM docs WHERE store='pending' AND id=$1", [t]); throw err(410, 'Ce lien a expiré (24 heures). Demande un nouvel e-mail.'); }
+      e = pend.email;
+      if (!STRONG.test(password || '')) throw err(400, 'Mot de passe : 10 caractères au moins, une majuscule, une minuscule et un chiffre ou un signe.');
+      if ((await q('SELECT 1 FROM users WHERE email=$1', [e])).rowCount) throw err(409, 'Un compte existe déjà avec cette adresse. Connecte-toi.');
+      const id = await create(password, pend.invite || invite); await q("DELETE FROM docs WHERE store='pending' AND id=$1", [t]);
+      const token = crypto.randomBytes(32).toString('hex'); await q('INSERT INTO sessions (token,user_id,created) VALUES ($1,$2,$3)', [token, id, Date.now()]);
+      return send(res, 200, { token, id });
+    }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw err(400, 'Adresse e-mail invalide.');
     if (!password || password.length < 8) throw err(400, 'Le mot de passe doit avoir au moins 8 caractères.');
     let id;
-    if (parts[1] === 'register') {
+    if (parts[1] === 'register') { // ancien parcours, seulement quand le serveur ne peut pas envoyer d'e-mails
+      if (mailReady()) throw err(403, 'Passe par la vérification de l\'adresse e-mail.');
       const r = await q('SELECT 1 FROM users WHERE email=$1', [e]); if (r.rowCount) throw err(409, 'Un compte existe déjà avec cette adresse.');
       if ((await config()).closed && !invite) throw err(403, 'Les inscriptions sont fermées pour le moment. Tu peux entrer avec le lien d\'invitation d\'un membre.');
-      id = uid();
-      const inviter = invite ? (await q('SELECT id FROM users WHERE id=$1', [String(invite)])).rows[0] : null;
-      await q('INSERT INTO users (id,email,pass,created,invited_by) VALUES ($1,$2,$3,$4,$5)', [id, e, hashPass(password), Date.now(), inviter ? inviter.id : null]);
-      if (inviter) { // la personne qui invite entre directement dans la tribu de la nouvelle, et elle est prévenue
-        const iid = 'inv-' + pair(id, inviter.id); await putDoc('invites', iid, inviter.id, { id: iid, from: inviter.id, to: id, state: 'yes', ts: Date.now(), answeredAt: Date.now() });
-        notify(inviter.id, 'Un ami a rejoint FeelShareLove grâce à toi', '/app#tribu');
-      }
+      if (!STRONG.test(password)) throw err(400, 'Mot de passe : 10 caractères au moins, une majuscule, une minuscule et un chiffre ou un signe.');
+      id = await create(password, invite);
+      const hits = await redHits(e); if (hits.length) await redMark(id, hits, 'inscription : ');
     } else if (parts[1] === 'login') {
       const r = await q('SELECT id, pass, banned FROM users WHERE email=$1', [e]);
       if (!r.rowCount || !checkPass(password, r.rows[0].pass)) throw err(401, 'Adresse ou mot de passe incorrect.');
@@ -454,6 +505,14 @@ async function api(req, res, url) {
 
 /* ---------- administration : /admin?key=ADMIN_KEY ---------- */
 const H = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/* ---------- e-mail de vérification de l'adresse, dans la langue de l'app ---------- */
+const VERIFY_MAIL = {
+  fr: { subject: 'FeelShareLove : confirme ton adresse e-mail', body: 'Bonjour,\n\nPour continuer ton inscription sur FeelShareLove, clique sur ce lien (valable 24 heures) :\n{link}\n\nTu choisiras ensuite ton mot de passe.\nSi tu n\'es pas à l\'origine de cette demande, ignore simplement cet e-mail.' },
+  de: { subject: 'FeelShareLove: Bestätige deine E-Mail-Adresse', body: 'Hallo,\n\num deine Anmeldung bei FeelShareLove fortzusetzen, klicke auf diesen Link (24 Stunden gültig):\n{link}\n\nDanach wählst du dein Passwort.\nFalls du das nicht angefordert hast, ignoriere diese E-Mail einfach.' },
+  en: { subject: 'FeelShareLove: confirm your e-mail address', body: 'Hello,\n\nTo continue signing up on FeelShareLove, click this link (valid for 24 hours):\n{link}\n\nYou will then choose your password.\nIf you did not request this, simply ignore this e-mail.' },
+  it: { subject: 'FeelShareLove: conferma il tuo indirizzo e-mail', body: 'Ciao,\n\nper continuare la tua iscrizione a FeelShareLove, clicca su questo link (valido 24 ore):\n{link}\n\nSceglierai poi la tua password.\nSe non hai fatto tu questa richiesta, ignora semplicemente questa e-mail.' },
+  es: { subject: 'FeelShareLove: confirma tu dirección de correo', body: 'Hola,\n\npara continuar tu inscripción en FeelShareLove, haz clic en este enlace (válido 24 horas):\n{link}\n\nDespués elegirás tu contraseña.\nSi no has hecho esta solicitud, simplemente ignora este correo.' },
+  pt: { subject: 'FeelShareLove: confirma o teu endereço de e-mail', body: 'Olá,\n\npara continuares a tua inscrição no FeelShareLove, clica neste link (válido 24 horas):\n{link}\n\nDepois escolherás a tua palavra-passe.\nSe não fizeste este pedido, ignora simplesmente este e-mail.' } };
 /* ---------- e-mails à tous les inscrits (adresse d'envoi à régler dans Coolify : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM) ---------- */
 const SMTP = { host: process.env.SMTP_HOST || '', port: +(process.env.SMTP_PORT || 465), user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '' };
 const MAIL_PER_HOUR = +(process.env.MAIL_PER_HOUR || 100); // envoi par petits paquets : les comptes e-mail gratuits limitent le nombre d'envois par heure
@@ -573,6 +632,16 @@ async function admin(req, res, url) {
       let n = 0; for (const p of await listDocs('profiles')) if (p.fake === true) { await wipeUser(p.id); n++; }
       await alog('Profils de test supprimés', '', n + ' comptes'); return go('settings', '', n + ' profils de test supprimés.');
     }
+    if (a === 'redlist-save') { const c = await config();
+      const lines = k => String(f.get(k) || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      c.redlist = { emails: [...new Set(lines('emails').map(norm))], phones: [...new Set(lines('phones').map(rlPhone).filter(x => x.length >= 7))],
+        names: [...new Set(lines('names').map(x => { const w = x.split(/\s+/); return rlName(w[0], w.slice(1).join(' ')); }).filter(x => !x.endsWith('|')))] };
+      await putDoc('admin', 'config', 'admin', c); await alog('Liste rouge modifiée', '', `${c.redlist.emails.length} adresses, ${c.redlist.phones.length} numéros, ${c.redlist.names.length} noms`);
+      /* comptes déjà existants qui correspondent */
+      let n = 0; for (const u of (await q('SELECT id, email FROM users WHERE NOT redlisted')).rows) { const p = (await getDoc('profiles', u.id)) || {}; const hits = await redHits(u.email, p.phone, p.name, p.lastName); if (hits.length) { await redMark(u.id, hits, 'déjà inscrit : '); n++; } }
+      return go('redlist', '', 'Liste enregistrée' + (n ? ` · ${n} compte(s) existant(s) marqué(s)` : '')); }
+    if (a === 'red-ok') { const p = await getDoc('profiles', id); if (p) { delete p.redlistCheck; await putDoc('profiles', id, id, p); } await alog('Liste rouge confirmée', id); return go('redlist'); }
+    if (a === 'red-free') { await q('UPDATE users SET redlisted=false WHERE id=$1', [id]); const p = await getDoc('profiles', id); if (p) { delete p.redlisted; delete p.redlistCheck; await putDoc('profiles', id, id, p); } await alog('Liste rouge : compte libéré', id); return go('redlist'); }
     if (a === 'closed') { const c = await config(); c.closed = f.get('v') === '1'; await putDoc('admin', 'config', 'admin', c); await alog(c.closed ? 'Inscriptions fermées' : 'Inscriptions ouvertes'); return go('settings', '', c.closed ? 'Inscriptions fermées (sauf lien d\'invitation).' : 'Inscriptions ouvertes.'); }
     if (a === 'mail-test' || a === 'mail-all') {
       const subject = (f.get('subject') || '').trim(), body = (f.get('body') || '').trim();
@@ -590,7 +659,7 @@ async function admin(req, res, url) {
 
   /* ---------- données ---------- */
   const now = Date.now(), D7 = now - 7 * 864e5, D1 = now - 864e5;
-  const users = (await q('SELECT id, email, created, banned, ban_reason, last_seen, invited_by, no_mail FROM users ORDER BY created DESC')).rows;
+  const users = (await q('SELECT id, email, created, banned, ban_reason, last_seen, invited_by, no_mail, redlisted FROM users ORDER BY created DESC')).rows;
   const profiles = Object.fromEntries((await listDocs('profiles')).map(p => [p.id, p]));
   const reportsAll = await listDocs('reports');
   const reports = reportsAll.filter(r => r.status === 'open' && r.kind !== 'suggestion').sort((a, b) => (b.ts || 0) - (a.ts || 0));
@@ -679,12 +748,21 @@ async function admin(req, res, url) {
   }
   if (tab === 'log') { const logs = (await listDocs('adminlog')).sort((a, b) => b.ts - a.ts).slice(0, 300);
     body = `<h2>Journal</h2><table><tr><th>Date</th><th>Action</th><th>Compte</th><th>Détail</th></tr>${logs.map(l => `<tr><td>${fmtDT(l.ts)}</td><td>${H(l.action)}</td><td>${l.target ? (profiles[l.target] ? who(l.target) : '<small>' + H(l.target) + '</small>') : ''}</td><td><small>${H(l.detail)}</small></td></tr>`).join('') || '<tr><td class="muted">Vide.</td></tr>'}</table>`; }
+  if (tab === 'redlist') { const r = await redlist(); const flagged = users.filter(u => u.redlisted);
+    const row = u => { const p = profiles[u.id] || {}; return `<tr><td>${who(u.id)}<br><small>${H(u.email)}</small></td><td>${H(p.name || '')} ${H(p.lastName || '')}<br><small>${H(p.phone || '')}</small></td><td>${p.redlistCheck ? '<span class="tag y">nom seulement : à confirmer</span>' : '<span class="tag red">bloqué</span>'}</td><td>${p.redlistCheck ? btn('red-ok', u.id, 'Confirmer le blocage') : ''}${btn('red-free', u.id, 'Libérer ce compte', sure('Je confirme'))}</td></tr>`; };
+    body = `<h2>Liste rouge</h2><p class="muted">Les personnes de cette liste ne peuvent pas entrer, sans le savoir : à l'inscription, l'écran « Regarde tes e-mails » s'affiche mais rien ne part ; si elles entrent par une autre adresse, leur numéro de mobile ou leur prénom et nom les met en pause silencieuse (elles voient leur portrait, personne ne les voit, elles ne voient personne). Aucun e-mail, aucun message ne leur est jamais envoyé.</p>
+      <form method="post" class="card"><input type="hidden" name="a" value="redlist-save">
+        <div class="grid"><div><b>Adresses e-mail</b> <small>(une par ligne)</small><textarea name="emails">${H(r.emails.join('\n'))}</textarea></div>
+        <div><b>Numéros de mobile</b> <small>(une par ligne, avec ou sans indicatif)</small><textarea name="phones">${H(r.phones.join('\n'))}</textarea></div>
+        <div><b>Prénom et nom</b> <small>(une personne par ligne : prénom, puis nom)</small><textarea name="names">${H(r.names.map(x => x.replace('|', ' ')).join('\n'))}</textarea></div></div>
+        <p><button class="flame" type="submit">Enregistrer la liste</button> <small class="muted">Les comptes déjà inscrits qui correspondent sont marqués aussitôt.</small></p></form>
+      <h2>Comptes concernés (${flagged.length})</h2>${flagged.length ? `<table><tr><th>Compte</th><th>Prénom, nom, mobile</th><th>État</th><th></th></tr>${flagged.map(row).join('')}</table>` : '<p class="muted">Aucun.</p>'}`; }
   if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
     body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
       <h2>Profils de test (${nf})</h2><div class="card"><p class="muted">Brad, Sandra, Tom, Sophie et Jean-Jacques. Ils portent l'étiquette « profil de démonstration » dans l'app. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
         ${btn('fakes', '', 'Remplir les profils de test')} ${btn('fakes-delete', '', 'Supprimer les profils de test', sure('Je confirme'), 'danger')}</div>`; }
 
-  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['log', 'Journal'], ['settings', 'Réglages']];
+  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"><style>${ADMIN_CSS}</style>
 <header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>

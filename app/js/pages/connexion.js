@@ -1,6 +1,7 @@
 /* FeelShareLove — écran « Connexion » (version en ligne seulement) : créer un compte ou se reconnecter */
 Pages.connexion=function(S){
   const $=id=>document.getElementById(id);
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   document.body.classList.add('onboarding');
   /* page d'accueil : la profession de foi, puis « Commencer » qui ouvre la création du compte */
   /* page d'accueil en 3 écrans, style peinture rupestre : paroi de pierre, pigments ocre, rouge et blanc, icônes du site en grand */
@@ -54,26 +55,85 @@ Pages.connexion=function(S){
     $('c-next').addEventListener('click',()=>{if(last)form(true);else{pg++;intro();}});
     const pv=$('c-prev');if(pv)pv.addEventListener('click',()=>{pg--;intro();});
     $('c-have').addEventListener('click',()=>form(false));}
+  const RULES=[[/.{10,}/,'10 caractères au moins'],[/[A-Z]/,'une majuscule'],[/[a-z]/,'une minuscule'],[/[^A-Za-z]/,'un chiffre ou un signe']];
+  const strong=p=>RULES.every(([re])=>re.test(p));
+  function rulesHtml(p){return RULES.map(([re,l])=>`<li class="${re.test(p)?'ok':''}">${l}</li>`).join('');}
+  const head=t=>`<p class="eyebrow">FeelShareLove <span class="beta-tag">BÊTA</span></p><h1>${t}</h1>`;
+  /* se reconnecter : adresse et mot de passe */
   function form(isNew){
-  S.innerHTML=`<p class="eyebrow">FeelShareLove <span class="beta-tag">BÊTA</span></p><h1>${isNew?'Créer mon compte':'Me reconnecter'}</h1>
+  if(isNew&&DB.verifyToken&&DB.verifyToken())return password();
+  if(isNew)return signup();
+  S.innerHTML=head('Me reconnecter')+`
+  <p class="muted" style="margin:10px 0 18px">Ton adresse e-mail reste privée : personne ne la voit, jamais de publicité.</p>
+  <div class="sec" style="margin-top:0">
+    <label class="muted small" for="c-mail">Adresse e-mail</label><input class="in" id="c-mail" type="email" autocomplete="email" style="margin:6px 0 12px">
+    <label class="muted small" for="c-pass">Mot de passe</label><input class="in" id="c-pass" type="password" autocomplete="current-password" style="margin:6px 0 14px">
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-log">Me connecter</button><button class="btn ghost" type="button" id="c-new">Créer un compte</button></div>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p>
+  </div>
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;
+  async function go(){const e=$('c-mail').value.trim(),p=$('c-pass').value;$('c-err').textContent='';$('c-log').disabled=true;
+    try{await DB.login(e,p);location.hash='#now';location.reload();}catch(x){$('c-err').textContent=x.message;$('c-log').disabled=false;}}
+  $('c-log').addEventListener('click',go);$('c-pass').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
+  $('c-new').addEventListener('click',()=>signup());$('c-back').addEventListener('click',intro);}
+  /* créer un compte, étape 1 : l'adresse e-mail seule ; un lien part par e-mail */
+  function signup(mail){
+  S.innerHTML=head('Créer mon compte')+`
   <p class="muted" style="margin:10px 0 18px">Ici, on se rencontre par ce qui nous fait vibrer. Ton adresse e-mail reste privée : personne ne la voit, jamais de publicité.</p>
   <div class="sec" style="margin-top:0">
     <label class="muted small" for="c-mail">Adresse e-mail</label><input class="in" id="c-mail" type="email" autocomplete="email" style="margin:6px 0 12px">
-    <label class="muted small" for="c-pass">Mot de passe (8 caractères au moins)</label><input class="in" id="c-pass" type="password" autocomplete="current-password" style="margin:6px 0 14px">
-    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-new">Créer mon compte</button><button class="btn ghost" type="button" id="c-log">Me connecter</button></div>
-    <label class="check" style="margin-top:12px"><input type="checkbox" id="c-ok"> Pour créer un compte : j'ai 18 ans ou plus, et j'ai lu l'<a href="#conditions" style="color:var(--saffron)">avertissement et les conditions</a>.</label>
+    <p class="muted small" style="margin:0 0 12px">On t'envoie d'abord un e-mail avec un lien. C'est en cliquant sur ce lien que ton inscription continue : tu choisiras alors ton mot de passe.</p>
+    <label class="check"><input type="checkbox" id="c-ok"> J'ai 18 ans ou plus, et j'ai lu l'<a href="#conditions" style="color:var(--saffron)">avertissement et les conditions</a>.</label>
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px;margin-top:12px"><button class="btn flame" type="button" id="c-send">Recevoir le lien par e-mail</button><button class="btn ghost" type="button" id="c-log">J'ai déjà un compte</button></div>
     <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p>
   </div>
-  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>
-`;
-  async function go(kind){const e=$('c-mail').value.trim(),p=$('c-pass').value;$('c-err').textContent='';
-    if(kind==='new'&&!$('c-ok').checked){$('c-err').textContent='Coche la case : 18 ans ou plus, avertissement et conditions lus.';return;}
-    $('c-new').disabled=$('c-log').disabled=true;
-    try{await (kind==='new'?DB.register(e,p):DB.login(e,p));location.hash=kind==='new'?'#accueil':'#now';location.reload();}
-    catch(x){$('c-err').textContent=x.message;$('c-new').disabled=$('c-log').disabled=false;}}
-  $('c-new').addEventListener('click',()=>go('new'));
-  $('c-log').addEventListener('click',()=>go('log'));
-  $('c-pass').addEventListener('keydown',k=>{if(k.key==='Enter')go(isNew?'new':'log');});
-  $('c-back').addEventListener('click',intro);}
-  intro();
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;
+  if(mail)$('c-mail').value=mail;
+  async function go(){const e=$('c-mail').value.trim();$('c-err').textContent='';
+    if(!$('c-ok').checked){$('c-err').textContent='Coche la case : 18 ans ou plus, avertissement et conditions lus.';return;}
+    $('c-send').disabled=true;
+    try{const r=await DB.start(e);if(r&&r.direct)return direct(e);sent(e);}
+    catch(x){$('c-err').textContent=x.message;$('c-send').disabled=false;}}
+  $('c-send').addEventListener('click',go);$('c-mail').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
+  $('c-log').addEventListener('click',()=>form(false));$('c-back').addEventListener('click',intro);}
+  /* l'e-mail est parti : on attend le clic sur le lien */
+  function sent(mail){
+  S.innerHTML=head('Regarde tes e-mails')+`
+  <div class="sec" style="margin-top:14px"><p class="exp">On vient d'envoyer un e-mail à <b>${esc(mail)}</b>. Clique sur le lien qu'il contient pour continuer ton inscription et choisir ton mot de passe. Le lien est valable 24 heures.</p>
+    <p class="muted small" style="margin-top:10px">Rien reçu après quelques minutes ? Regarde dans les indésirables, puis renvoie l'e-mail.</p>
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px;margin-top:12px"><button class="btn ghost" type="button" id="c-again">Renvoyer l'e-mail</button><button class="btn ghost" type="button" id="c-change">Changer d'adresse</button></div>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p></div>`;
+  $('c-again').addEventListener('click',async()=>{$('c-again').disabled=true;$('c-err').textContent='';try{await DB.start(mail);$('c-err').style.color='var(--saffron)';$('c-err').textContent='E-mail renvoyé.';}catch(x){$('c-err').style.color='var(--flame)';$('c-err').textContent=x.message;}setTimeout(()=>{$('c-again').disabled=false;},20000);});
+  $('c-change').addEventListener('click',()=>signup(mail));}
+  /* le lien a été cliqué : choix du mot de passe */
+  function password(){
+  S.innerHTML=head('Choisis ton mot de passe')+`
+  <p class="muted" style="margin:10px 0 18px">Ton adresse est confirmée. Il ne manque plus que ton mot de passe.</p>
+  <div class="sec" style="margin-top:0">
+    <label class="muted small" for="c-pass">Mot de passe</label><input class="in" id="c-pass" type="password" autocomplete="new-password" style="margin:6px 0 8px">
+    <ul class="rules" id="c-rules">${rulesHtml('')}</ul>
+    <label class="muted small" for="c-pass2" style="display:block;margin-top:12px">Le même, une deuxième fois</label><input class="in" id="c-pass2" type="password" autocomplete="new-password" style="margin:6px 0 14px">
+    <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-go">Créer mon compte</button></div>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p>
+  </div>
+  <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-restart">Recommencer avec une autre adresse</button></div>`;
+  $('c-pass').addEventListener('input',()=>{$('c-rules').innerHTML=rulesHtml($('c-pass').value);});
+  async function go(){const p=$('c-pass').value;$('c-err').textContent='';
+    if(!strong(p)){$('c-err').textContent='Le mot de passe ne respecte pas encore les quatre règles.';return;}
+    if(p!==$('c-pass2').value){$('c-err').textContent='Les deux mots de passe ne sont pas identiques.';return;}
+    $('c-go').disabled=true;
+    try{await DB.finish(p);location.hash='#accueil';location.reload();}
+    catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;if(x.code===410){DB.forgetVerify();setTimeout(()=>signup(),2500);}}}
+  $('c-go').addEventListener('click',go);$('c-pass2').addEventListener('keydown',k=>{if(k.key==='Enter')go();});
+  $('c-restart').addEventListener('click',()=>{DB.forgetVerify();signup();});}
+  /* sans serveur d'e-mails (secours) : mot de passe tout de suite */
+  function direct(mail){
+  S.innerHTML=head('Choisis ton mot de passe')+`
+  <div class="sec" style="margin-top:14px"><p class="muted small">Adresse : <b>${esc(mail)}</b></p>
+    <label class="muted small" for="c-pass">Mot de passe</label><input class="in" id="c-pass" type="password" autocomplete="new-password" style="margin:6px 0 8px"><ul class="rules" id="c-rules">${rulesHtml('')}</ul>
+    <div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn flame" type="button" id="c-go">Créer mon compte</button></div><p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p></div>`;
+  $('c-pass').addEventListener('input',()=>{$('c-rules').innerHTML=rulesHtml($('c-pass').value);});
+  $('c-go').addEventListener('click',async()=>{const p=$('c-pass').value;if(!strong(p)){$('c-err').textContent='Le mot de passe ne respecte pas encore les quatre règles.';return;}$('c-go').disabled=true;
+    try{await DB.register(mail,p);location.hash='#accueil';location.reload();}catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;}});}
+  if(DB.verifyToken&&DB.verifyToken())password();else intro();
 };
