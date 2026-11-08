@@ -146,6 +146,15 @@ Pages.portrait=async function(S){
   renderFacts();
   Plus.editors(me,saveMe);
   if(window.Genres)Genres.editor($('genre-box'),me,saveMe);
+  /* portrait rempli : on ne montre que les choix faits, avec « Changer mes choix » pour tout rouvrir */
+  function fold(id){const B=$(id);if(!B)return;const L=document.createElement('button');L.type='button';L.className='linkbtn fold-link';B.after(L);
+    const has=()=>!!B.querySelector('.chip.on');
+    const set=c=>{B.classList.toggle('folded',c);L.textContent=c?'Changer mes choix':'Valider mes choix';};
+    const upd=()=>{L.hidden=!has();};
+    L.addEventListener('click',()=>{const c=!B.classList.contains('folded');set(c);if(c)B.previousElementSibling&&B.previousElementSibling.scrollIntoView({block:'nearest',behavior:'smooth'});});
+    new MutationObserver(upd).observe(B,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    set(has());upd();}
+  ['intent','lang-box','rep-box','inv-box','genre-box'].forEach(fold);
   try{if(sessionStorage.getItem('fsl_goto')==='genre-box'){sessionStorage.removeItem('fsl_goto');setTimeout(()=>{const g=$('genre-box');if(g)g.previousElementSibling.scrollIntoView({block:'start',behavior:'smooth'});},300);}}catch(e){}
 
   /* œuvres et passions */

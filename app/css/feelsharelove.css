@@ -535,3 +535,9 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .chip.int-tile.priv{border-style:dashed}
 .chip.int-tile .int-badge{position:absolute;top:10px;right:10px;font:700 10px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px 3px;border-radius:999px;border:1px solid #c85ca8;color:#f5c2e7;background:rgba(200,92,168,.15)}
 .vis-note{grid-column:1/-1;margin:8px 0 0}
+
+/* portrait replié : seulement les choix faits */
+.folded .chip:not(.on),.folded:not(#lang-box) p.muted,.folded .g-more,.folded .g-box .row,.folded .lang-add,.folded .lang-sug,.folded .int-d{display:none!important}
+.folded .chip{pointer-events:none}
+#genre-box.folded #g-pick{display:none}
+.fold-link{display:block;margin:10px 4px 4px}

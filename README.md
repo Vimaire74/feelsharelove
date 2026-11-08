@@ -1,9 +1,9 @@
-# FeelShareLove — lot 32 (à envoyer APRÈS le lot 31)
+# FeelShareLove — lot 33
 
-Version 1.13.1 (08/11/2026)
-- Portrait : « Ce qui m'amène » a maintenant son titre, et chaque choix est une tuile avec son explication à l'intérieur ; « Rompre ma solitude » porte l'étiquette « Privé » dans sa propre tuile, bordure en pointillé
-- Portrait : sous « Ville et code postal », la mention de ce qui est visible (la ville, sans adresse) et de ce qui reste privé (le code postal)
-- Création du compte : même présentation en tuiles
+Version 1.13.2 (08/11/2026)
+- Portrait : dans Ce qui m'amène, Mes langues, Métiers/rôles/tendances, Là où je mets mon cœur et Mes histoires préférées, seuls les choix faits sont affichés
+- Lien « Changer mes choix » sous chaque rubrique pour tout rouvrir, puis « Valider mes choix » pour replier
+- Histoires préférées repliées : les catégories choisies restent visibles avec leurs œuvres
 - Textes traduits dans les 5 langues
 
-Fichiers : app/js/app.js, app/js/pages/portrait.js, app/js/pages/accueil.js, app/css/feelsharelove.css, app/js/lang/*.js
+Fichiers : app/js/pages/portrait.js, app/css/feelsharelove.css, app/js/lang/*.js
