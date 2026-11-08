@@ -4,12 +4,14 @@ Pages.now=async function(S){
   let {me,entries}=await App.loadMe();
   const people=await App.others();for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
   S.innerHTML=`<p class="eyebrow">Maintenant <span class="beta-tag soft">bêta</span></p><h1 id="now-title"></h1>
+    ${window.Genres&&me.onboardedAt&&!(me.genres||[]).length?`<a class="g-new" href="#portrait" id="g-new"><b>Nouveau</b> · Tes histoires préférées : choisis tes 5 genres de films, livres et séries.</a>`:''}
     <div class="avail-card" id="my-avail"></div>
     <div class="qdj" id="qdj"></div>
     <div class="search"><input id="q-search" placeholder="Un film, un livre, une passion, un pseudo…"></div>
     <p class="muted small" id="f-note" style="margin:6px 0 0"></p>
     <div id="people"></div>
     <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a>`;
+  {const gn=document.getElementById('g-new');if(gn)gn.addEventListener('click',()=>{try{sessionStorage.setItem('fsl_goto','genre-box');}catch(e){}});}
   const h=new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});
   /* phrase du titre selon le moment de la journée ; elle change chaque jour, pas à chaque visite */
   const f=App.fem(me),seul=f?'seule':'seul',hr=new Date().getHours(),day=Math.floor(Date.now()/864e5);

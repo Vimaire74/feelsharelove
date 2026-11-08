@@ -20,6 +20,7 @@ window.Plus=(function(){
     const subs=pi.filter(k=>k.includes(':')&&mi.has(k));const cats=new Set(subs.map(k=>k.split(':')[0]));
     subs.forEach(k=>out.push({k:'inv',sub:true,kw:C.INV[k]?C.INV[k].l:k,l:'Vous y mettez tous les deux votre cœur : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
     pi.filter(k=>!k.includes(':')&&mi.has(k)&&!cats.has(k)).forEach(k=>out.push({k:'inv',kw:C.INV[k]?C.INV[k].l:k,l:'Vous y mettez tous les deux votre cœur : '+(C.INV[k]?C.INV[k].l.toLowerCase():k)}));
+    if(window.Genres)Genres.common(me,p).items.forEach(x=>out.push(x));
     return out;}
 
   /* ---------- affichage sur un portrait ---------- */
@@ -27,6 +28,7 @@ window.Plus=(function(){
   function viewHtml(p,me,preview,only){let h='';const ex=preview?[]:extraCommon(me,p);
     const rp=(preview||p.repShow!==false)?(p.rep||[]):[];
     if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>${preview?'Mes métiers, mes rôles, <em>mes tendances</em>':'Ses métiers, ses rôles, <em>ses tendances</em>'}</h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
+    if(window.Genres)h+=Genres.viewHtml(p,me,preview);
     if(only==='rep')return h;
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
     const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
@@ -120,14 +122,19 @@ window.Plus=(function(){
 
   /* pourcentage de similitude : chaque similitude ajoute des points selon son importance, total plafonné à 100.
      Plus deux portraits sont remplis, plus ils peuvent se ressembler. Les ressentis ne comptent pas. */
-  const PTS={type:15,typeNear:10,work:6,perso2:4,perso3:10,rep:6,invSub:5,univers:4,invCat:2,lang:2,langMax:8,question:6,questionMax:12,intent:{amis:2,parler:4,amour:6}};
+  const PTS={type:15,typeNear:10,work:6,workMain:1,longWhy:300,perso2:4,perso3:10,rep:6,invSub:5,univers:4,invCat:2,lang:2,langMax:8,question:6,questionMax:12,intent:{amis:2,parler:4,amour:6}};
   const TYPE_MATCH={sens:{sens:1,emo:.7},emo:{emo:1,sens:.7},mental:{mental:1},phys:{phys:1}};
   function similarity(me,p,mine,theirs){
     const wk=e=>e.workId||('t:'+App.norm(e.title));
     const inter=(A,B)=>{const b=new Set(B);return [...new Set(A)].filter(x=>b.has(x));};
     let pts=0;
     /* œuvres et passions */
-    pts+=PTS.work*inter((mine||[]).map(wk),(theirs||[]).map(wk)).length;
+    /* une œuvre très connue (présente dans les listes des histoires préférées) ne vaut que 1,
+       sauf si les deux personnes ont écrit un vrai paragraphe sur ce qu'elle leur fait : alors elle garde ses 6 points */
+    {const T=new Map((theirs||[]).map(e=>[wk(e),e]));
+     for(const e of new Map((mine||[]).map(x=>[wk(x),x])).values()){const o=T.get(wk(e));if(!o)continue;
+       const main=window.Genres&&(Genres.isMainstream(e.title)||Genres.isMainstream(o.title));
+       pts+=main&&!(String(e.why||'').trim().length>=PTS.longWhy&&String(o.why||'').trim().length>=PTS.longWhy)?PTS.workMain:PTS.work;}}
     /* personnages : le même personnage, sinon le même univers */
     const mc=me.chinois||[],pc=p.chinoisShow===false?[]:(p.chinois||[]);
     const ids=inter(mc.map(x=>x.id),pc.map(x=>x.id));pts+=ids.length>=3?PTS.perso3:ids.length===2?PTS.perso2:0; // un seul personnage commun : rien ; deux : 4 ; trois ou plus : 10
@@ -145,6 +152,8 @@ window.Plus=(function(){
       [...TA].sort((x,y)=>(TB.includes(y)?1:0)-(TB.includes(x)?1:0)).forEach(a=>{let bi=-1,bv=0;left.forEach((b,j)=>{const v=(TYPE_MATCH[a]||{})[b]||0;if(v>bv){bv=v;bi=j;}});
         if(bi>=0){pts+=bv===1?PTS.type:PTS.typeNear;left.splice(bi,1);}});}
     /* rien en commun à part l'intention : pas de pourcentage */
+    /* genres d'histoires : genre commun +1, œuvre commune +1 (ou +2 si l'un n'a pas détaillé), 10 au plus */
+    if(window.Genres)pts+=Genres.score(me,p,mine,theirs);
     if(!pts)return null;
     /* langues parlées en commun : la première va de soi (on se lit déjà), chaque langue de plus compte 2, au plus 8 */
     const nl=inter(me.langs||[],p.langs||[]).length;if(nl>1)pts+=Math.min(PTS.langMax,PTS.lang*(nl-1));
@@ -154,7 +163,7 @@ window.Plus=(function(){
     inter(me.intent||[],p.intent||[]).forEach(k=>{pts+=PTS.intent[k]||0;});
     return Math.min(100,Math.round(pts));}
   /* mots-clés en commun, une couleur par catégorie (toujours la même) */
-  const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos métiers, nos rôles, nos tendances'};
+  const CAT={oeuvre:'Nos passions communes',type:'Nos fonctionnements',perso:'À quel personnage on ressemble',inv:'Vers quoi vont nos cœurs',rep:'Nos métiers, nos rôles, nos tendances',genre:'Nos histoires préférées'};
   function tagList(r,ct,ex){const t=[];
     (r.common||[]).forEach(c=>t.push(['oeuvre',c.theirs.title]));
     (r.feels||[]).forEach(f=>t.push(['feel',f.feel.both.replace(/^ce (qui|dont on|qu'on) /,'')]));

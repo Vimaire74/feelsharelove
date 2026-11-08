@@ -72,12 +72,18 @@ Pages.accueil=async function(S){
       $('intent').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
       $('back').addEventListener('click',()=>{step=2;render();});
       $('next').addEventListener('click',async()=>{me.intent=[...$('intent').querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=$('a-city').value.trim();me.npa=$('a-npa').value.trim();me.now=$('a-now').value.trim();await save();step=4;render();});return;}
+    if(step===4&&window.Genres&&!me.storiesSeen){S.innerHTML=head+`<p class="eyebrow">Tes histoires préférées</p><h1>Films, livres, séries : ce que tu aimes</h1><p class="muted" style="margin:10px 0">Choisis tes genres préférés, puis, si tu veux, des œuvres dans chacun. Tu pourras tout changer plus tard dans ton portrait.</p>
+      <div class="sec" id="g-on"></div>
+      <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn" type="button" id="next">Continuer</button></div>`;
+      Genres.editor($('g-on'),me,save);
+      $('back').addEventListener('click',()=>{step=3;render();});$('next').addEventListener('click',async()=>{me.storiesSeen=true;await save();render();});return;}
     if(step===4){S.innerHTML=head+`<p class="eyebrow">Ce qui te fait vibrer</p><h1>Trois choses que tu aimes vraiment</h1><p class="muted" style="margin:10px 0">Un film, un livre, une musique, un lieu, un souvenir. Avec ce que ça te fait et pourquoi. C'est ce qui te reliera aux autres.</p>
       <div class="list" id="l"></div><div id="fs"></div><div class="add" id="add">+ Ajouter</div>
       <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn" type="button" id="next">${entries.length?'Continuer':'Plus tard'}</button></div>`;
       const L=$('l');entries.forEach((e,i)=>L.appendChild(App.entryEl(e,{edit:()=>{$('fs').innerHTML='';$('fs').appendChild(App.entryForm(e,async ne=>{entries[i]=await DB.put('entries',{...ne,profileId:'me'});render();},()=>render()));}})));
-      $('add').addEventListener('click',()=>{$('add').hidden=true;$('fs').innerHTML='';$('fs').appendChild(App.entryForm({},async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));render();},()=>render()));});
-      $('back').addEventListener('click',()=>{step=3;render();});$('next').addEventListener('click',()=>{step=5;render();});return;}
+      const addF=start=>{$('add').hidden=true;$('fs').innerHTML='';const sg=!start&&window.Genres?Genres.suggest(me,entries,t=>addF({title:t,kind:'Film'})):null;if(sg)$('fs').appendChild(sg);$('fs').appendChild(App.entryForm(start||{},async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));render();},()=>render()));};
+      $('add').addEventListener('click',()=>addF());
+      $('back').addEventListener('click',()=>{if(window.Genres){me.storiesSeen=false;}step=4;render();});$('next').addEventListener('click',()=>{step=5;render();});return;}
     if(step===5){S.innerHTML=head+`<p class="eyebrow">Presque fini</p><h1>Ta photo, prise maintenant</h1><p class="muted" style="margin:10px 0">Sur FeelShareLove, la photo est prise en direct avec la caméra : pas d'import, pas de vieille photo retouchée. Le visage doit être reconnaissable. Une photo en pied est possible : pose le téléphone et utilise le retardateur.</p>
       <div class="hero"><div class="avatar"><img id="photo" alt="" hidden></div><div><h1>${esc(me.pseudo)}</h1><p class="muted">${esc([me.npa,me.city].filter(Boolean).join(' '))}</p></div></div>
       <div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn ghost" type="button" id="take">${me.photo?'Reprendre ma photo':'Prendre ma photo'}</button></div>

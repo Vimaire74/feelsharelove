@@ -39,11 +39,12 @@ Pages.portrait=async function(S){
   <h2>Quels sont mes métiers, mes rôles, <em>mes tendances</em></h2><div class="sec" id="rep-box"></div>
   <h2>Si j'étais <em>un personnage</em></h2><div class="sec" id="pc-box"></div>
   <h2>Là où je mets <em>mon cœur</em></h2><div class="sec" id="inv-box"></div>
+  <h2>Mes histoires <em>préférées</em></h2><div class="sec" id="genre-box"></div>
 
   <h2>Ce qui me fait <em>vibrer</em></h2>
   <p class="muted small" style="margin-bottom:10px">Pour chaque chose : le titre, ce que ça te fait, et pourquoi. C'est de là que partent les résonances.</p>
   <div class="list" id="list"></div><div id="form-slot"></div>
-  <div class="add" id="add">+ Ajouter une œuvre, un lieu, une passion</div>
+  <div class="add" id="add">+ Ajouter une œuvre, un lieu, une activité, un souvenir</div>
 
   <h2>Questions <em>ouvertes</em></h2>
   <p class="muted small" style="margin-bottom:4px">Touche une question pour y répondre ou la modifier.</p>
@@ -144,6 +145,8 @@ Pages.portrait=async function(S){
   {const b=me.facts.birth.v,z=b?zodiac(b)+' · '+chinese(b):'';if(me.facts.sign.v!==z&&(z||me.facts.sign.v)){me.facts.sign.v=z;saveMe();}}
   renderFacts();
   Plus.editors(me,saveMe);
+  if(window.Genres)Genres.editor($('genre-box'),me,saveMe);
+  try{if(sessionStorage.getItem('fsl_goto')==='genre-box'){sessionStorage.removeItem('fsl_goto');setTimeout(()=>{const g=$('genre-box');if(g)g.previousElementSibling.scrollIntoView({block:'start',behavior:'smooth'});},300);}}catch(e){}
 
   /* œuvres et passions */
   function closeForm(){$('form-slot').innerHTML='';$('add').style.display='';}
@@ -156,8 +159,11 @@ Pages.portrait=async function(S){
       if(!(e.feel&&e.feel.length)){const n=document.createElement('div');n.className='nudge';n.textContent='Ajoute ce que ça te fait : touche, puis Modifier.';el.appendChild(n);}
       Plus.nodsFor(el,e,nods);L.appendChild(el);});}
   renderList();
-  $('add').addEventListener('click',()=>{$('add').style.display='none';$('form-slot').innerHTML='';
-    $('form-slot').appendChild(App.entryForm({},async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));renderList();closeForm();},closeForm));});
+  function addForm(start){$('add').style.display='none';$('form-slot').innerHTML='';
+    const saveNew=async ne=>{entries.push(await DB.put('entries',{...ne,profileId:'me'}));renderList();closeForm();};
+    const sg=!start&&window.Genres?Genres.suggest(me,entries,t=>addForm({title:t,kind:'Film'})):null;if(sg)$('form-slot').appendChild(sg);
+    $('form-slot').appendChild(App.entryForm(start||{},saveNew,closeForm));}
+  $('add').addEventListener('click',()=>addForm());
 
   /* questions ouvertes */
   let qEdit=-1;
