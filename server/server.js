@@ -646,7 +646,7 @@ async function proposalsText(all) {
   const L = (await listDocs('proposals')).filter(r => all || r.status === 'open').sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const out = ['FeelShareLove — propositions et corrections' + (all ? ' (toutes)' : ' (à lire)'), 'Exporté le ' + fmtDT(Date.now()) + ' · ' + L.length + ' proposition(s)', ''];
   for (const r of L) { const p = await getDoc('profiles', r.by);
-    out.push('---', 'Date : ' + fmtDT(r.ts), 'Page : ' + (r.page || '') + (r.hash ? ' (' + r.hash + ')' : ''), 'Rubrique : ' + (r.section || '(la page entière)'), 'Langue de l\'app : ' + (r.lang || ''), 'Écran : ' + (r.width ? r.width + ' px' : ''), 'De : ' + (p && p.pseudo || r.by) + (r.status === 'done' ? ' · classée' : ''), '', String(r.text || ''), ''); }
+    out.push('---', 'Date : ' + fmtDT(r.ts), 'Page : ' + (r.page || '') + (r.hash ? ' (' + r.hash + ')' : ''), 'Rubrique : ' + (r.section || '(la page entière)'), 'Langue de l\'app : ' + (r.lang || ''), 'Écran : ' + (r.width ? r.width + ' px' : ''), 'Capture : ' + (r.img ? 'oui (fichier .html ou admin)' : 'non'), 'De : ' + (p && p.pseudo || r.by) + (r.status === 'done' ? ' · classée' : ''), '', String(r.text || ''), ''); }
   return out.join('\n'); }
 
 async function admin(req, res, url) {
@@ -739,6 +739,16 @@ async function admin(req, res, url) {
     return go(back, backId);
   }
 
+  if (tab === 'propimg') { const fid = url.searchParams.get('id') || ''; const used = (await listDocs('proposals')).some(r => r.img === fid);
+    const r = used ? await q('SELECT mime, data FROM files WHERE id=$1', [fid]) : { rowCount: 0 }; if (!r.rowCount) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
+    res.writeHead(200, { 'Content-Type': r.rows[0].mime, 'Cache-Control': 'private, max-age=86400' }); return res.end(r.rows[0].data); }
+  if (tab === 'proposals' && url.searchParams.get('dl') === 'html') { const all = url.searchParams.get('all') === '1';
+    const L = (await listDocs('proposals')).filter(r => all || r.status === 'open').sort((a, b) => (a.ts || 0) - (b.ts || 0)); const parts = [];
+    for (const r of L) { const p = await getDoc('profiles', r.by); let img = '';
+      if (r.img) { const f = await q('SELECT mime, data FROM files WHERE id=$1', [r.img]); if (f.rowCount) img = `<img src="data:${f.rows[0].mime};base64,${f.rows[0].data.toString('base64')}" alt="">`; }
+      parts.push(`<section><h2>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</h2><p class="m">${fmtDT(r.ts)} · ${H(r.hash || '')} · langue ${H(r.lang || '')} · écran ${H(r.width || '')} px · ${H(p && p.pseudo || r.by)}${r.status === 'done' ? ' · classée' : ''}</p><p class="t">${H(r.text || '')}</p>${img}</section>`); }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': 'attachment; filename="propositions-feelsharelove-' + new Date().toISOString().slice(0, 10) + '.html"' });
+    return res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>FeelShareLove · propositions</title><style>body{font:15px system-ui;max-width:1000px;margin:20px auto;padding:0 16px}section{border-top:1px solid #ccc;padding:12px 0}h2{font-size:17px;margin:0}.m{color:#666;font-size:13px}.t{white-space:pre-wrap}img{max-width:100%;border:1px solid #ccc}</style><h1>FeelShareLove — propositions et corrections</h1><p>${L.length} proposition(s) · exporté le ${fmtDT(Date.now())}</p>${parts.join('')}</html>`); }
   if (tab === 'proposals' && url.searchParams.get('dl')) { const txt = await proposalsText(url.searchParams.get('dl') === 'all');
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'attachment; filename="propositions-feelsharelove-' + new Date().toISOString().slice(0, 10) + '.txt"' }); return res.end(txt); }
   /* ---------- données ---------- */
@@ -843,9 +853,9 @@ async function admin(req, res, url) {
       <h2>Comptes concernés (${flagged.length})</h2>${flagged.length ? `<table><tr><th>Compte</th><th>Prénom, nom, mobile</th><th>État</th><th></th></tr>${flagged.map(row).join('')}</table>` : '<p class="muted">Aucun.</p>'}`; }
   if (tab === 'proposals') { const all = (await listDocs('proposals')).sort((a, b) => (b.ts || 0) - (a.ts || 0)); const open = all.filter(r => r.status === 'open');
     body = `<h2>Propositions et corrections (${open.length} à lire)</h2>
-      <div class="card"><a class="flame" style="text-decoration:none;padding:8px 12px;border-radius:10px;display:inline-block" href="/admin?key=${K}&tab=proposals&dl=open">Télécharger le fichier (à lire)</a> <a href="/admin?key=${K}&tab=proposals&dl=all">tout télécharger, classées comprises</a>
+      <div class="card"><a class="flame" style="text-decoration:none;padding:8px 12px;border-radius:10px;display:inline-block" href="/admin?key=${K}&tab=proposals&dl=open">Télécharger le fichier (à lire)</a> <a href="/admin?key=${K}&tab=proposals&dl=all">tout télécharger, classées comprises</a> · <a href="/admin?key=${K}&tab=proposals&dl=html">fichier avec les captures (.html)</a> · <a href="/admin?key=${K}&tab=proposals&dl=html&all=1">avec les captures, classées comprises</a>
         <form method="post" style="margin-top:10px"><input type="hidden" name="a" value="prop-mail"><input name="to" value="${H(SMTP.from)}" style="min-width:240px"> <label class="muted" style="font-size:13px"><input type="checkbox" name="all" value="1"> classées comprises</label> <button type="submit">Recevoir le fichier par e-mail</button></form></div>
-      ${open.map(r => `<div class="card"><b>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</b> · <small>${fmtDT(r.ts)} · langue ${H(r.lang || '')} · ${who(r.by)}</small><div class="copy">${H(r.text || '')}</div>${btn('prop-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune proposition à lire.</p>'}`; }
+      ${open.map(r => `<div class="card"><b>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</b> · <small>${fmtDT(r.ts)} · langue ${H(r.lang || '')} · ${who(r.by)}</small><div class="copy">${H(r.text || '')}</div>${r.img ? `<a href="/admin?key=${K}&tab=propimg&id=${encodeURIComponent(r.img)}" target="_blank"><img src="/admin?key=${K}&tab=propimg&id=${encodeURIComponent(r.img)}" alt="capture" style="max-width:320px;border-radius:8px;border:1px solid #333;display:block;margin:6px 0"></a>` : ''}${btn('prop-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune proposition à lire.</p>'}`; }
   if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
     body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
       <h2>Profils de démonstration (${nf})</h2><div class="card"><p class="muted">Dix personnages inventés : Elio, Nora, Paul, Claire et André (portraits en français), Lena (allemand), Owen (anglais), Giulia (italien), Mateo (espagnol) et Inês (portugais). Ils portent l'étiquette « profil de démonstration » dans l'app. Le bouton les met à jour et crée ceux qui manquent. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>

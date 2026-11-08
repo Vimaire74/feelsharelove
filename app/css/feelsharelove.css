@@ -550,3 +550,13 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .prop-sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
 .prop-card{background:#160b0e;border:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:10px}
 @media(min-width:700px){.prop-sheet{align-items:center}.prop-card{border-radius:18px}}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+.spin[hidden]{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn.busy{opacity:.75;cursor:wait}
+.prop-cap{font-size:13px}
+/* inviter mes connaissances */
+.inv-card{border:1px solid var(--rose);border-radius:16px;padding:14px}
+.inv-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.inv-btns .btn{text-align:center;text-decoration:none;min-height:46px;display:flex;align-items:center;justify-content:center}
+.inv-btns [hidden]{display:none!important}
