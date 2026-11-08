@@ -1,9 +1,6 @@
-# FeelShareLove — lot 33
+# FeelShareLove — lot 34 (à envoyer APRÈS le lot 33)
 
-Version 1.13.2 (08/11/2026)
-- Portrait : dans Ce qui m'amène, Mes langues, Métiers/rôles/tendances, Là où je mets mon cœur et Mes histoires préférées, seuls les choix faits sont affichés
-- Lien « Changer mes choix » sous chaque rubrique pour tout rouvrir, puis « Valider mes choix » pour replier
-- Histoires préférées repliées : les catégories choisies restent visibles avec leurs œuvres
-- Textes traduits dans les 5 langues
+Version 1.13.3 (08/11/2026)
+- Histoires préférées : une œuvre choisie dans la liste d'une autre tranche d'âge (« Plus de choix ») reste affichée et cochée, aussi dans le portrait replié
 
-Fichiers : app/js/pages/portrait.js, app/css/feelsharelove.css, app/js/lang/*.js
+Fichiers : app/js/genres.js

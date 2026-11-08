@@ -136,9 +136,11 @@ window.Genres=(function(){
         <div class="intent" id="g-pick">${G.map(g=>`<button class="chip${me.genres.some(x=>x.k===g.k)?' on':''}" type="button" data-g="${g.k}"${n>=MAX&&!me.genres.some(x=>x.k===g.k)?' disabled':''}>${esc(g.l)}</button>`).join('')}</div>
         <div id="g-detail">${me.genres.map(x=>{const g=BY[x.k];const others=BANDS.filter(b=>b!==my);
           const chip=t=>`<button class="chip${(x.works||[]).includes(wid(t))?' on':''}" type="button" data-w="${esc(wid(t))}">${esc(t)}</button>`;
-          const more=[...new Set(others.flatMap(b=>g.w[b]))].filter(t=>!g.w[my].includes(t));
+          const all=[...new Set(others.flatMap(b=>g.w[b]))].filter(t=>!g.w[my].includes(t));
+          /* une œuvre choisie dans une autre tranche d'âge reste toujours visible, et cochée */
+          const picked=all.filter(t=>(x.works||[]).includes(wid(t))),more=all.filter(t=>!picked.includes(t));
           return `<div class="g-box" data-k="${x.k}"><div class="k">${esc(g.l)}</div>
-            <div class="intent">${g.w[my].map(chip).join('')}${open[x.k]?more.map(chip).join(''):''}</div>
+            <div class="intent">${g.w[my].map(chip).join('')}${picked.map(chip).join('')}${open[x.k]?more.map(chip).join(''):''}</div>
             ${more.length&&!open[x.k]?`<button class="linkbtn g-more" type="button">Plus de choix</button>`:''}
             ${(x.free||[]).length?`<div class="intent" style="margin-top:6px">${x.free.map((t,i)=>`<button class="chip on" type="button" data-f="${i}" title="Retirer">${esc(t)} ×</button>`).join('')}</div>`:''}
             <div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><input class="in g-free" placeholder="Ajouter une œuvre (film, livre, série)" style="flex:1;min-width:0"><button class="btn small-btn g-add" type="button">Ajouter</button></div></div>`;}).join('')}</div>`;
