@@ -15,7 +15,7 @@ Pages._view=async function(S,p,preview){
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
   <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Ta tribu</span>':''}${preview?'':App.langTag(me,p)}<p class="muted">${esc(preview?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
-  <div class="intent">${(p.intent||[]).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
+  <div class="intent">${App.shownIntent(p.intent).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}
   ${p.limited?'':`<div class="voice-box"><p class="eyebrow" style="margin:0">${preview?'Ma voix':'Sa voix'}</p><div id="voice"></div></div>`}
   ${preview?'':`<div class="actions2"><a class="btn flame" href="#resonances/${p.id}">Nos résonances · ${nres}</a><a class="btn ghost" href="#messages/${p.id}">Conversation</a></div><div class="tb" id="tribe"></div>`}

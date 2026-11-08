@@ -3,7 +3,12 @@ window.App=(function(){
   const $=id=>document.getElementById(id);
 
   /* ---------- constantes ---------- */
-  const INTENT_LABEL={parler:'Quelqu\'un à qui parler',amis:'Des amis',amour:'L\'amour'};
+  const INTENT_LABEL={parler:'Des échanges',passion:'Partager sa passion pour quelque chose',amis:'Se faire des amis',amour:'Trouver quelqu\'un à aimer',seul:'Rompre ma solitude'};
+  const INTENT_DESC={parler:'Discuter, partager, au fil des envies',amis:'Des liens qui durent, se voir en vrai',seul:'Privé : jamais visible, même dans ta tribu. Sert seulement à te relier à d\'autres qui le vivent aussi.'};
+  const INTENT_PRIVATE=new Set(['seul']);                       // jamais affiché, ni sur le portrait, ni dans la tribu
+  const shownIntent=l=>(l||[]).filter(k=>INTENT_LABEL[k]&&!INTENT_PRIVATE.has(k));
+  /* les choix de « Ce qui t'amène », avec une courte explication sous certains */
+  const intentHtml=sel=>`<div class="int-list">${Object.entries(INTENT_LABEL).map(([k,l])=>`<div class="int-opt"><button class="chip ${(sel||[]).includes(k)?'on':''}" type="button" data-k="${k}">${l}</button>${INTENT_DESC[k]?`<span class="muted small${INTENT_PRIVATE.has(k)?' priv':''}">${INTENT_DESC[k]}</span>`:''}</div>`).join('')}</div>`;
   const FACT_LABEL={age:'Âge',langs:'Langues',roots:'Racines',pets:'Animaux',work:'Ce que je fais',study:'Études',sign:'Signes'};
   const FACTS=[
     {id:'birth',k:'Date de naissance',type:'date',sub:'year'},
@@ -443,7 +448,7 @@ window.App=(function(){
     if(r.thread.status==='pending-out')return `Envoyé. ${esc(dn(p))} lira ta réponse à côté de son entrée et choisira d'ouvrir la conversation. Il te reste ${r.left} premier${r.left>1?'s':''} message${r.left>1?'s':''} aujourd'hui. <a href="#messages/${p.id}">Voir</a>`;
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
-  return {$,INTENT_LABEL,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
+  return {$,INTENT_LABEL,INTENT_DESC,shownIntent,intentHtml,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
     shell,closeMenu,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};

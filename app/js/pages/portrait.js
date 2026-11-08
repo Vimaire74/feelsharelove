@@ -22,9 +22,7 @@ Pages.portrait=async function(S){
     <div class="fact"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="f-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="f-place" placeholder="Ville"></div></div>
   </div>
   <div id="travel-box" style="margin:8px 4px 0"></div>
-  <div class="intent" id="intent">
-    <button class="chip" type="button" data-k="parler">Quelqu'un à qui parler</button><button class="chip" type="button" data-k="amis">Des amis</button><button class="chip" type="button" data-k="amour">L'amour</button>
-  </div>
+  <div id="intent">${App.intentHtml([])}</div>
   <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="f-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea></div>
   <div class="voice-box"><p class="eyebrow" style="margin:0">Ma voix · une minute pour me présenter</p><div id="voice"></div></div>
 
