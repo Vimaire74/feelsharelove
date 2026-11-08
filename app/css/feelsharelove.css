@@ -560,3 +560,7 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .inv-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .inv-btns .btn{text-align:center;text-decoration:none;min-height:46px;display:flex;align-items:center;justify-content:center}
 .inv-btns [hidden]{display:none!important}
+/* espacements réguliers : Présent (recherche → liste) et Résonances (critères → légende → liste) */
+#people{margin-top:14px}
+#r-info{margin:16px 0 8px!important}
+.rlegend{gap:8px;margin:0 0 16px}
