@@ -65,10 +65,10 @@ Pages.accueil=async function(S){
     if(step===2){S.innerHTML=head+`<p class="eyebrow">Ton pseudo</p><h1>Comment les autres te verront</h1><p class="muted" style="margin:10px 0">Ton prénom reste privé. Les autres voient un pseudo composé à partir de ton prénom et d'un mot qui dit un petit quelque chose de toi.</p><p class="muted small" style="margin:0 0 10px">Ton pseudo est visible par les autres. Tu pourras le changer une fois pendant le premier mois.</p><div id="pp"></div><div class="row" style="justify-content:flex-start"><button class="linkbtn" type="button" id="back">← Retour</button></div>`;
       $('pp').appendChild(App.pseudoPicker(me,async ps=>{me.pseudo=ps;await save();step=3;render();}));$('back').addEventListener('click',()=>{step=1;render();});return;}
     if(step===3){S.innerHTML=head+`<p class="eyebrow">Ce que tu cherches</p><h1>${esc(me.pseudo)}, qu'est-ce qui t'amène ?</h1>
-      <p class="muted small" style="margin:8px 0 10px">Visible sur ton portrait, sauf « Rompre ma solitude ».</p>
+      <p class="muted small" style="margin:8px 0 10px">Visible sur ton portrait, sauf ce qui est marqué « Privé ».</p>
       <div id="intent">${App.intentHtml(me.intent)}</div>
       <div class="fact" style="margin-top:14px"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="a-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="a-city" placeholder="Ville"></div>
-        <p class="muted small vis-note" style="grid-column:1/-1;margin:8px 0 0">La ville est visible par les autres, sans adresse ; la grande ville la plus proche suffit. Le code postal reste privé : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
+        <p class="muted small vis-note">La ville est visible par les autres, sans adresse ; la grande ville la plus proche suffit. Le code postal reste privé : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
       <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="a-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea><p class="muted small" style="margin:6px 0 0">Visible seulement une fois une conversation ouverte.</p></div>
       <p class="muted small" style="margin:12px 0 0">Tu pourras tout modifier ensuite dans ton portrait.</p>
       <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn" type="button" id="next">Continuer</button></div>`;

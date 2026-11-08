@@ -4,11 +4,12 @@ window.App=(function(){
 
   /* ---------- constantes ---------- */
   const INTENT_LABEL={parler:'Des échanges',passion:'Partager sa passion pour quelque chose',amis:'Se faire des amis',amour:'Trouver quelqu\'un à aimer',seul:'Rompre ma solitude'};
-  const INTENT_DESC={parler:'Discuter, partager, au fil des envies',amis:'Des liens qui durent, se voir en vrai',seul:'Privé : jamais visible, même dans ta tribu. Sert seulement à te relier à d\'autres qui le vivent aussi.'};
+  const INTENT_DESC={parler:'Discuter, partager, au fil des envies',amis:'Des liens qui durent, se voir en vrai',seul:'Jamais visible, même dans ta tribu. Sert seulement à te relier à d\'autres qui le vivent aussi.'};
   const INTENT_PRIVATE=new Set(['seul']);                       // jamais affiché, ni sur le portrait, ni dans la tribu
   const shownIntent=l=>(l||[]).filter(k=>INTENT_LABEL[k]&&!INTENT_PRIVATE.has(k));
   /* les choix de « Ce qui t'amène », avec une courte explication sous certains */
-  const intentHtml=sel=>`<div class="int-list">${Object.entries(INTENT_LABEL).map(([k,l])=>`<div class="int-opt"><button class="chip ${(sel||[]).includes(k)?'on':''}" type="button" data-k="${k}">${l}</button>${INTENT_DESC[k]?`<span class="muted small${INTENT_PRIVATE.has(k)?' priv':''}">${INTENT_DESC[k]}</span>`:''}</div>`).join('')}</div>`;
+  const intentHtml=sel=>`<div class="int-list">${Object.entries(INTENT_LABEL).map(([k,l])=>{const pv=INTENT_PRIVATE.has(k);
+    return `<button class="chip int-tile${(sel||[]).includes(k)?' on':''}${pv?' priv':''}" type="button" data-k="${k}"><span class="int-t">${l}</span>${pv?'<span class="int-badge">Privé</span>':''}${INTENT_DESC[k]?`<span class="int-d">${INTENT_DESC[k]}</span>`:''}</button>`;}).join('')}</div>`;
   const FACT_LABEL={age:'Âge',langs:'Langues',roots:'Racines',pets:'Animaux',work:'Ce que je fais',study:'Études',sign:'Signes'};
   const FACTS=[
     {id:'birth',k:'Date de naissance',type:'date',sub:'year'},

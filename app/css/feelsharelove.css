@@ -526,4 +526,12 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 #g-pick .chip[disabled]{opacity:.4}
 .g-new{display:block;margin:0 0 14px;padding:10px 12px;border:1px dashed rgba(200,92,168,.6);border-radius:12px;background:rgba(200,92,168,.10);color:var(--fg);font-size:14px;text-decoration:none}.g-new b{color:#f5c2e7}
 .g-suggest{margin:0 0 12px}
-.int-list{display:flex;flex-direction:column;gap:8px}.int-opt{display:flex;flex-direction:column;align-items:flex-start;gap:3px}.int-opt .muted{margin-left:12px}.int-opt .priv{color:#f5c2e7}
+/* « Ce qui m'amène » : une tuile par choix, l'explication dans la tuile */
+.int-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:0 0 6px}
+.chip.int-tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;margin:0;padding:12px 14px;border-radius:14px;text-align:left;white-space:normal;position:relative;min-height:54px;justify-content:center}
+.chip.int-tile .int-t{font-weight:600;font-size:15px;line-height:1.25;padding-right:56px}
+.chip.int-tile .int-d{font-size:12.5px;line-height:1.35;color:var(--muted);font-weight:400}
+.chip.int-tile.on .int-d{color:inherit;opacity:.85}
+.chip.int-tile.priv{border-style:dashed}
+.chip.int-tile .int-badge{position:absolute;top:10px;right:10px;font:700 10px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;padding:4px 7px 3px;border-radius:999px;border:1px solid #c85ca8;color:#f5c2e7;background:rgba(200,92,168,.15)}
+.vis-note{grid-column:1/-1;margin:8px 0 0}
