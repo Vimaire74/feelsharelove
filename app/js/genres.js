@@ -2,9 +2,10 @@
    Jusqu'à 5 genres préférés ; dans chaque genre, des œuvres très connues proposées selon l'âge de la personne
    (moins de 30 ans, 30-50, 50-70, plus de 70), « Plus de choix » pour les autres, et un champ pour ajouter la sienne.
    Points de résonance : par genre commun +1 ; si les deux ont détaillé, +1 par œuvre commune ; sinon +2 ; 10 au plus.
-   Listes en français pour commencer (une liste par langue viendra ensuite). */
+   Listes françaises ici ; listes allemandes, anglaises, italiennes, espagnoles et portugaises dans genres-xx.js. */
 window.Genres=(function(){
   const MAX=5,CAP=10;
+  const BANDS=['a','b','c','d'];
   /* a : moins de 30 ans · b : 30-50 · c : 50-70 · d : plus de 70 */
   const G=[
   {k:'sf',l:'Science-fiction',w:{
@@ -102,11 +103,19 @@ window.Genres=(function(){
     b:['Koh-Lanta','Loft Story','Star Academy','Fort Boyard','Qui veut gagner des millions ?'],
     c:['Fort Boyard','Questions pour un champion','Des chiffres et des lettres','Les Grosses Têtes'],
     d:['Des chiffres et des lettres','Intervilles','La Piste aux étoiles','Le Jeu des 1000 euros']}}];
-  const BANDS=['a','b','c','d'];
   const BAND_L={a:'moins de 30 ans',b:'30-50 ans',c:'50-70 ans',d:'plus de 70 ans'};
   const fold=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
   const wid=t=>fold(t).replace(/ /g,'-');            // une œuvre = son titre simplifié : la même œuvre dans deux genres compte une fois
   const BY=Object.fromEntries(G.map(g=>[g.k,g]));
+  /* listes par langue (fichiers genres-xx.js) : « Titre local=Titre français » quand c'est la même œuvre que dans la liste française,
+     pour qu'elle ait le même identifiant dans toutes les langues ; « Titre » seul pour une œuvre propre au pays */
+  const LW={fr:{}},TL={fr:{}};let MAINC=null;
+  for(const g of G){LW.fr[g.k]={};for(const b of BANDS)LW.fr[g.k][b]=g.w[b].map(t=>{TL.fr[wid(t)]=t;return {t,id:wid(t)};});}
+  function addLang(l,data){LW[l]={};TL[l]=TL[l]||{};MAINC=null;
+    for(const k in data){LW[l][k]={};for(const b of BANDS)LW[l][k][b]=(data[k][b]||[]).map(s=>{const [t,fr]=s.split('=');const id=wid(fr||t);TL[l][id]=t;return {t,id};});}}
+  const uiLang=()=>(window.I18N&&I18N.lang)||'fr';
+  const langOf=me=>{const l=(me&&me.textLang)||uiLang();return LW[l]?l:'fr';};
+  const works=(k,b,l)=>((LW[l]&&LW[l][k])||LW.fr[k])[b]||[];
   /* tranche d'âge de la personne : date de naissance, sinon l'âge écrit, sinon 30-50 */
   function band(me){let y=null;const b=me&&me.facts&&me.facts.birth;const bv=b&&(b.v||b);if(bv&&/^\d{4}/.test(bv))y=new Date().getFullYear()-(+String(bv).slice(0,4));
     if(y==null){const a=me&&me.facts&&me.facts.age;const m=String(a&&(a.v||a)||'').match(/\d{2}/);if(m)y=+m[0];}
@@ -122,7 +131,7 @@ window.Genres=(function(){
       if(wa.length&&wb.length){for(const w of wa)if(wb.includes(w)&&!seen.has(w)){seen.add(w);pts+=1;out.push({k:'genre',kw:title(w,a,b),l:'Vous aimez tous les deux '+title(w,a,b)});}}
       else pts+=2;}
     return {pts:Math.min(CAP,pts),items:out};}
-  function title(w,a,b){for(const x of [a,b]){const f=(x.free||[]).find(t=>wid(t)===w);if(f)return f;}for(const g of G)for(const k of BANDS)for(const t of g.w[k])if(wid(t)===w)return t;return w;}
+  function title(w,a,b){for(const x of [a,b]){const f=(x.free||[]).find(t=>wid(t)===w);if(f)return f;}for(const l of [uiLang(),'fr',...Object.keys(TL)])if(TL[l]&&TL[l][w])return TL[l][w];return w;}
   const score=(me,p,mine,theirs)=>common(me,p,mine,theirs).pts;
   /* ---------- affichage sur un portrait ---------- */
   function viewHtml(p,me,preview){const L=list(p);if(!L.length)return '';const mine=preview?[]:list(me);const esc=App.esc;
@@ -131,16 +140,19 @@ window.Genres=(function(){
       return `<span class="chip on ro${m?' hit':''}"><span>${esc(BY[x.k].l)}</span>${ws.length?' · '+ws.map(t=>`<b class="${mw.includes(wid(t))?'hit':''}">${esc(t)}</b>`).join(', '):''}</span>`;}).join('')}</div>`;}
   /* ---------- édition dans « Mon portrait » ---------- */
   function editor(B,me,save){const esc=App.esc;me.genres=list(me);const my=band(me);let open={};
+    const lg=langOf(me);
     function draw(){const n=me.genres.length;
       B.innerHTML=`<p class="muted small" style="margin:0 0 8px">Choisis tes 5 genres préférés (${n}/5), puis, si tu veux, les œuvres que tu aimes dans chacun.</p>
         <div class="intent" id="g-pick">${G.map(g=>`<button class="chip${me.genres.some(x=>x.k===g.k)?' on':''}" type="button" data-g="${g.k}"${n>=MAX&&!me.genres.some(x=>x.k===g.k)?' disabled':''}>${esc(g.l)}</button>`).join('')}</div>
         <div id="g-detail">${me.genres.map(x=>{const g=BY[x.k];const others=BANDS.filter(b=>b!==my);
-          const chip=t=>`<button class="chip${(x.works||[]).includes(wid(t))?' on':''}" type="button" data-w="${esc(wid(t))}">${esc(t)}</button>`;
-          const all=[...new Set(others.flatMap(b=>g.w[b]))].filter(t=>!g.w[my].includes(t));
-          /* une œuvre choisie dans une autre tranche d'âge reste toujours visible, et cochée */
-          const picked=all.filter(t=>(x.works||[]).includes(wid(t))),more=all.filter(t=>!picked.includes(t));
+          const chip=o=>`<button class="chip${(x.works||[]).includes(o.id)?' on':''}" type="button" data-w="${esc(o.id)}">${esc(o.t)}</button>`;
+          const mine=works(x.k,my,lg),seen=new Set(mine.map(o=>o.id)),all=[];
+          for(const b of others)for(const o of works(x.k,b,lg))if(!seen.has(o.id)){seen.add(o.id);all.push(o);}
+          /* une œuvre choisie ailleurs (autre tranche d'âge, autre langue) reste toujours visible, et cochée */
+          for(const w of x.works||[])if(!seen.has(w)){seen.add(w);all.push({t:title(w,x,x),id:w});}
+          const picked=all.filter(o=>(x.works||[]).includes(o.id)),more=all.filter(o=>!picked.includes(o));
           return `<div class="g-box" data-k="${x.k}"><div class="k">${esc(g.l)}</div>
-            <div class="intent">${g.w[my].map(chip).join('')}${picked.map(chip).join('')}${open[x.k]?more.map(chip).join(''):''}</div>
+            <div class="intent">${mine.map(chip).join('')}${picked.map(chip).join('')}${open[x.k]?more.map(chip).join(''):''}</div>
             ${more.length&&!open[x.k]?`<button class="linkbtn g-more" type="button">Plus de choix</button>`:''}
             ${(x.free||[]).length?`<div class="intent" style="margin-top:6px">${x.free.map((t,i)=>`<button class="chip on" type="button" data-f="${i}" title="Retirer">${esc(t)} ×</button>`).join('')}</div>`:''}
             <div class="row" style="justify-content:flex-start;gap:8px;margin-top:8px"><input class="in g-free" placeholder="Ajouter une œuvre (film, livre, série)" style="flex:1;min-width:0"><button class="btn small-btn g-add" type="button">Ajouter</button></div></div>`;}).join('')}</div>`;
@@ -159,7 +171,8 @@ window.Genres=(function(){
     d.innerHTML=`<p class="muted small" style="margin:0 0 6px">Depuis tes histoires préférées : choisis-en une et dis ce qu'elle te fait.</p><div class="intent">${out.slice(0,12).map(t=>`<button class="chip" type="button">${App.esc(t)}</button>`).join('')}</div>`;
     d.querySelectorAll('.chip').forEach((c,i)=>c.addEventListener('click',()=>onPick(out[i])));return d;}
   /* œuvre très connue : son titre commence par un titre des listes (« Star Wars : Un nouvel espoir » → Star Wars) */
-  const MAIN=[...new Set(G.flatMap(g=>BANDS.flatMap(b=>g.w[b])).map(wid))].filter(w=>w.length>=3);
-  function isMainstream(t){const w=wid(t);return !!w&&MAIN.some(m=>w===m||w.startsWith(m+'-'));}
-  return {G,BY,band,BAND_L,score,common,viewHtml,editor,suggest,isMainstream,MAX};
+  function isMainstream(t){const w=wid(t);if(!w)return false;
+    if(!MAINC)MAINC=[...new Set(Object.values(TL).flatMap(o=>[...Object.keys(o),...Object.values(o).map(wid)]))].filter(m=>m.length>=3);
+    return MAINC.some(m=>w===m||w.startsWith(m+'-'));}
+  return {G,BY,addLang,band,BAND_L,score,common,viewHtml,editor,suggest,isMainstream,MAX};
 })();
