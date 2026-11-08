@@ -10,7 +10,8 @@ Pages.now=async function(S){
     <div class="search"><input id="q-search" placeholder="Un film, un livre, une passion, un pseudo…"></div>
     <p class="muted small" id="f-note" style="margin:6px 0 0"></p>
     <div id="people"></div>
-    <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a>`;
+    <h2>Cercles <em>ouverts</em></h2><div class="list" id="circles"></div><a class="more" href="#cercles">Tous les cercles</a><div id="now-invite"></div>`;
+  Pages.inviteBox(document.getElementById('now-invite'));
   {const gn=document.getElementById('g-new');if(gn)gn.addEventListener('click',()=>{try{sessionStorage.setItem('fsl_goto','genre-box');}catch(e){}});}
   const h=new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});
   /* phrase du titre selon le moment de la journée ; elle change chaque jour, pas à chaque visite */

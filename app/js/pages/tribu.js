@@ -1,4 +1,4 @@
-/* FeelShareLove — écran « Ma tribu » : invitations à répondre, ma tribu, invitations envoyées, personnes préférées, inviter mes connaissances */
+/* FeelShareLove — écran « Ma tribu » : invitations à répondre, ma tribu, invitations envoyées, personnes préférées */
 Pages.tribu=async function(S){
   const {$,esc,dn}=App;
   const {me}=await App.loadMe();
@@ -15,23 +15,10 @@ Pages.tribu=async function(S){
   const threads=await DB.all('threads');
   /* rencontrés ici : conversation ouverte, pas encore d'invitation */
   const met=threads.filter(t=>t.status==='open'&&byId[t.id]&&!known.has(t.id)).map(t=>byId[t.id]);
-  const link=DB.remote&&DB.inviteLink?DB.inviteLink():'https://feelsharelove.com';
-  const msg=`Je t'invite sur FeelShareLove : on s'y rencontre par ce qui nous fait vibrer, sans publicité. ${link}`;
   S.innerHTML=`<p class="eyebrow">Ma tribu</p><h1>Les gens qui <span style="color:var(--flame)">comptent</span></h1>
   <p class="muted small" style="margin:8px 0 14px">Ta tribu, ce sont les personnes qui se sont choisies des deux côtés : l'un invite, l'autre répond toujours. Dans la tribu, vous voyez ce que vous réservez à la tribu. Tes personnes préférées, c'est une liste privée : personne ne sait qu'il y est.</p>
   <div id="t-ask"></div><div id="t-list"></div><div id="t-sent"></div><div id="t-fav"></div><div id="t-met"></div>
-  <h2>Inviter <em>mes connaissances</em></h2>
-  <div class="sec inv-card"><p class="exp">Aide-nous à t'aider : invite tes connaissances sur FeelShareLove, pour qu'ensemble nous atteignions un nombre d'utilisateurs suffisant, avec du choix, des personnes de tous horizons et de différentes langues pour animer le site et trouver tes prochains amis.</p>
-    <p class="muted small" style="margin:0 0 8px">Envoyer l'invitation par :</p>
-    <div class="inv-btns">
-      <button class="btn flame" type="button" id="i-contacts" hidden>Mon carnet d'adresses</button>
-      <a class="btn" id="i-wa" target="_blank" rel="noopener">WhatsApp</a>
-      <a class="btn" id="i-sms" hidden>SMS</a>
-      <a class="btn" id="i-mail">E-mail</a>
-      <button class="btn ghost" type="button" id="i-share" hidden>Autre application</button>
-      <button class="btn ghost" type="button" id="i-copy">Copier le lien</button></div>
-    <div id="i-picked" style="margin-top:12px"></div>
-    <p class="muted small" id="i-msg" style="margin-top:8px"></p></div>`;
+`;
   const card=(el,p,extra)=>{const d=App.personEl(p,null,'');d.addEventListener('click',ev=>{if(ev.target.closest('button,.tb'))return;location.hash='#personne/'+p.id;});if(extra)extra(d);el.appendChild(d);return d;};
   const btn=(d,label,fn)=>{const b=document.createElement('button');b.className='linkbtn';b.type='button';b.textContent=label;b.style.marginLeft='auto';b.addEventListener('click',async ev=>{ev.stopPropagation();await fn();Router.route();});d.appendChild(b);};
   /* à toi de répondre */
@@ -54,6 +41,25 @@ Pages.tribu=async function(S){
   if(met.length){const M=$('t-met');M.innerHTML='<h2>Rencontrés <em>ici</em></h2><p class="muted small" style="margin:-4px 0 10px">Vous avez une conversation ouverte.</p>';
     met.forEach(p=>card(M,p,d=>{const b=document.createElement('button');b.className='btn small-btn';b.type='button';b.textContent='Inviter dans ma tribu';b.style.marginLeft='auto';
       b.addEventListener('click',async ev=>{ev.stopPropagation();try{await App.tribeInvite(p);}catch(e){}Router.route();});d.appendChild(b);}));}
+
+};
+
+/* « Inviter mes connaissances » : bloc affiché sur l'écran Présent */
+Pages.inviteBox=function(B){const {esc}=App;const $=id=>B.querySelector('#'+id);
+  const link=DB.remote&&DB.inviteLink?DB.inviteLink():'https://feelsharelove.com';
+  const msg=`Je t'invite sur FeelShareLove : on s'y rencontre par ce qui nous fait vibrer, sans publicité. ${link}`;
+  B.innerHTML=`  <h2>Inviter <em>mes connaissances</em></h2>
+  <div class="sec inv-card"><p class="exp">Aide-nous à t'aider : invite tes connaissances sur FeelShareLove, pour qu'ensemble nous atteignions un nombre d'utilisateurs suffisant, avec du choix, des personnes de tous horizons et de différentes langues pour animer le site et trouver tes prochains amis.</p>
+    <p class="muted small" style="margin:0 0 8px">Envoyer l'invitation par :</p>
+    <div class="inv-btns">
+      <button class="btn flame" type="button" id="i-contacts" hidden>Mon carnet d'adresses</button>
+      <a class="btn" id="i-wa" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="btn" id="i-sms" hidden>SMS</a>
+      <a class="btn" id="i-mail">E-mail</a>
+      <button class="btn ghost" type="button" id="i-share" hidden>Autre application</button>
+      <button class="btn ghost" type="button" id="i-copy">Copier le lien</button></div>
+    <div id="i-picked" style="margin-top:12px"></div>
+    <p class="muted small" id="i-msg" style="margin-top:8px"></p></div>`;
   /* inviter */
   const say=t=>{$('i-msg').textContent=t;};
   $('i-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(msg);say('Invitation copiée : colle-la dans un message.');}catch(e){prompt('Copie ce texte :',msg);}});
