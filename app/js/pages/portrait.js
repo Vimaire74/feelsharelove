@@ -52,7 +52,7 @@ Pages.portrait=async function(S){
   <div class="qform" id="qform" hidden><label for="q-k">Question</label><input id="q-k" placeholder="Ma question"><label for="q-a">Ma réponse</label><textarea id="q-a" placeholder="En quelques lignes…"></textarea>
     <div class="row"><button class="btn ghost" type="button" id="q-cancel">Annuler</button><button class="btn" type="button" id="q-save">Valider</button></div></div>
   <div class="add" id="add-q" style="margin-top:12px">+ Ajouter ma propre question</div>
-  <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div>`;
+  <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div><div id="prop-foot" style="margin-top:18px"></div>`;
 
   let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
   /* langues : app, portrait, portraits que je veux voir */

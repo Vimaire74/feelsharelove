@@ -541,3 +541,12 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .folded .chip{pointer-events:none}
 #genre-box.folded #g-pick{display:none}
 .fold-link{display:block;margin:10px 4px 4px}
+/* vos propositions : mode propositions et corrections */
+.prop-box{background:linear-gradient(135deg,#e8456e,#f08a3c);color:#fff;border-radius:12px;padding:11px 14px;margin:2px 2px 6px;display:flex;flex-direction:column;gap:4px}
+.prop-box b{font:600 15px var(--body)}.prop-box span{font-size:12px;opacity:.92;line-height:1.35}
+.prop-switch{align-self:flex-start;background:none;border:0;padding:2px 0;color:#fff;font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+.prop-btn{display:inline-block;background:#e8456e;color:#fff;border:0;border-radius:999px;padding:4px 11px;font:600 12px var(--body);cursor:pointer;margin:2px 0 10px}
+.prop-btn.prop-page{display:block;margin:0 0 12px}
+.prop-sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.prop-card{background:#160b0e;border:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px;width:100%;max-width:520px;display:flex;flex-direction:column;gap:10px}
+@media(min-width:700px){.prop-sheet{align-items:center}.prop-card{border-radius:18px}}

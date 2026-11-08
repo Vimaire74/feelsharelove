@@ -19,8 +19,8 @@ function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), wh
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
-const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites','notices']);
-const PRIVATE = new Set(['lists','reports','settings']);
+const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites','notices','proposals']);
+const PRIVATE = new Set(['lists','reports','settings','proposals']);
 
 /* ---------- base ---------- */
 async function initDb() {
@@ -303,10 +303,11 @@ async function writeOne(store, me, id, body) {
     else if (data.verified && data.verified.status === 'verified') data.verified = old && old.verified || null;
     return selfView(await putDoc(store, id, me, data));
   }
-  const ownerField = { entries: 'profileId', questions: 'profileId', circlePosts: 'author', reports: 'by', circles: 'createdBy' }[store] || 'owner';
+  const ownerField = { entries: 'profileId', questions: 'profileId', circlePosts: 'author', reports: 'by', proposals: 'by', circles: 'createdBy' }[store] || 'owner';
   if (old && old.__owner && old.__owner !== me) throw err(403, 'écriture');
   if (data[ownerField] !== me) throw err(403, 'propriétaire');
-  if (store === 'reports') data.status = old ? old.status : 'open';
+  if (store === 'reports' || store === 'proposals') data.status = old ? old.status : 'open';
+  if (store === 'proposals') data.text = String(data.text || '').slice(0, 3000);
   if (store === 'reports' && !old) await attachCopy(me, data);
   data.__owner = me;
   const saved = await putDoc(store, id, me, data);
@@ -640,6 +641,14 @@ form.inline{display:inline-flex;gap:6px;align-items:center;margin:0 6px 6px 0;fl
 .copy{background:#140a0c;border-left:3px solid var(--rose);padding:8px 10px;border-radius:8px;margin:6px 0;white-space:pre-wrap}
 .flash{background:rgba(95,191,143,.15);border:1px solid var(--ok);border-radius:12px;padding:8px 12px;margin-bottom:12px}`;
 
+/* fichier texte des propositions, à donner à Claude : une proposition par bloc, avec la page et la rubrique précises */
+async function proposalsText(all) {
+  const L = (await listDocs('proposals')).filter(r => all || r.status === 'open').sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const out = ['FeelShareLove — propositions et corrections' + (all ? ' (toutes)' : ' (à lire)'), 'Exporté le ' + fmtDT(Date.now()) + ' · ' + L.length + ' proposition(s)', ''];
+  for (const r of L) { const p = await getDoc('profiles', r.by);
+    out.push('---', 'Date : ' + fmtDT(r.ts), 'Page : ' + (r.page || '') + (r.hash ? ' (' + r.hash + ')' : ''), 'Rubrique : ' + (r.section || '(la page entière)'), 'Langue de l\'app : ' + (r.lang || ''), 'Écran : ' + (r.width ? r.width + ' px' : ''), 'De : ' + (p && p.pseudo || r.by) + (r.status === 'done' ? ' · classée' : ''), '', String(r.text || ''), ''); }
+  return out.join('\n'); }
+
 async function admin(req, res, url) {
   const key = url.searchParams.get('key') || '';
   if (!ADMIN_KEY || key.length !== ADMIN_KEY.length || !crypto.timingSafeEqual(Buffer.from(key), Buffer.from(ADMIN_KEY))) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
@@ -657,6 +666,11 @@ async function admin(req, res, url) {
       await alog(a === 'verify' ? 'Identité vérifiée' : 'Vérification refusée', id); return go(back, backId, 'C\'est fait.');
     }
     if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('reports', id, r.by, r); await alog('Signalement traité', r.target, r.kind); } return go(back, backId, 'Signalement classé.'); }
+    if (a === 'prop-done') { const r = await getDoc('proposals', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('proposals', id, r.by, r); } return go('proposals', '', 'Proposition classée.'); }
+    if (a === 'prop-mail') { if (!mailReady()) return go('proposals', '', 'L\'adresse d\'envoi n\'est pas encore configurée.');
+      const to = (f.get('to') || SMTP.from).trim(); const all = f.get('all') === '1'; const txt = await proposalsText(all);
+      try { await getMailer().sendMail({ from: `FeelShareLove <${SMTP.from}>`, to, subject: 'FeelShareLove · propositions et corrections (' + new Date().toISOString().slice(0, 10) + ')', text: 'Le fichier des propositions est joint.', attachments: [{ filename: 'propositions-feelsharelove.txt', content: txt }] });
+        return go('proposals', '', 'Fichier envoyé à ' + to + '.'); } catch (e) { return go('proposals', '', 'Échec de l\'envoi : ' + e.message); } }
     if (a === 'warn') {
       const nid = uid(); await putDoc('notices', nid, 'admin', { id: nid, to: id, ts: Date.now(), read: false,
         text: `Nous avons reçu des signalements te concernant (${reason}). Merci de respecter les règles de FeelShareLove : en cas de récidive, ton compte sera fermé.` });
@@ -725,6 +739,8 @@ async function admin(req, res, url) {
     return go(back, backId);
   }
 
+  if (tab === 'proposals' && url.searchParams.get('dl')) { const txt = await proposalsText(url.searchParams.get('dl') === 'all');
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'attachment; filename="propositions-feelsharelove-' + new Date().toISOString().slice(0, 10) + '.txt"' }); return res.end(txt); }
   /* ---------- données ---------- */
   const now = Date.now(), D7 = now - 7 * 864e5, D1 = now - 864e5;
   const users = (await q('SELECT id, email, created, banned, ban_reason, last_seen, invited_by, no_mail, redlisted FROM users ORDER BY created DESC')).rows;
@@ -825,12 +841,17 @@ async function admin(req, res, url) {
         <div><b>Prénom et nom</b> <small>(une personne par ligne : prénom, puis nom)</small><textarea name="names">${H(r.names.map(x => x.replace('|', ' ')).join('\n'))}</textarea></div></div>
         <p><button class="flame" type="submit">Enregistrer la liste</button> <small class="muted">Les comptes déjà inscrits qui correspondent sont marqués aussitôt.</small></p></form>
       <h2>Comptes concernés (${flagged.length})</h2>${flagged.length ? `<table><tr><th>Compte</th><th>Prénom, nom, mobile</th><th>État</th><th></th></tr>${flagged.map(row).join('')}</table>` : '<p class="muted">Aucun.</p>'}`; }
+  if (tab === 'proposals') { const all = (await listDocs('proposals')).sort((a, b) => (b.ts || 0) - (a.ts || 0)); const open = all.filter(r => r.status === 'open');
+    body = `<h2>Propositions et corrections (${open.length} à lire)</h2>
+      <div class="card"><a class="flame" style="text-decoration:none;padding:8px 12px;border-radius:10px;display:inline-block" href="/admin?key=${K}&tab=proposals&dl=open">Télécharger le fichier (à lire)</a> <a href="/admin?key=${K}&tab=proposals&dl=all">tout télécharger, classées comprises</a>
+        <form method="post" style="margin-top:10px"><input type="hidden" name="a" value="prop-mail"><input name="to" value="${H(SMTP.from)}" style="min-width:240px"> <label class="muted" style="font-size:13px"><input type="checkbox" name="all" value="1"> classées comprises</label> <button type="submit">Recevoir le fichier par e-mail</button></form></div>
+      ${open.map(r => `<div class="card"><b>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</b> · <small>${fmtDT(r.ts)} · langue ${H(r.lang || '')} · ${who(r.by)}</small><div class="copy">${H(r.text || '')}</div>${btn('prop-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune proposition à lire.</p>'}`; }
   if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
     body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
       <h2>Profils de démonstration (${nf})</h2><div class="card"><p class="muted">Dix personnages inventés : Elio, Nora, Paul, Claire et André (portraits en français), Lena (allemand), Owen (anglais), Giulia (italien), Mateo (espagnol) et Inês (portugais). Ils portent l'étiquette « profil de démonstration » dans l'app. Le bouton les met à jour et crée ceux qui manquent. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
         ${btn('fakes', '', 'Remplir les profils de démonstration')} ${btn('fakes-delete', '', 'Supprimer les profils de démonstration', sure('Je confirme'), 'danger')}</div>`; }
 
-  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
+  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"><style>${ADMIN_CSS}</style>
 <header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
