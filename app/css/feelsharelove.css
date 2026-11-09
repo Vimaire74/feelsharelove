@@ -571,7 +571,8 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .help-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 .help-row:first-of-type{border-top:0}
 .help-tel{color:var(--saffron);font-weight:700;white-space:nowrap;text-decoration:none;font-size:16px}
-.del-acc{border:1px solid rgba(192,57,43,.6)}
+.acc-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:6px}.acc-btns .btn{text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;min-height:44px}
+.del-acc{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}.del-open{border-color:rgba(192,57,43,.7)!important}
 .btn.del-btn{background:#c0392b;color:#fff}
 .btn.del-btn:disabled{opacity:.45}
 .legal-ul{margin:4px 0 0 18px;padding:0}.legal-ul li{margin:4px 0}

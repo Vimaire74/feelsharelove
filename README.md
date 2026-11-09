@@ -1,6 +1,6 @@
-# FeelShareLove — lot 43 (regroupe les lots 43 à 46)
+# FeelShareLove — lot 44 (regroupe tout ce qui n'était pas encore envoyé)
 
-Version 1.16.2 (09/11/2026)
+Version 1.16.4 (10/11/2026)
 - Cercle : « NaN personnes » corrigé (nombre de membres, singulier/pluriel), « undefined ici » évité dans la liste des cercles
 - Présent : le petit titre en haut dit « Présent » comme l'onglet (au lieu de « Maintenant »)
 - Présent : 6 titres du soir et de midi (au masculin et au féminin) traduits dans les 5 langues
@@ -14,5 +14,8 @@ Version 1.16.2 (09/11/2026)
 - Textes traduits dans les 5 langues (sauf la page légale, en français qui fait foi)
 - Mentions légales : adresse de TitanCorp, Inc. (Delaware, États-Unis) ajoutée
 - Anonymat : le prénom du fondateur retiré des commentaires du code (remplacé par « l’équipe »)
+- Besoin d'aide : les deux phrases du haut (112, personnes formées) retirées ; la page commence directement par les pays
+- Réglages, Compte : les liens jaunes à la suite deviennent des boutons (Mes données, Conditions, Confidentialité, Se déconnecter)
+- Réglages : « Supprimer mon compte » déplacé dans la rubrique Compte, séparé des autres boutons par un trait, bouton bordé de rouge
 
 Fichiers : app/css/feelsharelove.css, app/index.html, app/js/app.js, app/js/lang/de.js, app/js/lang/en.js, app/js/lang/es.js, app/js/lang/it.js, app/js/lang/pt.js, app/js/pages/accueil.js, app/js/pages/aide.js, app/js/pages/cercles.js, app/js/pages/conditions.js, app/js/pages/legal.js, app/js/pages/now.js, app/js/pages/reglages.js, app/js/pages/resonances.js, app/js/pages/test.js, app/js/propose.js, app/js/router.js, app/js/types.js, server/server.js

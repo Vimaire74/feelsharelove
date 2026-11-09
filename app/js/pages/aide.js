@@ -26,8 +26,6 @@ Pages.aide=async function(S){const {esc}=App;
   const cname=(c,fr)=>{try{return new Intl.DisplayNames([I18N.lang],{type:'region'}).of(c)||fr;}catch(e){return fr;}};
   const tel=n=>`<a class="help-tel" href="tel:${n.replace(/\s/g,'')}">${esc(n)}</a>`;
   S.innerHTML=`<a class="back" href="javascript:history.back()">← Retour</a><p class="eyebrow">Besoin d'aide</p><h1>Tu n'es pas <em>seul·e</em></h1>
-    <div class="sec help-top"><p class="exp"><b>Si ta vie ou celle de quelqu'un est en danger immédiat, appelle les urgences : 112</b> (valable dans toute l'Europe).</p>
-      <p class="exp">Si tu traverses un moment difficile, des personnes formées t'écoutent, gratuitement et sans te juger. Tu peux appeler même pour parler simplement.</p></div>
     ${rows.map((x,i)=>`<div class="sec help-c${i===0&&x[0]===cc?' mine':''}"><h3>${esc(cname(x[0],x[1]))}</h3>${x[2].map(([n,t,h])=>`<div class="help-row"><span>${esc(n)}${h?' <small class="muted">· <span>jour et nuit</span></small>':''}</span>${tel(t)}</div>`).join('')}<div class="help-row muted"><span>Urgences</span>${x[3].split(' · ').map(tel).join(' ')}</div></div>`).join('')}
     <p class="muted small" style="margin-top:12px">Autre pays : <a href="https://findahelpline.com" target="_blank" rel="noopener" style="color:var(--saffron)">findahelpline.com</a> donne les lignes d'écoute du monde entier.</p>
     <p class="muted small">FeelShareLove n'est pas un service d'aide ni de soins. Si un message reçu ici t'inquiète pour quelqu'un, signale-le : l'équipe le lira.</p>`;

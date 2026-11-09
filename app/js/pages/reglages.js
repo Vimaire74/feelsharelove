@@ -13,12 +13,13 @@ Pages.reglages=async function(S){
   ${DB.remote?'<div class="sec" id="notif"></div>':''}
   <div class="sec" id="pause"></div>
   <div class="sec"><h3>Signalements envoyés</h3><div class="names" id="reports"></div></div>
-  <div class="sec"><h3>Compte</h3><p class="exp"><a href="#donnees" style="color:var(--saffron)">Mes données : sauvegarder, recharger, tout effacer</a> · <a href="#conditions" style="color:var(--saffron)">Conditions</a> · <a href="#legal" style="color:var(--saffron)">Confidentialité</a>${DB.remote?' · <a href="#" id="logout" style="color:var(--saffron)">Se déconnecter</a>':''}</p></div>
-  ${DB.remote?`<div class="sec del-acc"><h3>Supprimer mon compte</h3><p class="exp">Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n'est pas réversible.</p>
-    <button class="btn ghost" type="button" id="del-open">Supprimer mon compte…</button>
+  <div class="sec"><h3>Compte</h3>
+    <div class="acc-btns"><a class="btn ghost" href="#donnees">Mes données</a><a class="btn ghost" href="#conditions">Conditions</a><a class="btn ghost" href="#legal">Confidentialité</a>${DB.remote?'<button class="btn ghost" type="button" id="logout">Se déconnecter</button>':''}</div>
+    ${DB.remote?`<div class="del-acc"><p class="exp" style="margin:0"><b>Supprimer mon compte</b></p><p class="exp">Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n'est pas réversible.</p>
+    <button class="btn ghost del-open" type="button" id="del-open">Supprimer mon compte…</button>
     <div id="del-box" hidden><label class="check" style="margin:10px 0"><input type="checkbox" id="del-ok"> Je comprends que tout sera effacé définitivement</label>
       <button class="btn del-btn" type="button" id="del-go" disabled><span class="spin" hidden></span><span>M'envoyer l'e-mail de confirmation</span></button>
-      <p class="muted small" style="margin-top:8px">Pour éviter une erreur, la suppression se termine depuis le lien reçu par e-mail (valable 1 heure).</p><p class="small" id="del-msg"></p></div></div>`:''}`;
+      <p class="muted small" style="margin-top:8px">Pour éviter une erreur, la suppression se termine depuis le lien reçu par e-mail (valable 1 heure).</p><p class="small" id="del-msg"></p></div></div>`:''}</div>`;
   async function renderLists(){const lists=await DB.where('lists','owner','me');
     for(const [id,type,extra] of [['red-list','red',''],['black-list','black',' · signalé à FeelShareLove']]){const el=$(id);const arr=lists.filter(l=>l.type===type);el.innerHTML='';
       if(!arr.length){el.innerHTML='<p class="muted small">Personne pour l\'instant.</p>';continue;}
