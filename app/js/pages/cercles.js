@@ -6,7 +6,7 @@ Pages.cercles=async function(S){
   <p class="muted small" style="margin:8px 0 14px">Dans un cercle, on écrit à tout le monde à la fois. On peut lire sans rien dire.</p><div class="list" id="cl"></div>
   <div class="form on" style="margin-top:16px"><label>Créer un cercle</label><input class="in" id="nc-t" placeholder="Ceux qui…"><input class="in" id="nc-a" placeholder="En une phrase, pour qui c'est"><div class="row"><button class="btn" type="button" id="nc">Créer</button></div></div>`;
   $('cl').innerHTML=circles.sort((a,b)=>mine.includes(b.id)-mine.includes(a.id)).map(c=>{const n=posts.filter(p=>p.circleId===c.id).length;
-    return `<a class="entry circle-link" href="#cercle/${c.id}"><div class="t"><span class="title">${esc(c.title)}</span><span class="kind">${mine.includes(c.id)?'tu en fais partie':c.members+' ici'}</span></div><div class="desc">${esc(c.about||'')}</div><div class="hint">${n} message${n>1?'s':''}</div></a>`;}).join('');
+    return `<a class="entry circle-link" href="#cercle/${c.id}"><div class="t"><span class="title">${esc(c.title)}</span><span class="kind">${mine.includes(c.id)?'tu en fais partie':(+c.members||0)+' ici'}</span></div><div class="desc">${esc(c.about||'')}</div><div class="hint">${n} message${n>1?'s':''}</div></a>`;}).join('');
   $('nc').addEventListener('click',async()=>{const t=$('nc-t').value.trim();if(!t)return;const c=await DB.put('circles',{title:t,about:$('nc-a').value.trim(),members:1,createdBy:'me'});me.circles=[...mine,c.id];await DB.put('profiles',me);location.hash='#cercle/'+c.id;});
 };
 Pages.cercle=async function(S,id){
@@ -17,7 +17,7 @@ Pages.cercle=async function(S,id){
   const profs=Object.fromEntries((await DB.all('profiles')).map(p=>[p.id,p]));const hidden=new Set((await App.others()).map(p=>p.id));
   const member=me.circles.includes(c.id);
   S.innerHTML=`<a class="back" href="${c.qdj?'#now':'#cercles'}">← ${c.qdj?'Maintenant':'Cercles'}</a><p class="eyebrow">${c.qdj?'Question du jour':'Cercle'}</p><h1>${esc(c.title)}</h1><p class="muted" style="margin-top:6px">${esc(c.about||'')}</p>
-  ${c.qdj?'':`<div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn ${member?'ghost':'flame'}" type="button" id="join">${member?'Quitter le cercle':'Rejoindre le cercle'}</button><span class="muted small" style="align-self:center">${c.members+(member&&!c.createdBy?1:0)} personnes</span></div>`}
+  ${c.qdj?'':`<div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn ${member?'ghost':'flame'}" type="button" id="join">${member?'Quitter le cercle':'Rejoindre le cercle'}</button><span class="muted small" style="align-self:center">${(+c.members||0)+(member&&!c.createdBy?1:0)} personne${(+c.members||0)+(member&&!c.createdBy?1:0)>1?'s':''}</span></div>`}
   <div class="posts" id="posts"></div>
   <div class="form on" style="margin-top:14px"><label>${c.qdj?'Ma réponse':'Écrire au cercle'} <span class="muted" style="text-transform:none;letter-spacing:0">(sous ton pseudo ${esc(dn(me))})</span></label><textarea class="ta" id="pt" rows="2" placeholder="${c.qdj?'En une ou deux phrases…':'Ce que tu veux partager avec tout le cercle…'}"></textarea><div class="row"><button class="btn" type="button" id="pp">Publier</button></div></div>`;
   async function renderPosts(){const P=$('posts');const ps=(await DB.where('circlePosts','circleId',c.id)).filter(x=>x.author==='me'||hidden.has(x.author)).sort((a,b)=>a.ts-b.ts);

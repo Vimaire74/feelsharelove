@@ -1,8 +1,11 @@
-# FeelShareLove — lot 42 (remplace le lot 41, qui n'est plus à envoyer)
+# FeelShareLove — lot 43
 
-Version 1.15.6 (09/11/2026)
-- E-mail « X t'a écrit » envoyé après 20 minutes d'absence au lieu de 6 heures
-- L'e-mail part aussi quand la personne a les notifications sur son téléphone (en plus, par sécurité)
-- Toujours un seul e-mail par absence, sans le contenu du message, avec le lien qui ouvre la conversation
+Version 1.15.7 (09/11/2026)
+- Cercle : « NaN personnes » corrigé (nombre de membres, singulier/pluriel), « undefined ici » évité dans la liste des cercles
+- Présent : le petit titre en haut dit « Présent » comme l'onglet (au lieu de « Maintenant »)
+- Présent : 6 titres du soir et de midi (au masculin et au féminin) traduits dans les 5 langues
+- Questions du jour : les 7 questions traduites dans les 5 langues
+- Nos résonances : « ce qui l'amène » sous le pseudo traduit dans les 5 langues
+- Création du compte : intentions traduites
 
-Fichiers : server/server.js
+Fichiers : app/js/pages/resonances.js, accueil.js, cercles.js, now.js, app/js/lang/*.js

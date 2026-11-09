@@ -79,7 +79,7 @@ Pages.resonances=async function(S,id){
   const r=App.resonance(entries,p.entries);const f=fem(p);const il=f?'elle':'il';const ex=Plus.extraCommon(me,p);const n=r.common.length+r.feels.length+commonTypes(me,p).length+ex.length;const pct=Plus.similarity(me,p,entries,p.entries);
   S.innerHTML=`<a class="back" href="#resonances">← Toutes les résonances</a><p class="eyebrow">Résonances</p>
   <h1>${esc(meName)} <span style="color:var(--flame)">&amp;</span> ${esc(dn(p))}</h1>${App.badge(p)}
-  <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${App.shownIntent(p.intent).map(i=>INTENT_LABEL[i].toLowerCase()).join(', ')}</p>
+  <p class="muted" style="margin-top:6px">${esc(App.place(p))} · ${App.shownIntent(p.intent).map(i=>`<span>${INTENT_LABEL[i].toLowerCase()}</span>`).join(', ')}</p>
   <div class="pair">${App.avatarHtml(p.intimate&&me.photoIntimate===true&&me.photoReal?{...me,photo:me.photoReal}:me)}${App.avatarHtml(p)}<div class="count"><b>${pct!=null?pct+'%':n}</b><span>${pct!=null?'similitude · '+n+' point'+(n>1?'s':'')+' commun'+(n>1?'s':''):'résonance'+(n>1?'s':'')}</span></div></div>${App.langTag(me,p)?`<div class="rtags">${App.langTag(me,p)}</div>`:''}${Plus.tagsHtml(r,commonTypes(me,p),ex,99)}<div class="tb" id="tribe"></div><div id="body" style="margin-top:10px"></div>`;
   const B=$('body');App.tribeBox(p,$('tribe'));
   const ct=commonTypes(me,p);
