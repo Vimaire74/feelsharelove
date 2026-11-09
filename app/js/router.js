@@ -11,7 +11,7 @@
   App.shell();
   const TAB={now:'now',personne:'now',cercle:'now',cercles:'now',portrait:'portrait',apercu:'portrait',test:'portrait',resonances:'resonances',messages:'messages',tribu:'tribu'};
   const HEAD={now:'now',resonances:'res',messages:'msg',tribu:'tribu',portrait:'port'};
-  const FREE=new Set(['accueil','conditions','donnees']);   // accessibles sans pseudo
+  const FREE=new Set(['accueil','conditions','donnees','aide','legal']);   // accessibles sans pseudo
   /* un seul affichage à la fois : si l'adresse change pendant qu'une page se construit (notification, redirection),
      on finit la page en cours puis on affiche la nouvelle. Sans ça, deux pages s'écrasaient et donnaient « Cannot read properties of null ». */
   let busy=false,again=false;

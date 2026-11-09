@@ -13,7 +13,12 @@ Pages.reglages=async function(S){
   ${DB.remote?'<div class="sec" id="notif"></div>':''}
   <div class="sec" id="pause"></div>
   <div class="sec"><h3>Signalements envoyés</h3><div class="names" id="reports"></div></div>
-  <div class="sec"><h3>Compte</h3><p class="exp"><a href="#donnees" style="color:var(--saffron)">Mes données : sauvegarder, recharger, tout effacer</a> · <a href="#conditions" style="color:var(--saffron)">Conditions</a>${DB.remote?' · <a href="#" id="logout" style="color:var(--saffron)">Se déconnecter</a>':''}</p></div>`;
+  <div class="sec"><h3>Compte</h3><p class="exp"><a href="#donnees" style="color:var(--saffron)">Mes données : sauvegarder, recharger, tout effacer</a> · <a href="#conditions" style="color:var(--saffron)">Conditions</a> · <a href="#legal" style="color:var(--saffron)">Confidentialité</a>${DB.remote?' · <a href="#" id="logout" style="color:var(--saffron)">Se déconnecter</a>':''}</p></div>
+  ${DB.remote?`<div class="sec del-acc"><h3>Supprimer mon compte</h3><p class="exp">Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n'est pas réversible.</p>
+    <button class="btn ghost" type="button" id="del-open">Supprimer mon compte…</button>
+    <div id="del-box" hidden><label class="check" style="margin:10px 0"><input type="checkbox" id="del-ok"> Je comprends que tout sera effacé définitivement</label>
+      <button class="btn del-btn" type="button" id="del-go" disabled><span class="spin" hidden></span><span>M'envoyer l'e-mail de confirmation</span></button>
+      <p class="muted small" style="margin-top:8px">Pour éviter une erreur, la suppression se termine depuis le lien reçu par e-mail (valable 1 heure).</p><p class="small" id="del-msg"></p></div></div>`:''}`;
   async function renderLists(){const lists=await DB.where('lists','owner','me');
     for(const [id,type,extra] of [['red-list','red',''],['black-list','black',' · signalé à FeelShareLove']]){const el=$(id);const arr=lists.filter(l=>l.type===type);el.innerHTML='';
       if(!arr.length){el.innerHTML='<p class="muted small">Personne pour l\'instant.</p>';continue;}
@@ -48,6 +53,12 @@ Pages.reglages=async function(S){
     N.innerHTML=`<h3>Notifications</h3><p class="exp">${txt}</p>${st==='on'?'<button class="btn ghost" type="button" id="n-go">Couper les notifications</button>':st==='off'?'<button class="btn flame" type="button" id="n-go">Activer les notifications</button>':''}<p class="muted small" id="n-err" style="margin-top:8px"></p>`;
     const b=$('n-go');if(b)b.addEventListener('click',async()=>{b.disabled=true;try{st==='on'?await DB.pushOff():await DB.pushOn();renderNotif();}catch(e){$('n-err').textContent=e.message;b.disabled=false;}});}
   if(DB.remote)renderNotif();
+  if(DB.remote){$('del-open').addEventListener('click',()=>{$('del-box').hidden=false;$('del-open').hidden=true;});
+    $('del-ok').addEventListener('change',e=>{$('del-go').disabled=!e.target.checked;});
+    $('del-go').addEventListener('click',async()=>{const b=$('del-go');b.disabled=true;b.querySelector('.spin').hidden=false;
+      try{const r=await fetch('/api/account/delete-request',{method:'POST',headers:{Authorization:'Bearer '+DB.token}});if(!r.ok){let m='';try{m=(await r.json()).error;}catch(x){}throw new Error(m||'Envoi impossible pour le moment. Réessaie plus tard.');}
+        $('del-msg').textContent='E-mail envoyé. Ouvre le lien qu\'il contient pour terminer la suppression.';}
+      catch(e){$('del-msg').textContent=e.message;b.disabled=false;}finally{b.querySelector('.spin').hidden=true;}});}
   if(DB.remote)$('logout').addEventListener('click',async e=>{e.preventDefault();await DB.logout();location.hash='';location.reload();});
   const profs=Object.fromEntries((await DB.all('profiles')).map(p=>[p.id,p]));
   const reps=await DB.all('reports');$('reports').innerHTML=reps.length?reps.map(r=>`<div class="nm-row"><span>${r.kind==='photo'?'Photo':r.kind==='block'?'Blocage':'Portrait'} · ${esc(dn(profs[r.target])||r.target)} <small>${esc(r.reason||'')} · ${r.status==='open'?'en cours':'traité'}</small></span></div>`).join(''):'<p class="muted small">Aucun.</p>';

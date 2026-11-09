@@ -1,6 +1,6 @@
 /* FeelShareLove — « Vos propositions » : mode propositions et corrections.
    Activé depuis le menu (ou en bas du portrait), il ajoute un bouton « Proposer une correction » en haut de chaque page
-   et sous chaque titre. La proposition est envoyée au serveur avec la page, la rubrique et la langue ; Marc la lit dans l'admin. */
+   et sous chaque titre. La proposition est envoyée au serveur avec la page, la rubrique et la langue ; l'équipe la lit dans l'admin. */
 window.Propose=(function(){
   const K='fsl_propose';
   const on=v=>{try{if(v!==undefined)localStorage.setItem(K,v?'1':'');return localStorage.getItem(K)==='1';}catch(e){return false;}};

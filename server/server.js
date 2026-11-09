@@ -386,6 +386,30 @@ async function deleteOne(store, me, id) {
   if (store === 'settings') return q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', me + ':' + id]);
   return q('DELETE FROM docs WHERE store=$1 AND id=$2 AND owner=$3', [store, id, me]);
 }
+/* suppression du compte, étape 2 : la page ouverte depuis l'e-mail, avec un dernier bouton */
+const DEL_MAIL = {
+  fr: { subject: 'Confirme la suppression de ton compte FeelShareLove', body: 'Bonjour,\n\nTu as demandé la suppression de ton compte FeelShareLove. Pour la confirmer, ouvre ce lien (valable 1 heure) :\n{link}\n\nSi tu n\'as rien demandé, ignore cet e-mail : ton compte reste intact.' },
+  de: { subject: 'Bestätige die Löschung deines FeelShareLove-Kontos', body: 'Hallo,\n\nDu hast die Löschung deines FeelShareLove-Kontos beantragt. Öffne diesen Link zur Bestätigung (1 Stunde gültig):\n{link}\n\nWenn du nichts beantragt hast, ignoriere diese E-Mail: Dein Konto bleibt erhalten.' },
+  en: { subject: 'Confirm the deletion of your FeelShareLove account', body: 'Hello,\n\nYou asked to delete your FeelShareLove account. To confirm, open this link (valid for 1 hour):\n{link}\n\nIf you did not ask for this, ignore this e-mail: your account stays as it is.' },
+  it: { subject: 'Conferma l\'eliminazione del tuo account FeelShareLove', body: 'Ciao,\n\nHai chiesto di eliminare il tuo account FeelShareLove. Per confermare, apri questo link (valido 1 ora):\n{link}\n\nSe non hai chiesto nulla, ignora questa e-mail: il tuo account resta intatto.' },
+  es: { subject: 'Confirma la eliminación de tu cuenta de FeelShareLove', body: 'Hola,\n\nHas pedido eliminar tu cuenta de FeelShareLove. Para confirmarlo, abre este enlace (válido 1 hora):\n{link}\n\nSi no has pedido nada, ignora este e-mail: tu cuenta sigue intacta.' },
+  pt: { subject: 'Confirma a eliminação da tua conta FeelShareLove', body: 'Olá,\n\nPediste para eliminar a tua conta FeelShareLove. Para confirmar, abre este link (válido 1 hora):\n{link}\n\nSe não pediste nada, ignora este e-mail: a tua conta fica intacta.' } };
+const DEL_PAGE = {
+  fr: ['Supprimer ton compte', 'Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n\'est pas réversible.', 'Supprimer définitivement mon compte', 'Ton compte est supprimé. Merci d\'être passé·e par FeelShareLove.', 'Ce lien n\'est plus valable (1 heure). Refais la demande depuis Réglages.'],
+  de: ['Konto löschen', 'Dein Porträt, deine Gespräche, deine Fotos und alle deine Daten werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.', 'Mein Konto endgültig löschen', 'Dein Konto ist gelöscht. Danke, dass du bei FeelShareLove warst.', 'Dieser Link ist nicht mehr gültig (1 Stunde). Stelle die Anfrage erneut in den Einstellungen.'],
+  en: ['Delete your account', 'Your portrait, conversations, photos and all your data will be permanently deleted. This cannot be undone.', 'Permanently delete my account', 'Your account has been deleted. Thank you for being part of FeelShareLove.', 'This link is no longer valid (1 hour). Make the request again from Settings.'],
+  it: ['Elimina il tuo account', 'Il tuo ritratto, le conversazioni, le foto e tutti i tuoi dati saranno eliminati definitivamente. Non si può tornare indietro.', 'Elimina definitivamente il mio account', 'Il tuo account è stato eliminato. Grazie di essere passato/a da FeelShareLove.', 'Questo link non è più valido (1 ora). Rifai la richiesta dalle Impostazioni.'],
+  es: ['Eliminar tu cuenta', 'Tu retrato, tus conversaciones, tus fotos y todos tus datos se borrarán definitivamente. No se puede deshacer.', 'Eliminar definitivamente mi cuenta', 'Tu cuenta ha sido eliminada. Gracias por haber pasado por FeelShareLove.', 'Este enlace ya no es válido (1 hora). Vuelve a pedirlo desde Ajustes.'],
+  pt: ['Eliminar a tua conta', 'O teu retrato, as tuas conversas, as tuas fotos e todos os teus dados serão apagados definitivamente. Não é reversível.', 'Eliminar definitivamente a minha conta', 'A tua conta foi eliminada. Obrigado por teres passado pelo FeelShareLove.', 'Este link já não é válido (1 hora). Faz o pedido de novo nas Definições.'] };
+async function delPage(req, res, url) {
+  const t = String(url.searchParams.get('t') || ''); const d = /^[0-9a-f]{48}$/.test(t) ? await getDoc('deltoken', t) : null;
+  const L = DEL_PAGE[d ? mailLang(await getDoc('profiles', d.user)) : 'fr'];
+  const page = (body) => send(res, 200, `<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove</title><style>body{background:#14100e;color:#f5ece6;font:16px system-ui;max-width:520px;margin:40px auto;padding:0 18px}h1{font-size:24px}p{line-height:1.5}button{background:#c0392b;color:#fff;border:0;border-radius:999px;padding:14px 20px;font:600 16px system-ui;cursor:pointer;width:100%}a{color:#f0b429}</style><h1>FeelShareLove</h1>${body}</html>`, 'text/html; charset=utf-8');
+  if (!d || Date.now() - d.created > 36e5) { if (d) await q("DELETE FROM docs WHERE store='deltoken' AND id=$1", [t]); return page(`<p>${H(L[4])}</p><p><a href="/app#reglages">FeelShareLove</a></p>`); }
+  if (req.method === 'POST') { await wipeUser(d.user); await q("DELETE FROM docs WHERE store='deltoken' AND data->>'user'=$1", [d.user]); await alog('Compte supprimé par la personne', d.user, 'confirmé par e-mail'); return page(`<p>${H(L[3])}</p>`); }
+  return page(`<h2>${H(L[0])}</h2><p>${H(L[1])}</p><form method="post"><button type="submit">${H(L[2])}</button></form>`);
+}
+
 async function wipeUser(me) {
   await q('DELETE FROM docs WHERE owner=$1', [me]);
   await q("DELETE FROM docs WHERE store='invites' AND (data->>'to'=$1 OR data->>'from'=$1)", [me]);
@@ -520,6 +544,17 @@ async function api(req, res, url) {
     if (parts[1] === 'subscribe' && sub && sub.endpoint) { await q('INSERT INTO push_subs (endpoint,user_id,data,created) VALUES ($1,$2,$3,$4) ON CONFLICT (endpoint) DO UPDATE SET user_id=$2, data=$3', [sub.endpoint, me, sub, Date.now()]); return send(res, 200, { ok: true }); }
     if (parts[1] === 'unsubscribe' && sub && sub.endpoint) { await q('DELETE FROM push_subs WHERE endpoint=$1 AND user_id=$2', [sub.endpoint, me]); return send(res, 200, { ok: true }); }
     throw err(400, 'push');
+  }
+  /* suppression du compte, étape 1 : un lien de confirmation part par e-mail (valable 1 heure) */
+  if (parts[0] === 'account' && parts[1] === 'delete-request' && req.method === 'POST') {
+    if (!mailReady()) throw err(503, 'L\'e-mail de confirmation ne peut pas partir pour le moment. Écris à contact@feelsharelove.com.');
+    const u = (await q('SELECT email FROM users WHERE id=$1', [me])).rows[0]; if (!u) throw err(404, 'compte');
+    const token = crypto.randomBytes(24).toString('hex');
+    await q("DELETE FROM docs WHERE store='deltoken' AND data->>'user'=$1", [me]);
+    await putDoc('deltoken', token, 'system', { id: token, user: me, created: Date.now() });
+    const M = DEL_MAIL[mailLang(await getDoc('profiles', me))];
+    try { await sendMail(u.email, M.subject, M.body.replace('{link}', `${SITE}/compte/supprimer?t=${token}`), null); } catch (x) { logErr('mail', 'suppression : ' + x.message, { to: me }); throw err(500, 'L\'e-mail n\'a pas pu partir. Réessaie dans un moment.'); }
+    return send(res, 200, { ok: true });
   }
   /* fichiers (voix, photos) */
   if (parts[0] === 'files') {
@@ -901,6 +936,7 @@ http.createServer(async (req, res) => {
   try {
     if (url.pathname === '/health') return send(res, 200, { ok: true });
     if (url.pathname === '/unsub') return await unsub(res, url);
+    if (url.pathname === '/compte/supprimer') return await delPage(req, res, url);
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (url.pathname === '/admin') return await admin(req, res, url);
     if (url.pathname === '/debug' || url.pathname === '/debug/as') return await debug(req, res, url);

@@ -1,5 +1,5 @@
-/* FeelShareLove — les quatre types de fonctionnement (textes de Marc) et le questionnaire.
-   Les textes s'affichent à la fin du test ; Marc les retouchera. */
+/* FeelShareLove — les quatre types de fonctionnement (textes de l’équipe) et le questionnaire.
+   Les textes s'affichent à la fin du test. */
 window.TYPES={
  list:[
   {k:'mental',name:'Mental',both:'par la tête',
@@ -10,7 +10,7 @@ window.TYPES={
    text:`Les sensibles ou intuitifs ont beaucoup de sensations, corporelles ou mystérieuses. Ils sentent des choses, à tort ou à raison pour les autres. Ils sont souvent hypersensibles et plus fragiles ; ils vibrent avec passion, comme un instrument trop bien accordé. Si leur talent n'est pas maîtrisé, ils souffrent, sont victimes des autres ou des circonstances, se sentent incompris et seuls. Mais s'ils travaillent leurs capacités intuitives, ils deviennent plus conscients, plus intuitifs, et comprennent des choses que d'autres ne comprennent pas. Ils peuvent alors être des découvreurs. Les premiers herboristes, qui ont dû comprendre le pouvoir des plantes par sensibilité et par déductions successives, les dresseurs d'animaux, les chamans, les éclaireurs, les pisteurs, les artistes, les inventeurs ont été des sensibles, des sensitifs, des intuitifs.`},
   {k:'phys',name:'Physique',both:'par le corps',
    text:`Les physiques sont très proches de leur corps. En général, ils aiment leur corps et s'en occupent beaucoup ; sportifs ou esthètes, ils peuvent choisir la voie de la maîtrise physique ou celle de la beauté. Ils cherchent souvent un certain type de perfection physique. Certains sont souffrants : ils ont des maladies et ne parlent que de leur corps, qui est à la fois leur prison et leur souci constant. Ils parlent régimes, remèdes, biorythmes, phases de la lune… Ceux qui vont bien exploitent leur corps au maximum et en parlent aussi beaucoup, mais surtout pour raconter ce qu'ils ont réussi à faire avec. Fans de sports extrêmes, de dépassement de soi, ils admirent la formidable mécanique de leur corps. Parfois gourmands, hédonistes, ils préfèrent accumuler tous les conforts possibles, les plaisirs de la table et de leur maison. Certains aiment accumuler les biens matériels, d'autres les expériences.`}],
- /* 12 questions : une réponse par type (textes de Marc, réécriture validée le 17/10/2026). Jusqu'à deux réponses par question. */
+ /* 12 questions : une réponse par type (textes de l’équipe, réécriture validée le 17/10/2026). Jusqu'à deux réponses par question. */
  questions:[
   {
   "q": "Face à un problème, d'abord je…",
