@@ -561,8 +561,9 @@ const MSG_MAIL = {
   es: { subject: '{p} te ha escrito en FeelShareLove', body: 'Hola,\n\n{p} te ha escrito en FeelShareLove. En FeelShareLove nadie se queda sin respuesta: abre la conversación para leer y responder.\n{link}' },
   pt: { subject: '{p} escreveu-te no FeelShareLove', body: 'Olá,\n\n{p} escreveu-te no FeelShareLove. No FeelShareLove ninguém fica sem resposta: abre a conversa para ler e responder.\n{link}' } };
 const mailLang = p => { const l = p && (p.uiLang || p.textLang); return ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(l) ? l : 'fr'; };
-/* avis par e-mail d'un message : seulement si la personne n'est pas venue depuis 6 heures, et un seul e-mail par absence */
-const AWAY = 6 * 36e5;
+/* avis par e-mail d'un message : moyen principal (surtout sur iPhone, où les notifications demandent une installation).
+   Envoyé si la personne n'est pas venue depuis 20 minutes, même si elle a les notifications du téléphone ; un seul e-mail par absence */
+const AWAY = 20 * 6e4;
 async function mailIfAway(userId, fromId) {
   if (!mailReady()) return;
   const u = (await q('SELECT email, last_seen, no_mail, redlisted, banned FROM users WHERE id=$1', [userId])).rows[0];
