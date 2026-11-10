@@ -237,6 +237,7 @@ async function putMessage(me, id, body, old) {
   return msgView(m, me);
 }
 
+const IMG_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']); // seuls types servis comme image dans l'admin
 /* ---------- API générique ---------- */
 function err(code, msg) { const e = new Error(msg); e.code = code; return e; }
 async function readList(store, me, query) {
@@ -307,7 +308,10 @@ async function writeOne(store, me, id, body) {
   if (old && old.__owner && old.__owner !== me) throw err(403, 'écriture');
   if (data[ownerField] !== me) throw err(403, 'propriétaire');
   if (store === 'reports' || store === 'proposals') data.status = old ? old.status : 'open';
-  if (store === 'proposals') data.text = String(data.text || '').slice(0, 3000);
+  if (store === 'proposals') { data.text = String(data.text || '').slice(0, 3000);
+    /* la capture jointe doit être une image envoyée par la personne elle-même, sinon elle est ignorée */
+    const f = /^[\w-]{6,32}$/.test(String(data.img || '')) ? (await q('SELECT owner, mime FROM files WHERE id=$1', [data.img])).rows[0] : null;
+    if (!f || f.owner !== me || !IMG_MIME.has(f.mime)) data.img = null; }
   if (store === 'reports' && !old) await attachCopy(me, data);
   data.__owner = me;
   const saved = await putDoc(store, id, me, data);
@@ -534,7 +538,7 @@ async function api(req, res, url) {
   if (parts[0] === 'log' && req.method === 'POST') { const b = await json(req).catch(() => ({})); logErr('app', b.msg, { url: b.url, stack: String(b.stack || '').slice(0, 1500), ua: String(req.headers['user-agent'] || '').slice(0, 120), user: await userFromReq(req) }); return send(res, 200, { ok: true }); }
   const me = await userFromReq(req);
   if (!me) throw err(401, 'Connexion nécessaire.');
-  if (parts[0] === 'me' && req.method === 'DELETE') { await wipeUser(me); return send(res, 200, { ok: true }); }
+  /* la suppression du compte passe uniquement par l'e-mail de confirmation (account/delete-request, puis /compte/supprimer) */
   /* ma tribu : les personnes qui ont rejoint grâce à mon invitation */
   if (parts[0] === 'invited') { const r = await q('SELECT id FROM users WHERE invited_by=$1 AND NOT banned', [me]); const out = []; for (const u of r.rows) { const p = await getDoc('profiles', u.id); if (p && p.pseudo) out.push({ id: u.id, pseudo: p.pseudo }); } return send(res, 200, out); }
   /* notifications : la clé publique, puis l'abonnement de ce téléphone */
@@ -776,12 +780,13 @@ async function admin(req, res, url) {
   }
 
   if (tab === 'propimg') { const fid = url.searchParams.get('id') || ''; const used = (await listDocs('proposals')).some(r => r.img === fid);
-    const r = used ? await q('SELECT mime, data FROM files WHERE id=$1', [fid]) : { rowCount: 0 }; if (!r.rowCount) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
-    res.writeHead(200, { 'Content-Type': r.rows[0].mime, 'Cache-Control': 'private, max-age=86400' }); return res.end(r.rows[0].data); }
+    const r = used ? await q('SELECT mime, data FROM files WHERE id=$1', [fid]) : { rowCount: 0 }; if (!r.rowCount || !IMG_MIME.has(r.rows[0].mime)) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
+    /* servi uniquement comme image, jamais comme page : aucun script ne peut s'y exécuter */
+    res.writeHead(200, { 'Content-Type': r.rows[0].mime, 'Cache-Control': 'private, max-age=86400', 'Content-Security-Policy': "default-src 'none'; sandbox", 'Content-Disposition': 'inline; filename="capture.jpg"' }); return res.end(r.rows[0].data); }
   if (tab === 'proposals' && url.searchParams.get('dl') === 'html') { const all = url.searchParams.get('all') === '1';
     const L = (await listDocs('proposals')).filter(r => all || r.status === 'open').sort((a, b) => (a.ts || 0) - (b.ts || 0)); const parts = [];
     for (const r of L) { const p = await getDoc('profiles', r.by); let img = '';
-      if (r.img) { const f = await q('SELECT mime, data FROM files WHERE id=$1', [r.img]); if (f.rowCount) img = `<img src="data:${f.rows[0].mime};base64,${f.rows[0].data.toString('base64')}" alt="">`; }
+      if (r.img) { const f = await q('SELECT mime, data FROM files WHERE id=$1', [r.img]); if (f.rowCount && IMG_MIME.has(f.rows[0].mime)) img = `<img src="data:${f.rows[0].mime};base64,${f.rows[0].data.toString('base64')}" alt="">`; }
       parts.push(`<section><h2>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</h2><p class="m">${fmtDT(r.ts)} · ${H(r.hash || '')} · langue ${H(r.lang || '')} · écran ${H(r.width || '')} px · ${H(p && p.pseudo || r.by)}${r.status === 'done' ? ' · classée' : ''}</p><p class="t">${H(r.text || '')}</p>${img}</section>`); }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Disposition': 'attachment; filename="propositions-feelsharelove-' + new Date().toISOString().slice(0, 10) + '.html"' });
     return res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>FeelShareLove · propositions</title><style>body{font:15px system-ui;max-width:1000px;margin:20px auto;padding:0 16px}section{border-top:1px solid #ccc;padding:12px 0}h2{font-size:17px;margin:0}.m{color:#666;font-size:13px}.t{white-space:pre-wrap}img{max-width:100%;border:1px solid #ccc}</style><h1>FeelShareLove — propositions et corrections</h1><p>${L.length} proposition(s) · exporté le ${fmtDT(Date.now())}</p>${parts.join('')}</html>`); }
@@ -931,8 +936,26 @@ async function debug(req, res, url) {
   send(res, 200, { now: new Date().toISOString(), version: require('./package.json').version, users, data: by, push_subs: subs, files, errors: LOG });
 }
 
+/* ---------- en-têtes de sécurité, sur toutes les réponses ----------
+   La politique de contenu (CSP) est d'abord en mode « rapport seulement » : elle signale ce qu'elle bloquerait sans rien casser.
+   Elle sera rendue obligatoire une fois les rapports vérifiés (voir l'audit du 10/11/2026, point A1). */
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://*.wikipedia.org https://api.bigdatacloud.net; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+function secure(res, pathname) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(self), microphone=(self)');
+  const priv = pathname === '/admin' || pathname.startsWith('/debug') || pathname === '/compte/supprimer';
+  res.setHeader('Referrer-Policy', priv ? 'no-referrer' : 'strict-origin-when-cross-origin'); // l'adresse de l'admin (avec sa clé) ne part jamais ailleurs
+  if (!priv) res.setHeader('Content-Security-Policy-Report-Only', CSP);
+}
+/* une erreur oubliée ne doit pas arrêter le serveur : elle est notée et il continue */
+process.on('unhandledRejection', e => { console.error('promesse rejetée', e); logErr('serveur', 'promesse rejetée : ' + (e && e.message || e), { stack: String(e && e.stack || '').slice(0, 1500) }); });
+process.on('uncaughtException', e => { console.error('exception', e); logErr('serveur', 'exception : ' + (e && e.message || e), { stack: String(e && e.stack || '').slice(0, 1500) }); });
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  secure(res, url.pathname);
   try {
     if (url.pathname === '/health') return send(res, 200, { ok: true });
     if (url.pathname === '/unsub') return await unsub(res, url);

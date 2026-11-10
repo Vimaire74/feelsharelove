@@ -1,21 +1,12 @@
-# FeelShareLove — lot 44 (regroupe tout ce qui n'était pas encore envoyé)
+# FeelShareLove — lot 45, sécurité 1
 
-Version 1.16.4 (10/11/2026)
-- Cercle : « NaN personnes » corrigé (nombre de membres, singulier/pluriel), « undefined ici » évité dans la liste des cercles
-- Présent : le petit titre en haut dit « Présent » comme l'onglet (au lieu de « Maintenant »)
-- Présent : 6 titres du soir et de midi (au masculin et au féminin) traduits dans les 5 langues
-- Questions du jour : les 7 questions traduites dans les 5 langues
-- Nos résonances : « ce qui l'amène » sous le pseudo traduit dans les 5 langues
-- Création du compte : intentions traduites
-- Menu : « Besoin d'aide maintenant » en haut, ouvre une page avec les lignes d'écoute et les urgences de 15 pays, le pays de la personne en premier, numéros cliquables
-- Aide et conditions : « Si tu ne vas pas bien » renvoie vers cette page (plus seulement la Suisse)
-- Réglages : « Supprimer mon compte » avec case à cocher, puis e-mail de confirmation ; la suppression se termine sur la page ouverte par le lien (valable 1 heure), en 6 langues
-- Nouvelle page « Mentions légales et politique de confidentialité » (français), liée depuis Aide et conditions et Réglages
-- Textes traduits dans les 5 langues (sauf la page légale, en français qui fait foi)
-- Mentions légales : adresse de TitanCorp, Inc. (Delaware, États-Unis) ajoutée
-- Anonymat : le prénom du fondateur retiré des commentaires du code (remplacé par « l’équipe »)
-- Besoin d'aide : les deux phrases du haut (112, personnes formées) retirées ; la page commence directement par les pays
-- Réglages, Compte : les liens jaunes à la suite deviennent des boutons (Mes données, Conditions, Confidentialité, Se déconnecter)
-- Réglages : « Supprimer mon compte » déplacé dans la rubrique Compte, séparé des autres boutons par un trait, bouton bordé de rouge
+Version 1.17.0 (10/11/2026)
+- Admin : une capture de proposition n'est acceptée et affichée que si c'est une vraie image envoyée par la personne ; elle ne peut plus s'ouvrir comme une page
+- Suppression de compte : la suppression immédiate est retirée du serveur ; seule reste la voie avec e-mail de confirmation
+- Mes données (en ligne) : le bouton « Tout effacer » est remplacé par un renvoi vers Réglages ; texte de sauvegarde corrigé
+- En-têtes de sécurité sur toutes les pages (anti-incrustation, HTTPS forcé, type de fichier strict, adresse de l'admin jamais transmise)
+- Politique de contenu (CSP) en mode « rapport seulement » : elle ne bloque rien pour l'instant
+- Le serveur ne s'arrête plus sur une erreur oubliée : elle est notée dans le journal
+- Textes traduits dans les 5 langues
 
-Fichiers : app/css/feelsharelove.css, app/index.html, app/js/app.js, app/js/lang/de.js, app/js/lang/en.js, app/js/lang/es.js, app/js/lang/it.js, app/js/lang/pt.js, app/js/pages/accueil.js, app/js/pages/aide.js, app/js/pages/cercles.js, app/js/pages/conditions.js, app/js/pages/legal.js, app/js/pages/now.js, app/js/pages/reglages.js, app/js/pages/resonances.js, app/js/pages/test.js, app/js/propose.js, app/js/router.js, app/js/types.js, server/server.js
+Fichiers : server/server.js, app/js/db-remote.js, app/js/pages/donnees.js, app/js/lang/*.js

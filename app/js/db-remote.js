@@ -101,7 +101,7 @@
       for(const n of ['entries','questions'])for(const r of (d[n]||[]).filter(x=>x.profileId==='me'))await DB.put(n,{...r});
       for(const r of (d.lists||[]).filter(x=>x.owner==='me'))await DB.put('lists',{...r});
       const v=(d.voices||[]).find(x=>x.id==='pres-me'&&x.dataUrl);if(v){const b=await (await fetch(v.dataUrl)).blob();await DB.put('voices',{id:'pres-me',owner:'me',kind:'presentation',blob:b,secs:v.secs});}},
-    wipe:async()=>{await call('DELETE','/api/me');logoutLocal();},
+    wipe:async()=>{throw new Error('La suppression du compte se fait dans Réglages, avec une confirmation par e-mail.');},
     ensureSeed:async()=>{if(!token)throw Object.assign(new Error('auth'),{auth:true});
       let me=null;try{me=await call('GET','/api/profiles/'+enc(myId));}catch(e){}
       if(!me)await call('PUT','/api/profiles/'+enc(myId),{id:myId,name:'',pseudo:'',city:'',intent:[],now:'',photo:'',facts:{},avail:null,circles:[],online:true});}
