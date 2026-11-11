@@ -27,16 +27,16 @@ window.Propose=(function(){
     d.innerHTML=`<div class="prop-card"><p class="eyebrow">Ta proposition</p><p class="muted small">Concerne : <b>${App.esc(P.name)}</b>${sec?' › <b>'+App.esc(sec)+'</b>':''}</p>
       <textarea class="ta" rows="5" maxlength="3000" placeholder="Ce qu'il faudrait corriger, ajouter ou changer, et comment…"></textarea>
       <label class="check prop-cap"><input type="checkbox" data-c checked> Joindre une capture de l'écran</label>
-      <div class="row"><button class="btn ghost" type="button" data-x>Annuler</button><button class="btn" type="button" data-s><span class="spin" hidden></span><span data-l>Envoyer</span></button></div><p class="muted small" data-m></p></div>`;
+      <div class="row"><button class="btn ghost" type="button" data-x>Annuler</button><button class="btn" type="button" data-s>Envoyer</button></div><p class="muted small" data-m></p></div>`;
     document.body.appendChild(d);const ta=d.querySelector('textarea'),m=d.querySelector('[data-m]');ta.focus();
     d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-x]'))d.remove();});
-    const S=d.querySelector('[data-s]'),busy=v=>{S.disabled=v;S.querySelector('.spin').hidden=!v;S.classList.toggle('busy',v);};
+    const S=d.querySelector('[data-s]'),busy=v=>{S.disabled=v;S.classList.toggle('busy',v);};
     S.addEventListener('click',async()=>{const text=ta.value.trim();if(!text){ta.focus();return;}
       if(!DB.remote){m.textContent='Les propositions s\'envoient seulement depuis le site en ligne.';return;}
       busy(true);m.textContent='';
       try{let img=null;if(d.querySelector('[data-c]').checked){const b=await shot;if(b)try{img=await upload(b);}catch(e){}}
         await DB.put('proposals',{by:'me',page:P.name,hash:P.hash,section:sec||'',lang:(window.I18N&&I18N.lang)||'fr',text,img,ts:Date.now(),width:innerWidth});
-        S.querySelector('.spin').hidden=true;m.textContent='Merci, ta proposition est envoyée.';setTimeout(()=>d.remove(),1400);}
+        S.classList.remove('busy');m.textContent='Merci, ta proposition est envoyée.';setTimeout(()=>d.remove(),1400);}
       catch(e){busy(false);m.textContent='Envoi impossible pour le moment. Réessaie plus tard.';}});}
   document.addEventListener('click',e=>{
     const s=e.target.closest('.prop-switch');if(s){on(!on());if(window.App&&App.closeMenu)App.closeMenu();scan();return;}

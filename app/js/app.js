@@ -229,7 +229,7 @@ window.App=(function(){
       if(a==='send'){const txt=d.querySelector('textarea').value.trim();if(!txt)return;const r=await opts.reply(txt);const s=d.querySelector('.sent');s.style.display='block';s.innerHTML=r;if(!/^Il te reste|^Ta limite|^Attends/.test(r))d.querySelector('textarea').value='';return;}
       d.classList.toggle('open');});
     d.addEventListener('keydown',k=>{if(k.target.tagName==='TEXTAREA')return;if(k.key==='Enter'||k.key===' '){k.preventDefault();d.classList.toggle('open');}});return d;}
-  function avatarHtml(p,cls=''){return `<div class="avatar ${p.av||''} ${cls}" aria-hidden="true">${p.photo?`<img src="${p.photo}" alt="">`:''}</div>`;}
+  function avatarHtml(p,cls=''){return `<div class="avatar ${esc(p.av||'')} ${cls}" aria-hidden="true">${p.photo?`<img src="${esc(p.photo)}" alt="">`:''}</div>`;}
   /* lieu affiché : le pays seulement tant que la conversation n'est pas ouverte */
   function place(p){if(!p)return '';if(p.limited&&!p.travel){try{return p.country?new Intl.DisplayNames([I18N.lang],{type:'region'}).of(p.country):'';}catch(e){return p.country||'';}}return p.city||'';}
   function personEl(p,r,sub){const d=document.createElement('div');d.className='person'+(p&&p.intimate?' in-tribe':'');
@@ -338,7 +338,10 @@ window.App=(function(){
     toutes:['Merci de m\'avoir écrit, ça m\'a fait plaisir. Ce n\'est pas le bon moment pour moi, prends soin de toi.']};
   /* accords : masculin / féminin / neutre, choisis par la personne */
   function accord(me,text){const a=(me&&me.accord)||'n';return String(text).replace(/\((e|se|ve|trice)\)/g,(m0,suf)=>a==='m'?'':a==='f'?(suf==='se'?'se':suf==='ve'?'ve':suf==='trice'?'trice':'e'):'·'+suf);}
-  function declineChoices(p,me){const keys=[...new Set([...(p.intent||[]),'toutes'])];return keys.flatMap(k=>(DECLINE[k]||[]).map(t=>({k,t:accord(me,t)})));}
+  function declineChoices(p,me){const keys=[...new Set([...(p.intent||[]),'toutes'])];return keys.flatMap(k=>(DECLINE[k]||[]).map((t,i)=>({k,i,t:accord(me,t)})));}
+  /* texte d'un refus : la phrase est retrouvée par son numéro (dk, di) et accordée comme l'a choisi la personne qui refuse ;
+     chacun la lit dans sa langue. Les anciens refus, envoyés en texte, s'affichent tels quels. */
+  function declineText(m){const t=m&&m.dk&&DECLINE[m.dk]&&DECLINE[m.dk][+m.di];return t?accord({accord:m.acc},t):String(m&&m.text||'');}
   async function pendingIn(){const people=await others();const ids=new Set(people.map(p=>p.id));return (await DB.all('threads')).filter(t=>t.status==='pending-in'&&ids.has(t.id));}
   /* règles du portrait : pseudo une fois pendant le premier mois ; photo libre le premier mois puis une fois par an */
   const MONTH=30*864e5,YEAR=365*864e5;
@@ -452,6 +455,6 @@ window.App=(function(){
   return {$,INTENT_LABEL,INTENT_DESC,shownIntent,intentHtml,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
     shell,closeMenu,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
-    REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
+    REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,declineText,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();
 window.Pages={};

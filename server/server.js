@@ -228,15 +228,64 @@ async function putMessage(me, id, body, old) {
     if (old.to !== me) throw err(403, 'message'); old.seen = !!body.seen; await putDoc('messages', id, old.from, old); return msgView(old, me);
   }
   const other = body.to; if (body.from !== me || !other) throw err(403, 'message');
+  body = cleanDoc('messages', body);
+  if (!['text', 'voice', 'ephemeral', 'decline'].includes(body.kind)) throw err(400, 'message');
+  if (body.kind === 'decline') { // un refus est une des phrases prévues (famille + numéro), jamais un texte libre
+    if (!(DECLINE_N[body.dk] > +body.di && +body.di >= 0 && Number.isInteger(+body.di))) throw err(400, 'Choisis une des réponses proposées.');
+    body.di = +body.di; body.acc = ['m', 'f', 'n'].includes(body.acc) ? body.acc : 'n'; body.text = ''; delete body.aboutTitle; delete body.about;
+  } else body.text = String(body.text || '').slice(0, 5000);
+  if (body.kind === 'ephemeral') body.seconds = Math.min(60, Math.max(1, Math.round(+body.seconds) || 10)); else delete body.seconds;
+  if ('secs' in body) body.secs = Math.min(600, Math.max(0, Math.round(+body.secs) || 0));
+  limit(me, 'msg', 40, 6e4);
   const t = await getDoc('threads', pair(me, other)); if (!t) throw err(403, 'Pas de conversation.');
   const ok = t.state === 'open' || (t.state === 'pending' && t.a === me) || (body.kind === 'decline' && (t.decliner === me || (t.state === 'pending' && t.b === me)));
   if (!ok) throw err(403, 'Conversation fermée.');
+  /* tant que l'autre n'a pas ouvert la conversation : un seul message */
+  if (t.state === 'pending' && t.a === me && body.kind !== 'decline' && (await listDocs('messages', "AND data->>'pairId'=$2 AND data->>'from'=$3", [pair(me, other), me])).length) throw err(403, 'Attends que la personne ouvre la conversation.');
   const m = { ...body, id, pairId: pair(me, other), ts: Date.now() };
   delete m.thread; await putDoc('messages', id, me, m);
   if (!(t.state === 'pending' && t.a === me)) notify(other, (body.kind === 'decline' ? 'Réponse de ' : 'Nouveau message de ') + (await pseudoOf(me)), '/app#messages/' + me);
   return msgView(m, me);
 }
 
+/* ---------- contrôle de tout ce que l'app envoie (audit du 10/11/2026, points A1 et A4) ----------
+   Le serveur ne fait plus confiance au contenu reçu :
+   - les champs techniques (identifiants, clés, codes) perdent les caractères qui servent à écrire du code dans une page (" < > `) ;
+   - les textes libres gardent tout mais ont une longueur maximale (l'app les échappe à l'affichage) ;
+   - une photo est une image (data:image/…) ou un fichier du serveur, rien d'autre ;
+   - chaque document a une taille maximale. */
+const DOC_ID = /^[\w.:|-]{1,80}$/;
+const TEXT_KEYS = new Set(['why', 'now', 'text', 'title', 'about', 'desc', 'note', 'v', 'a', 'reason', 'aboutTitle', 'hint', 'free', 'page', 'section', 'hash', 'q', 'label']);
+const LABEL_KEYS = new Set(['pseudo', 'city', 'geoCity', 'name', 'lastName', 'n', 'w', 'g', 'phone', 'npa', 'kind', 'workId']); // courts, affichés tels quels : sans < > " `
+const PHOTO_KEYS = new Set(['photo', 'photoReal', 'photoSrc']);
+const PHOTO_OK = /^(data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+|\/api\/files\/[\w-]{6,32})$/;
+const strip = v => v.replace(/["<>`]/g, '');
+function clean(v, key, store, depth = 0) {
+  if (typeof v === 'string') {
+    if (PHOTO_KEYS.has(key)) return PHOTO_OK.test(v) ? v : '';
+    if (TEXT_KEYS.has(key) || (key === 'k' && store === 'questions')) return v.slice(0, 10000);
+    if (LABEL_KEYS.has(key) && !(key === 'g' && store === 'profiles' && depth === 1)) return strip(v).slice(0, key === 'pseudo' ? 40 : 160);
+    return strip(v).slice(0, 300);
+  }
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  if (v === null || typeof v === 'boolean') return v;
+  if (depth > 8) return null;
+  if (Array.isArray(v)) return v.slice(0, 500).map(x => clean(x, key, store, depth + 1));
+  if (typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v).slice(0, 200)) { const kk = strip(String(k)).slice(0, 60); if (kk && kk !== '__proto__' && kk !== 'constructor') o[kk] = clean(x, kk, store, depth + 1); } return o; }
+  return null;
+}
+function cleanDoc(store, data) {
+  const out = clean(data, '', store);
+  const max = store === 'profiles' ? 2e6 : 2e5;
+  if (JSON.stringify(out).length > max) throw err(413, 'Trop gros.');
+  return out;
+}
+/* limite de fréquence par personne (en mémoire) : écritures, messages, fichiers */
+const hits = new Map();
+function limit(me, what, max, ms) { const k = me + ':' + what, now = Date.now(); const a = (hits.get(k) || []).filter(t => now - t < ms); a.push(now); hits.set(k, a); if (a.length > max) throw err(429, 'Trop de demandes en peu de temps. Réessaie dans un moment.'); }
+setInterval(() => { const now = Date.now(); for (const [k, a] of hits) if (!a.length || now - a[a.length - 1] > 36e5) hits.delete(k); }, 6e5);
+const FILE_MIME = /^(image\/(jpeg|png|webp)|(audio|video)\/(webm|mp4|ogg|mpeg|wav|x-m4a|aac|x-wav)(;.*)?)$/;
+const DECLINE_N = { parler: 2, amis: 1, amour: 2, toutes: 1 }; // nombre de phrases de refus par famille (les textes sont dans l'app : DECLINE)
 const IMG_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']); // seuls types servis comme image dans l'admin
 /* ---------- API générique ---------- */
 function err(code, msg) { const e = new Error(msg); e.code = code; return e; }
@@ -290,9 +339,16 @@ async function writeOne(store, me, id, body) {
   if (store === 'notices') { const n = await getDoc('notices', id); if (!n || n.to !== me) throw err(403, 'message'); n.read = true; return putDoc('notices', id, 'admin', n); }
   const old = await getDoc(store, id);
   if (store === 'messages') return putMessage(me, id, body, old);
-  const data = { ...body, id };
+  limit(me, 'write', 300, 6e4);
+  if (store === 'circles' && !old) limit(me, 'circle', 5, 864e5);
+  if ((store === 'reports' || store === 'proposals') && !old) limit(me, store, 30, 36e5);
+  const data = cleanDoc(store, { ...body, id });
   if (store === 'profiles') {
     if (id !== me) throw err(403, 'portrait');
+    /* champs que seul le serveur ou l'équipe décide */
+    for (const k of ['km', 'hp', 'intimate', 'limited', 'country', 'fake', 'autoPaused']) delete data[k];
+    if (old && old.fake) data.fake = true;
+    if (old && old.autoPaused) { data.paused = old.paused; data.autoPaused = true; } // pause après signalements : seule l'équipe la lève
     if (data.pseudo) { const r = await q("SELECT 1 FROM docs WHERE store='profiles' AND id<>$1 AND lower(data->>'pseudo')=lower($2)", [me, data.pseudo]); if (r.rowCount) throw err(409, 'Ce pseudo est déjà pris.'); }
     if (old && old.geo && old.geoCity === data.city && !data.geo) { data.geo = old.geo; data.geoCity = old.geoCity; }
     await withGeo(data);
@@ -562,12 +618,15 @@ async function api(req, res, url) {
   }
   /* fichiers (voix, photos) */
   if (parts[0] === 'files') {
-    if (req.method === 'POST') { const b = await readBody(req); const id = uid(); await q('INSERT INTO files (id,owner,mime,data,created) VALUES ($1,$2,$3,$4,$5)', [id, me, req.headers['content-type'] || 'application/octet-stream', b, Date.now()]); return send(res, 200, { id, url: '/api/files/' + id }); }
+    if (req.method === 'POST') { limit(me, 'file', 40, 36e5); const b = await readBody(req); const id = uid();
+      const ct = String(req.headers['content-type'] || '').toLowerCase().trim(); // types connus seulement ; tout le reste devient un fichier neutre
+      await q('INSERT INTO files (id,owner,mime,data,created) VALUES ($1,$2,$3,$4,$5)', [id, me, FILE_MIME.test(ct) ? ct : 'application/octet-stream', b, Date.now()]); return send(res, 200, { id, url: '/api/files/' + id }); }
     const r = await q('SELECT mime, data FROM files WHERE id=$1', [parts[1]]); if (!r.rowCount) throw err(404, 'fichier');
     res.writeHead(200, { 'Content-Type': r.rows[0].mime, 'Cache-Control': 'private, max-age=86400' }); return res.end(r.rows[0].data);
   }
   const store = parts[0]; if (!STORES.has(store)) throw err(404, 'table');
   const id = parts[1];
+  if (id && !DOC_ID.test(id)) throw err(400, 'identifiant');
   const query = Object.fromEntries(url.searchParams);
   if (req.method === 'GET') return send(res, 200, id ? await readOne(store, me, id) : await readList(store, me, query));
   if (req.method === 'PUT' && id) return send(res, 200, await writeOne(store, me, id, await json(req)));
@@ -936,9 +995,7 @@ async function debug(req, res, url) {
   send(res, 200, { now: new Date().toISOString(), version: require('./package.json').version, users, data: by, push_subs: subs, files, errors: LOG });
 }
 
-/* ---------- en-têtes de sécurité, sur toutes les réponses ----------
-   La politique de contenu (CSP) est d'abord en mode « rapport seulement » : elle signale ce qu'elle bloquerait sans rien casser.
-   Elle sera rendue obligatoire une fois les rapports vérifiés (voir l'audit du 10/11/2026, point A1). */
+/* ---------- en-têtes de sécurité, sur toutes les réponses ---------- */
 const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://*.wikipedia.org https://api.bigdatacloud.net; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 function secure(res, pathname) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -947,7 +1004,8 @@ function secure(res, pathname) {
   res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(self), microphone=(self)');
   const priv = pathname === '/admin' || pathname.startsWith('/debug') || pathname === '/compte/supprimer';
   res.setHeader('Referrer-Policy', priv ? 'no-referrer' : 'strict-origin-when-cross-origin'); // l'adresse de l'admin (avec sa clé) ne part jamais ailleurs
-  if (!priv) res.setHeader('Content-Security-Policy-Report-Only', CSP);
+  /* obligatoire depuis la v1.18.0 : aucun script étranger ou écrit dans la page ne s'exécute */
+  res.setHeader('Content-Security-Policy', priv ? "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" : CSP);
 }
 /* une erreur oubliée ne doit pas arrêter le serveur : elle est notée et il continue */
 process.on('unhandledRejection', e => { console.error('promesse rejetée', e); logErr('serveur', 'promesse rejetée : ' + (e && e.message || e), { stack: String(e && e.stack || '').slice(0, 1500) }); });

@@ -18,7 +18,7 @@ Pages.reglages=async function(S){
     ${DB.remote?`<div class="del-acc"><p class="exp" style="margin:0"><b>Supprimer mon compte</b></p><p class="exp">Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n'est pas réversible.</p>
     <button class="btn ghost del-open" type="button" id="del-open">Supprimer mon compte…</button>
     <div id="del-box" hidden><label class="check" style="margin:10px 0"><input type="checkbox" id="del-ok"> Je comprends que tout sera effacé définitivement</label>
-      <button class="btn del-btn" type="button" id="del-go" disabled><span class="spin" hidden></span><span>M'envoyer l'e-mail de confirmation</span></button>
+      <button class="btn del-btn" type="button" id="del-go" disabled>M'envoyer l'e-mail de confirmation</button>
       <p class="muted small" style="margin-top:8px">Pour éviter une erreur, la suppression se termine depuis le lien reçu par e-mail (valable 1 heure).</p><p class="small" id="del-msg"></p></div></div>`:''}</div>`;
   async function renderLists(){const lists=await DB.where('lists','owner','me');
     for(const [id,type,extra] of [['red-list','red',''],['black-list','black',' · signalé à FeelShareLove']]){const el=$(id);const arr=lists.filter(l=>l.type===type);el.innerHTML='';
@@ -56,10 +56,10 @@ Pages.reglages=async function(S){
   if(DB.remote)renderNotif();
   if(DB.remote){$('del-open').addEventListener('click',()=>{$('del-box').hidden=false;$('del-open').hidden=true;});
     $('del-ok').addEventListener('change',e=>{$('del-go').disabled=!e.target.checked;});
-    $('del-go').addEventListener('click',async()=>{const b=$('del-go');b.disabled=true;b.querySelector('.spin').hidden=false;
+    $('del-go').addEventListener('click',async()=>{const b=$('del-go');b.disabled=true;b.classList.add('busy');
       try{const r=await fetch('/api/account/delete-request',{method:'POST',headers:{Authorization:'Bearer '+DB.token}});if(!r.ok){let m='';try{m=(await r.json()).error;}catch(x){}throw new Error(m||'Envoi impossible pour le moment. Réessaie plus tard.');}
         $('del-msg').textContent='E-mail envoyé. Ouvre le lien qu\'il contient pour terminer la suppression.';}
-      catch(e){$('del-msg').textContent=e.message;b.disabled=false;}finally{b.querySelector('.spin').hidden=true;}});}
+      catch(e){$('del-msg').textContent=e.message;b.disabled=false;}finally{b.classList.remove('busy');}});}
   if(DB.remote)$('logout').addEventListener('click',async e=>{e.preventDefault();await DB.logout();location.hash='';location.reload();});
   const profs=Object.fromEntries((await DB.all('profiles')).map(p=>[p.id,p]));
   const reps=await DB.all('reports');$('reports').innerHTML=reps.length?reps.map(r=>`<div class="nm-row"><span>${r.kind==='photo'?'Photo':r.kind==='block'?'Blocage':'Portrait'} · ${esc(dn(profs[r.target])||r.target)} <small>${esc(r.reason||'')} · ${r.status==='open'?'en cours':'traité'}</small></span></div>`).join(''):'<p class="muted small">Aucun.</p>';

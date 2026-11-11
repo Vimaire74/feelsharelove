@@ -5,7 +5,7 @@ Pages.legal=async function(S){
   const ADRESSE='société enregistrée au Delaware (États-Unis), 2810 N Church St STE 89496, Wilmington, DE 19802, États-Unis';
   const MAJ='9 novembre 2026';
   const sec=(t,h)=>`<div class="sec"><h3>${t}</h3>${h}</div>`, p=t=>`<p class="exp">${t}</p>`;
-  S.innerHTML=`<a class="back" href="javascript:history.back()">← Retour</a><p class="eyebrow">Informations légales</p><h1>Mentions légales et <em>confidentialité</em></h1>
+  S.innerHTML=`<a class="back" href="#now" data-back>← Retour</a><p class="eyebrow">Informations légales</p><h1>Mentions légales et <em>confidentialité</em></h1>
   <p class="muted small" style="margin:8px 0 14px">Dernière mise à jour : ${MAJ}. En cas de différence entre les langues, la version française fait foi.</p>
 
   <h2>Mentions <em>légales</em></h2>

@@ -1,6 +1,6 @@
 /* FeelShareLove — « Aide et conditions » (version de travail, à faire relire par un juriste avant publication) */
 Pages.conditions=async function(S){
-  S.innerHTML=`<a class="back" href="javascript:history.back()">← Retour</a><p class="eyebrow">Aide et conditions</p><h1>Les règles de FeelShareLove</h1>
+  S.innerHTML=`<a class="back" href="#now" data-back>← Retour</a><p class="eyebrow">Aide et conditions</p><h1>Les règles de FeelShareLove</h1>
   <p class="muted small" style="margin:8px 0 14px">Version de travail, à faire relire avant la publication sur les magasins.</p>
   <div class="sec" style="border:1px solid var(--rose)"><h3>Avertissement</h3>
     <p class="exp">FeelShareLove met en relation des personnes à partir de ce qui les touche. Nous ne pouvons pas vérifier les intentions ni les propos de chacun : un portrait « vérifié » signifie seulement que la photo correspond à une pièce d'identité.</p>

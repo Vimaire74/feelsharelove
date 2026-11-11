@@ -34,7 +34,7 @@ Pages.messages=async function(S,id){
   const C=$('chat'),Bo=$('bottom');App.tribeBox(p,$('tribe'));
   function addMsg(m){
     if(m.kind==='ephemeral'&&m.from!=='me'){const d=document.createElement('div');d.className='eph'+(m.seen?' gone':'');
-      d.innerHTML=`<div class="lbl">Photo éphémère · ${m.seconds} secondes · vue une fois</div><div class="pic">${m.seen?'Photo vue. Elle n\'est plus sur ton téléphone.':esc(m.text)}</div><div class="timer"></div><div class="actions"><button class="btn" type="button" ${m.seen?'disabled':''}>Voir</button><button class="btn ghost" type="button">Signaler</button></div>
+      d.innerHTML=`<div class="lbl">Photo éphémère · ${+m.seconds||10} secondes · vue une fois</div><div class="pic">${m.seen?'Photo vue. Elle n\'est plus sur ton téléphone.':esc(m.text)}</div><div class="timer"></div><div class="actions"><button class="btn" type="button" ${m.seen?'disabled':''}>Voir</button><button class="btn ghost" type="button">Signaler</button></div>
       <div class="report"><div class="k">Pourquoi tu signales cette photo ? Elle sera transmise à l'équipe FeelShareLove même si elle a disparu de ton écran.</div><div class="opts"><button class="chip" type="button">Nudité</button><button class="chip" type="button">Violence</button><button class="chip" type="button">Pas la bonne personne</button><button class="chip" type="button">Autre</button></div><div class="ok">Transmis. On regarde dans les 24 h et ${esc(dn(p))} ne saura pas que ça vient de toi.</div></div>`;
       const [see,flag]=d.querySelectorAll('.actions button');const t=d.querySelector('.timer');
       see.addEventListener('click',async()=>{if(m.seen)return;m.seen=true;await DB.put('messages',m);d.classList.add('seen');see.disabled=true;let n=m.seconds;t.style.display='block';
@@ -43,7 +43,7 @@ Pages.messages=async function(S,id){
       d.querySelectorAll('.report .chip').forEach(c=>c.addEventListener('click',async()=>{d.querySelectorAll('.report .chip').forEach(x=>x.classList.toggle('on',x===c));await DB.put('reports',{by:'me',target:p.id,kind:'photo',messageId:m.id,reason:c.textContent,status:'open',ts:Date.now()});d.querySelector('.ok').style.display='block';}));
       C.appendChild(d);return;}
     const d=document.createElement('div');d.className='msg '+(m.from==='me'?'me':'them')+(m.kind==='decline'?' decline':'');
-    d.innerHTML=(m.aboutTitle?`<div class="ctx">À propos de ${esc(m.aboutTitle)}</div>`:'')+(m.kind==='decline'?'<div class="ctx">Réponse</div>':'')+(m.kind==='ephemeral'?'<span class="muted">Photo éphémère envoyée · '+m.seconds+' s</span>':m.kind==='voice'?'':esc(m.text))+`<div class="time">${hhmm(m.ts)}</div>`;
+    d.innerHTML=(m.aboutTitle?`<div class="ctx">À propos de ${esc(m.aboutTitle)}</div>`:'')+(m.kind==='decline'?'<div class="ctx">Réponse</div>':'')+(m.kind==='ephemeral'?'<span class="muted">Photo éphémère envoyée · '+(+m.seconds||10)+' s</span>':m.kind==='voice'?'':esc(m.kind==='decline'?App.declineText(m):m.text))+`<div class="time">${hhmm(m.ts)}</div>`;
     if(m.kind==='voice'){DB.get('voices',m.voiceId).then(v=>{if(v)d.insertBefore(App.audioEl(v.blob),d.lastChild);});
       /* mes vocaux : je peux les effacer plus tard (ils disparaissent aussi chez l'autre) */
       if(m.from==='me'){const x=document.createElement('div');x.className='vdel';x.innerHTML='<button class="linkbtn" type="button" data-x="ask">Effacer</button>';d.appendChild(x);
@@ -72,7 +72,7 @@ Pages.messages=async function(S,id){
       $('no').addEventListener('click',()=>{$('dec').hidden=false;});
       Bo.querySelectorAll('input[name=dch]').forEach(r=>r.addEventListener('change',()=>{$('dsend').disabled=false;}));
       $('dsend').addEventListener('click',async()=>{const i=+Bo.querySelector('input[name=dch]:checked').value;
-        await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'decline',text:opts[i].t,ts:Date.now()});th.status='declined';await DB.put('threads',th);location.hash='#messages';});
+        const me0=await DB.get('profiles','me');await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'decline',dk:opts[i].k,di:opts[i].i,acc:(me0&&me0.accord)||'n',text:'',ts:Date.now()});th.status='declined';await DB.put('threads',th);location.hash='#messages';});
       $('rep').addEventListener('click',async()=>{await DB.put('lists',{owner:'me',type:'black',target:p.id,name:p.name||p.pseudo});await DB.put('reports',{by:'me',target:p.id,kind:'block',status:'open',ts:Date.now()});th.status='declined';await DB.put('threads',th);location.hash='#messages';});
       return;}
     /* conversation ouverte */

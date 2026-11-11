@@ -41,27 +41,30 @@ window.I18N=(function(){
   function patterns(){if(patLang===lang&&pats)return pats;pats=[];patLang=lang;const D=DICT[lang]||{};
     for(const k in D){if(!/\{\w+\}/.test(k))continue;const names=[];const re=new RegExp('^'+k.replace(/[.*+?^${}()|[\]\\]/g,m=>m==='{'||m==='}'?m:'\\'+m).replace(/\{(\w+)\}/g,(m,n)=>{names.push(n);return '(.+?)';})+'$');pats.push({re,names,v:D[k]});}
     return pats;}
+  /* un morceau repris de la page (pseudo, titre…) est échappé avant d'entrer dans une traduction : il ne peut jamais devenir du code */
+  const hesc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const hun=t=>String(t).replace(/&(amp|lt|gt|quot);/g,(m,k)=>({amp:'&',lt:'<',gt:'>',quot:'"'}[k]));
   function lookup(text,depth=0){if(lang==='fr')return null;const D=DICT[lang];if(!D)return null;const k=norm(text);if(!k)return null;
     if(D[k]!=null)return D[k];
     /* même phrase écrite avec une minuscule au début (ex. « tango » sous « Danse ») */
     const cap=k.charAt(0).toUpperCase()+k.slice(1);if(cap!==k&&D[cap]!=null)return D[cap].charAt(0).toLowerCase()+D[cap].slice(1);
     if(depth>2)return null;
-    for(const p of patterns()){const m=k.match(p.re);if(m){let v=p.v;p.names.forEach((n,i)=>{const g=m[i+1];const tg=lookup(g,depth+1);v=v.split('{'+n+'}').join(tg!=null?tg:g);});return v;}}
+    for(const p of patterns()){const m=k.match(p.re);if(m){let v=p.v;p.names.forEach((n,i)=>{const g=m[i+1];const tg=lookup(g,depth+1);v=v.split('{'+n+'}').join(tg!=null?tg:hesc(g));});return v;}}
     return null;}
   const ATTRS=['placeholder','title','aria-label'];
   function translateNode(root){if(lang==='fr'||!DICT[lang])return;
     const els=root.nodeType===1?[root,...root.querySelectorAll('*')]:[];
     for(const el of els){if(el.closest&&el.closest('svg'))continue;
-      ATTRS.forEach(a=>{const v=el.getAttribute&&el.getAttribute(a);if(v){const tr=lookup(v);if(tr!=null&&tr!==v)el.setAttribute(a,tr);}});
+      ATTRS.forEach(a=>{const v=el.getAttribute&&el.getAttribute(a);if(v){const tr=lookup(v);if(tr!=null&&tr!==v)el.setAttribute(a,hun(tr));}});
       if(SKIP.has(el.tagName)||isUser(el))continue;
       /* élément « simple » (texte + mise en forme) : on traduit la phrase entière, balises comprises.
          Jamais en texte brut si l'élément contient des liens, ni quand la phrase n'est reconnue que par un motif à trous (sinon deux boutons ou deux étiquettes côte à côte seraient fondus en un seul texte) */
       const kids=[...el.children];if(kids.length&&kids.every(c=>INLINE.has(c.tagName)&&!c.children.length&&!c.id)){const tr=lookup(el.textContent);
-        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else if(kids.some(c=>c.tagName==='A')||DICT[lang][norm(el.textContent)]==null)continue;else el.textContent=tr;[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
+        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else if(kids.some(c=>c.tagName==='A')||DICT[lang][norm(el.textContent)]==null)continue;else el.textContent=hun(tr);[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
     const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const list=[];let n;while(n=w.nextNode())list.push(n);
     for(const tn of list){const par=tn.parentNode;if(!par||SKIP.has(par.tagName)||(par.closest&&par.closest('svg')))continue;const v=tn.nodeValue;if(!v||!v.trim()||tn.__tr===v)continue; /* déjà traduit : on ne retraduit pas une traduction */
       /* dans ce que les gens ont écrit, seule une phrase entière de l'app (longue, exacte) est traduite */
-      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+tr+trail;tn.__tr=tn.nodeValue;}}}
+      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+hun(tr)+trail;tn.__tr=tn.nodeValue;}}}
     if(window.__fitTabs)try{window.__fitTabs();}catch(e){}}
   let observing=false;
   function watch(){if(observing||lang==='fr')return;observing=true;

@@ -14,6 +14,8 @@
   const FREE=new Set(['accueil','conditions','donnees','aide','legal']);   // accessibles sans pseudo
   /* un seul affichage à la fois : si l'adresse change pendant qu'une page se construit (notification, redirection),
      on finit la page en cours puis on affiche la nouvelle. Sans ça, deux pages s'écrasaient et donnaient « Cannot read properties of null ». */
+  /* liens « Retour » : reviennent à la page d'avant (sans code écrit dans le lien, que la politique de sécurité refuse) */
+  document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-back]');if(!a)return;e.preventDefault();if(history.length>1)history.back();else location.hash='#now';});
   let busy=false,again=false;
   async function route(){if(busy){again=true;return;}busy=true;
     try{do{again=false;await routeOnce();}while(again);}finally{busy=false;}}
