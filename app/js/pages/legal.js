@@ -33,7 +33,7 @@ Pages.legal=async function(S){
     <li>Les autres membres voient seulement ce que ton portrait affiche, selon tes réglages.</li>
     <li>L'équipe de FeelShareLove, pour la modération : elle ne lit pas tes conversations ; elle reçoit seulement la copie d'un élément signalé.</li>
     <li>OVH (France) héberge le serveur, la base de données et la messagerie qui envoie les e-mails.</li>
-    <li>Quand tu tapes un titre d'œuvre, ta recherche est envoyée à Wikipédia pour proposer le bon titre. Quand tu indiques ta ville, son nom est envoyé à Open-Meteo pour calculer les distances. Les polices de caractères du site viennent de Google Fonts, qui voit ton adresse IP.</li></ul>`)}
+    <li>Quand tu tapes un titre d'œuvre, ta recherche est envoyée à Wikipédia pour proposer le bon titre. Quand tu indiques ta ville, son nom est envoyé à Open-Meteo pour calculer les distances.</li></ul>`)}
   ${sec('Combien de temps',`<ul class="exp legal-ul">
     <li>Tant que ton compte existe. Quand tu le supprimes (Réglages › Supprimer mon compte), tout est effacé aussitôt de la base de données.</li>
     <li>Photos éphémères : quelques jours au plus, pour traiter un éventuel signalement.</li>

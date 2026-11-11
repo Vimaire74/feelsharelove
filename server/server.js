@@ -497,7 +497,7 @@ function readBody(req, max = 8e6) {
     req.on('end', () => ok(Buffer.concat(parts))); req.on('error', ko); });
 }
 const json = async req => { const b = await readBody(req); return b.length ? JSON.parse(b.toString('utf8')) : {}; };
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.ttf': 'font/ttf', '.webp': 'image/webp' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.ttf': 'font/ttf', '.woff2': 'font/woff2', '.webp': 'image/webp' };
 const SITE_LANGS = ['fr', 'de', 'en', 'it', 'es', 'pt']; // pages d'accueil publiques : / (fr), /de, /en…
 function serveStatic(req, res, p) {
   if (p === '/app/' || p === '/index.html') { res.writeHead(301, { Location: '/app' }); return res.end(); }
@@ -508,7 +508,8 @@ function serveStatic(req, res, p) {
   if (!file.startsWith(PUBLIC)) return send(res, 403, { error: 'interdit' });
   fs.readFile(file, (e, data) => {
     if (e) return send(res, 404, 'Introuvable', 'text/plain; charset=utf-8');
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(data);
+    /* les polices ne changent jamais : le navigateur les garde un an au lieu de les redemander à chaque visite */
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': p.startsWith('/fonts/') && p.endsWith('.woff2') ? 'public, max-age=31536000, immutable' : 'no-cache' }); res.end(data);
   });
 }
 
@@ -971,7 +972,7 @@ async function admin(req, res, url) {
 
   const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=Figtree:wght@400;600&display=swap"><style>${ADMIN_CSS}</style>
+<link rel="stylesheet" href="/fonts/fonts.css"><style>${ADMIN_CSS}</style>
 <header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
 <main>${flash ? `<div class="flash">${H(flash)}</div>` : ''}${body}</main></html>`;
   send(res, 200, html, 'text/html; charset=utf-8');
@@ -1004,7 +1005,7 @@ async function debug(req, res, url) {
 }
 
 /* ---------- en-têtes de sécurité, sur toutes les réponses ---------- */
-const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://*.wikipedia.org https://api.bigdatacloud.net; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://*.wikipedia.org https://api.bigdatacloud.net; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 function secure(res, pathname) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -1013,7 +1014,7 @@ function secure(res, pathname) {
   const priv = pathname === '/admin' || pathname.startsWith('/debug') || pathname === '/compte/supprimer';
   res.setHeader('Referrer-Policy', priv ? 'no-referrer' : 'strict-origin-when-cross-origin'); // l'adresse de l'admin (avec sa clé) ne part jamais ailleurs
   /* obligatoire depuis la v1.18.0 : aucun script étranger ou écrit dans la page ne s'exécute */
-  res.setHeader('Content-Security-Policy', priv ? "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" : CSP);
+  res.setHeader('Content-Security-Policy', priv ? "default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" : CSP);
 }
 /* une erreur oubliée ne doit pas arrêter le serveur : elle est notée et il continue */
 process.on('unhandledRejection', e => { console.error('promesse rejetée', e); logErr('serveur', 'promesse rejetée : ' + (e && e.message || e), { stack: String(e && e.stack || '').slice(0, 1500) }); });

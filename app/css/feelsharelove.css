@@ -603,3 +603,8 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 /* portrait en pause */
 .pause-card{border:1px solid var(--saffron)}
 #pause.pause-on{border:1px solid var(--saffron)}
+
+/* proposition : joindre sa propre image */
+.prop-own{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.prop-own label.btn{cursor:pointer}
+.prop-hint{margin:-4px 0 0}

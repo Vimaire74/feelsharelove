@@ -17,24 +17,45 @@ window.Propose=(function(){
       const b=document.createElement('button');b.type='button';b.className='prop-btn';b.textContent='Proposer une correction';h.after(b);});}
   let t=null;const later=()=>{clearTimeout(t);t=setTimeout(scan,150);};
   /* capture de ce que la personne voit, prise avant l'ouverture de la fenêtre (bibliothèque chargée seulement à ce moment) */
-  let lib=null;const loadLib=()=>lib||(lib=new Promise((ok,ko)=>{if(window.html2canvas)return ok();const sc=document.createElement('script');sc.src='js/vendor/html2canvas.min.js';sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc);}));
-  async function capture(){await loadLib();const c=await html2canvas(document.body,{x:scrollX,y:scrollY,width:innerWidth,height:innerHeight,scale:Math.min(2,devicePixelRatio||1),backgroundColor:'#0d0607',logging:false,
-      ignoreElements:el=>el.classList&&(el.classList.contains('prop-sheet')||el.classList.contains('menu'))});
-    const W=Math.min(1000,c.width),k=W/c.width,o=document.createElement('canvas');o.width=W;o.height=Math.round(c.height*k);o.getContext('2d').drawImage(c,0,0,o.width,o.height);
-    return new Promise(ok=>o.toBlob(ok,'image/jpeg',.72));}
+  const addScript=src=>new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src=src;sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc);});
+  const toJpeg=(c,max,q)=>{const k=Math.min(1,max/c.width),o=document.createElement('canvas');o.width=Math.round(c.width*k);o.height=Math.round(c.height*k);o.getContext('2d').drawImage(c,0,0,o.width,o.height);return new Promise(ok=>o.toBlob(ok,'image/jpeg',q));};
+  /* capture automatique : le navigateur dessine lui-même la page (vraies polices, vrais espacements), sans les boutons roses du mode propositions.
+     Si cet outil échoue, l'ancien (html2canvas) prend le relais. */
+  let lib=null,lib2=null;
+  async function capture(){const el=document.querySelector('.phone')||document.body;const scale=Math.min(2,devicePixelRatio||1);
+    try{await (lib||(lib=window.modernScreenshot?Promise.resolve():addScript('js/vendor/modern-screenshot.js')));
+      const c=await modernScreenshot.domToCanvas(el,{scale,timeout:8000,backgroundColor:getComputedStyle(document.body).backgroundColor,features:{restoreScrollPosition:true},
+        onCloneNode:n=>{n.querySelectorAll('.prop-btn,.menu').forEach(b=>{b.style.visibility='hidden';});}});
+      if(!c.width||!c.height)throw new Error('vide');return toJpeg(c,1200,.8);}
+    catch(e){await (lib2||(lib2=window.html2canvas?Promise.resolve():addScript('js/vendor/html2canvas.min.js')));
+      const c=await html2canvas(document.body,{x:scrollX,y:scrollY,width:innerWidth,height:innerHeight,scale,backgroundColor:'#0d0607',logging:false,
+        ignoreElements:x=>x.classList&&(x.classList.contains('prop-sheet')||x.classList.contains('menu')||x.classList.contains('prop-btn'))});
+      return toJpeg(c,1200,.75);}}
+  /* image choisie ou collée par la personne (sa propre capture) : réduite et convertie en JPEG avant l'envoi */
+  const ownImage=file=>new Promise((ok,ko)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);URL.revokeObjectURL(u);toJpeg(c,1600,.82).then(ok,ko);};im.onerror=()=>{URL.revokeObjectURL(u);ko(new Error('image'));};im.src=u;});
   async function upload(blob){const r=await fetch('/api/files',{method:'POST',headers:{'Content-Type':'image/jpeg',Authorization:'Bearer '+DB.token},body:blob});if(!r.ok)throw new Error('upload');return (await r.json()).id;}
   function sheet(sec){const P=page();const shot=DB.remote?capture().catch(()=>null):Promise.resolve(null);const d=document.createElement('div');d.className='prop-sheet';
     d.innerHTML=`<div class="prop-card"><p class="eyebrow">Ta proposition</p><p class="muted small">Concerne : <b>${App.esc(P.name)}</b>${sec?' › <b>'+App.esc(sec)+'</b>':''}</p>
       <textarea class="ta" rows="5" maxlength="3000" placeholder="Ce qu'il faudrait corriger, ajouter ou changer, et comment…"></textarea>
-      <label class="check prop-cap"><input type="checkbox" data-c checked> Joindre une capture de l'écran</label>
+      <label class="check prop-cap"><input type="checkbox" id="prop-auto" data-c checked> Joindre une capture automatique de l'écran</label>
+      <div class="prop-own"><label class="btn ghost small-btn">Joindre ma propre image<input type="file" id="prop-file" accept="image/*" hidden></label><span class="muted small" data-own></span><button type="button" class="linkbtn" data-ownx hidden>Retirer</button></div>
+      <p class="muted small prop-hint">Ta propre capture d'écran est plus fidèle. Sur ordinateur, tu peux aussi la coller ici.</p>
       <div class="row"><button class="btn ghost" type="button" data-x>Annuler</button><button class="btn" type="button" data-s>Envoyer</button></div><p class="muted small" data-m></p></div>`;
     document.body.appendChild(d);const ta=d.querySelector('textarea'),m=d.querySelector('[data-m]');ta.focus();
     d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-x]'))d.remove();});
+    /* image jointe par la personne : elle remplace la capture automatique */
+    let own=null;const auto=d.querySelector('[data-c]'),ownL=d.querySelector('[data-own]'),ownX=d.querySelector('[data-ownx]');
+    const setOwn=async f=>{if(!f){own=null;ownL.textContent='';ownX.hidden=true;auto.disabled=false;return;}
+      if(!/^image\//.test(f.type)){ownL.textContent='Ce fichier n\'est pas une image.';return;}
+      try{own=await ownImage(f);ownL.textContent='Image jointe';ownX.hidden=false;auto.disabled=true;}catch(e){own=null;ownL.textContent='Image illisible.';}};
+    d.querySelector('#prop-file').addEventListener('change',e=>{setOwn(e.target.files[0]);e.target.value='';});
+    ownX.addEventListener('click',()=>setOwn(null));
+    d.addEventListener('paste',e=>{const f=[...(e.clipboardData&&e.clipboardData.files||[])].find(x=>/^image\//.test(x.type));if(f){e.preventDefault();setOwn(f);}});
     const S=d.querySelector('[data-s]'),busy=v=>{S.disabled=v;S.classList.toggle('busy',v);};
     S.addEventListener('click',async()=>{const text=ta.value.trim();if(!text){ta.focus();return;}
       if(!DB.remote){m.textContent='Les propositions s\'envoient seulement depuis le site en ligne.';return;}
       busy(true);m.textContent='';
-      try{let img=null;if(d.querySelector('[data-c]').checked){const b=await shot;if(b)try{img=await upload(b);}catch(e){}}
+      try{let img=null;const b=own||(auto.checked?await shot:null);if(b)try{img=await upload(b);}catch(e){}
         await DB.put('proposals',{by:'me',page:P.name,hash:P.hash,section:sec||'',lang:(window.I18N&&I18N.lang)||'fr',text,img,ts:Date.now(),width:innerWidth});
         S.classList.remove('busy');m.textContent='Merci, ta proposition est envoyée.';setTimeout(()=>d.remove(),1400);}
       catch(e){busy(false);m.textContent='Envoi impossible pour le moment. Réessaie plus tard.';}});}

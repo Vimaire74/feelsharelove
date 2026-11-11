@@ -1,11 +1,12 @@
-# FeelShareLove — lot 48
+# FeelShareLove — lot 49 (à envoyer APRÈS le lot 48)
 
-Version 1.19.1 (11/11/2026)
-- Portrait en pause : Présent, Résonances, Messages, Ma tribu, les cercles et les portraits des autres sont remplacés par un écran « Ton portrait est en pause »
-- Cet écran explique comment revenir : menu (l'étoile), Réglages, « Revenir sur FeelShareLove » ; plus de lien dans la page
-- Restent accessibles pendant la pause : mon portrait, Réglages, Mes données, Aide et conditions, Besoin d'aide, mentions légales
-- Réglages : cadre jaune autour de la rubrique quand le portrait est en pause ; message clair si la pause vient de signalements (seule l'équipe la lève)
-- Réglages : le bouton affiche la roue d'attente et un message si l'envoi échoue
+Version 1.20.0 (11/11/2026)
+- Propositions : capture automatique refaite avec un nouvel outil, fidèle à l'écran (polices, espaces, position dans la page) ; l'ancien outil reste en secours
+- Propositions : les boutons roses « Proposer une correction » n'apparaissent plus dans la capture
+- Propositions : bouton « Joindre ma propre image » (galerie ou fichiers) et collage d'une image sur ordinateur ; l'image jointe remplace la capture automatique
+- Polices Fraunces et Figtree hébergées sur le serveur (nouveau dossier app/fonts) : plus aucun appel à Google Fonts sur le site, l'app et l'admin
+- Les polices sont gardées un an par le navigateur au lieu d'être redemandées à chaque visite
+- Mentions légales : la phrase sur Google Fonts est retirée
 - Textes traduits dans les 5 langues
 
-Fichiers : app/js/router.js, app/js/pages/now.js, app/js/pages/reglages.js, app/css/feelsharelove.css, app/js/lang/*.js
+Fichiers : server/server.js, app/index.html, app/css/feelsharelove.css, app/js/propose.js, app/js/vendor/modern-screenshot.js (nouveau), app/js/pages/legal.js, app/site/fr.html, de.html, en.html, it.html, es.html, pt.html, app/fonts/ (nouveau dossier : fonts.css et 6 fichiers .woff2), app/js/lang/*.js
