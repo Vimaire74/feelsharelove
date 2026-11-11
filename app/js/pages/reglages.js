@@ -42,9 +42,13 @@ Pages.reglages=async function(S){
   renderVerif();
   const accs=S.querySelectorAll('#acc .chip');accs.forEach(c=>{c.classList.toggle('on',(me.accord||'n')===c.dataset.a);c.addEventListener('click',async()=>{const m=await DB.get('profiles','me');m.accord=c.dataset.a;await DB.put('profiles',m);accs.forEach(x=>x.classList.toggle('on',x===c));});});
   async function renderPause(){const P=$('pause');const m=await DB.get('profiles','me');
-    P.innerHTML=m.paused?`<h3>Ton portrait est en pause</h3><p class="exp">Depuis le ${new Date(m.paused).toLocaleDateString(I18N.locale(),{day:'numeric',month:'long'})}. Personne ne te voit dans Maintenant, Résonances ou les cercles, et personne ne peut t'écrire. Tes conversations ouvertes restent accessibles.</p><button class="btn flame" type="button" id="p-go">Revenir sur FeelShareLove</button>`
+    P.classList.toggle('pause-on',!!m.paused);
+    P.innerHTML=m.paused&&m.autoPaused?`<h3>Ton portrait est en pause</h3><p class="exp">Ton portrait a été mis en pause après plusieurs signalements. L'équipe regarde la situation et te répondra.</p>`
+      :m.paused?`<h3>Ton portrait est en pause</h3><p class="exp">Personne ne te voit et personne ne peut t'écrire. Tes conversations et ta tribu t'attendent : tu les retrouveras en revenant.</p><button class="btn flame" type="button" id="p-go">Revenir sur FeelShareLove</button><p class="small" id="p-msg" style="margin-top:8px"></p>`
       :`<h3>Mettre mon portrait en pause</h3><p class="exp">Pour faire une pause sans tout effacer : ton portrait disparaît pour les autres et personne ne peut t'écrire, jusqu'à ce que tu reviennes.</p><button class="btn ghost" type="button" id="p-go">Mettre en pause</button>`;
-    $('p-go').addEventListener('click',async()=>{const f=await DB.get('profiles','me');f.paused=f.paused?null:Date.now();if(f.paused)f.avail=null;await DB.put('profiles',f);renderPause();});}
+    if($('p-go'))$('p-go').addEventListener('click',async()=>{const b=$('p-go');b.disabled=true;b.classList.add('busy');
+      try{const f=await DB.get('profiles','me');f.paused=f.paused?null:Date.now();if(f.paused)f.avail=null;await DB.put('profiles',f);await renderPause();}
+      catch(e){b.disabled=false;b.classList.remove('busy');const M=$('p-msg');if(M)M.textContent=e.message||'Envoi impossible pour le moment. Réessaie plus tard.';}});}
   renderPause();
   async function renderNotif(){const N=$('notif');if(!N)return;const st=await DB.pushState();
     const txt={on:'Ce téléphone te prévient quand quelqu\'un t\'écrit ou ouvre une conversation. Le contenu des messages n\'apparaît jamais dans la notification.',

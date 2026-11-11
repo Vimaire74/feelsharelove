@@ -599,3 +599,7 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .reply-bar button{background:none;border:0;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;min-width:38px;min-height:38px}
 .reply-bar+.bar{margin-top:8px}
 .msg.flash{outline:2px solid var(--saffron);outline-offset:2px}
+
+/* portrait en pause */
+.pause-card{border:1px solid var(--saffron)}
+#pause.pause-on{border:1px solid var(--saffron)}

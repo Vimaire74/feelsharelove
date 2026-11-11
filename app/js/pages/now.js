@@ -30,7 +30,7 @@ Pages.now=async function(S){
   /* --- ma disponibilité --- */
   let draft={wants:[],note:'',dur:1};
   function renderAvail(){const A=$('my-avail');
-    if(me.paused){A.innerHTML=`<div class="k">Ton portrait est en pause</div><p class="txt" style="font-style:normal;font-family:var(--body);font-size:14px">Personne ne te voit et personne ne peut t'écrire. <a href="#reglages" style="color:var(--saffron)">Revenir sur FeelShareLove</a></p>`;return;}
+    if(me.paused)return; // écran de pause affiché par le routeur
     if(isAvail(me)){A.innerHTML=`<div class="k">Tu es disponible jusqu'à ${hhmm(me.avail.until)}</div><div class="wants big">${me.avail.wants.map(k=>WANT[k].l).join(' · ')}</div>${me.avail.note?`<p class="txt">${esc(me.avail.note)}</p>`:''}<div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="av-stop">Ne plus être disponible</button></div>`;
       $('av-stop').addEventListener('click',async()=>{me.avail=null;await DB.put('profiles',me);renderAvail();render();});return;}
     A.innerHTML=`<div class="k">Tu n'es pas affiché comme disponible</div><button class="btn flame" type="button" id="av-open" style="margin-top:8px">Me rendre disponible</button>

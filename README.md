@@ -1,13 +1,11 @@
-# FeelShareLove — lot 47 (à envoyer APRÈS le lot 46)
+# FeelShareLove — lot 48
 
-Version 1.19.0 (11/11/2026)
-- Messages : après l'envoi, l'écran reste en bas sur le dernier message et le champ d'écriture garde le curseur (plus de remontée en haut, ni sur téléphone ni sur ordinateur)
-- Messages : la conversation n'est plus redessinée toutes les 8 secondes ; seuls les nouveaux messages et réactions s'ajoutent, sans bouger si on est remonté lire plus haut
-- Messages : un message qui parle d'un goût du portrait porte une pastille jaune « Sur ton portrait · titre » (ou « Sur son portrait ») et un cadre jaune
-- Messages : un toucher sur une bulle ouvre ses outils — six réactions (❤️ 😂 😮 😢 🙏 👍) et « Répondre »
-- Messages : répondre à un message précis ; le message cité s'affiche dans la réponse, un toucher dessus y ramène
-- Les réactions des deux personnes s'affichent sous la bulle ; retoucher la même réaction l'enlève
-- Serveur : réactions limitées aux six prévues, réservées aux deux personnes de la conversation
+Version 1.19.1 (11/11/2026)
+- Portrait en pause : Présent, Résonances, Messages, Ma tribu, les cercles et les portraits des autres sont remplacés par un écran « Ton portrait est en pause »
+- Cet écran explique comment revenir : menu (l'étoile), Réglages, « Revenir sur FeelShareLove » ; plus de lien dans la page
+- Restent accessibles pendant la pause : mon portrait, Réglages, Mes données, Aide et conditions, Besoin d'aide, mentions légales
+- Réglages : cadre jaune autour de la rubrique quand le portrait est en pause ; message clair si la pause vient de signalements (seule l'équipe la lève)
+- Réglages : le bouton affiche la roue d'attente et un message si l'envoi échoue
 - Textes traduits dans les 5 langues
 
-Fichiers : server/server.js, app/js/app.js, app/js/pages/messages.js, app/css/feelsharelove.css, app/js/lang/*.js
+Fichiers : app/js/router.js, app/js/pages/now.js, app/js/pages/reglages.js, app/css/feelsharelove.css, app/js/lang/*.js

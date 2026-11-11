@@ -16,6 +16,12 @@
      on finit la page en cours puis on affiche la nouvelle. Sans ça, deux pages s'écrasaient et donnaient « Cannot read properties of null ». */
   /* liens « Retour » : reviennent à la page d'avant (sans code écrit dans le lien, que la politique de sécurité refuse) */
   document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-back]');if(!a)return;e.preventDefault();if(history.length>1)history.back();else location.hash='#now';});
+  const PAUSE_OK=new Set(['accueil','connexion','portrait','apercu','test','reglages','donnees','conditions','aide','legal']);
+  const pausedPage=me=>async S=>{S.innerHTML=`<p class="eyebrow">En pause</p><h1>Ton portrait est <em>en pause</em></h1>
+    <div class="sec pause-card">${me.autoPaused
+      ?`<p class="exp">Ton portrait a été mis en pause après plusieurs signalements. L'équipe regarde la situation et te répondra.</p><p class="exp">Pour nous écrire : <a href="mailto:contact@feelsharelove.com" style="color:var(--saffron)">contact@feelsharelove.com</a></p>`
+      :`<p class="exp">Personne ne te voit et personne ne peut t'écrire. Tes conversations et ta tribu t'attendent : tu les retrouveras en revenant.</p>
+        <p class="exp"><b>Pour revenir</b></p><p class="exp">Ouvre le menu (l'étoile en haut à droite), puis « Réglages », puis « Revenir sur FeelShareLove ».</p>`}</div>`;};
   let busy=false,again=false;
   async function route(){if(busy){again=true;return;}busy=true;
     try{do{again=false;await routeOnce();}while(again);}finally{busy=false;}}
@@ -23,7 +29,10 @@
     const h=(location.hash||'#now').slice(1);const [name,param]=h.split('/');
     const me=await DB.get('profiles','me');
     if(!me.pseudo&&!FREE.has(name)){location.hash='#accueil';return;}
-    const page=Pages[name]||Pages.now;
+    let page=Pages[name]||Pages.now;
+    /* portrait en pause : les pages de rencontre sont remplacées par un écran qui le dit clairement ;
+       on revient par le menu (Réglages), pas par un bouton dans la page */
+    if(me.paused&&me.pseudo&&!PAUSE_OK.has(name)&&Pages[name])page=pausedPage(me);
     document.body.classList.toggle('onboarding',name==='accueil');
     document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===TAB[name]));
     App.closeMenu();await App.tickThreads();
