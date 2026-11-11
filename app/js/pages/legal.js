@@ -25,7 +25,7 @@ Pages.legal=async function(S){
     ${p('Certaines informations peuvent toucher à des sujets sensibles (spiritualité, ce que tu traverses, ce que tu recherches). Tu les donnes librement, tu peux les cacher ou les effacer à tout moment, et elles servent uniquement aux résonances.')}`)}
   ${sec('Pourquoi',`<ul class="exp legal-ul">
     <li>Faire fonctionner le service : ton portrait, les résonances, les conversations (exécution du contrat).</li>
-    <li>Protéger les membres : modération, signalements, lutte contre les faux profils et les arnaques (intérêt légitime).</li>
+    <li>Protéger les membres : modération, signalements, lutte contre les faux profils et les arnaques (intérêt légitime). Les contenus visibles par les autres membres (portrait, cercles) sont relus automatiquement chaque jour pour repérer menaces, arnaques et signes de détresse ; une personne de l'équipe vérifie toujours avant toute décision. Les messages privés ne sont pas analysés.</li>
     <li>T'écrire : confirmation d'adresse, mot de passe oublié, avis de nouveau message, informations importantes. Chaque e-mail permet de se désabonner.</li>
     <li>Les données sensibles que tu choisis de remplir : sur la base de ton consentement, que tu retires en les effaçant.</li></ul>`)}
   ${sec('Ce que nous ne faisons jamais',p('Nous ne vendons aucune donnée, nous n\'affichons pas de publicité et nous ne faisons pas de profilage publicitaire.'))}

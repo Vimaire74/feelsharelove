@@ -100,7 +100,7 @@ window.App=(function(){
     const star=document.createElement('button');star.className='star';star.type='button';star.id='star';star.setAttribute('aria-label','Menu');
     star.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 2c-.4 3.8-1.6 6.6-3.2 7.4C7.2 10.2 4.6 9.8 1.5 9c3.1 1.6 4.9 3 5.2 4.7.3 1.7-1 4-3 7 2.8-2.3 5.2-3.2 7-2.7 1.8.5 3.6 2.3 5.6 4.9-1.3-3.3-1.6-5.6-.7-7.1.9-1.5 3.2-2.4 6.9-3-3.9-.3-6.3-1.1-7.2-2.5C14.4 8.9 13.4 6.3 12 2z"/></svg>';
     const menu=document.createElement('div');menu.className='menu';menu.id='menu';
-    menu.innerHTML=Propose.switchHtml()+`<a href="#aide" class="menu-help">Besoin d'aide maintenant</a><hr><a href="#messages">Messages <small id="msg-count"></small></a><a href="#tribu">Ma tribu <small>les gens qui comptent</small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#portrait">Mon portrait</a><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
+    menu.innerHTML=`<div id="menu-top">${Propose.switchHtml()}</div><a href="#aide" class="menu-help">Besoin d'aide maintenant</a><hr><a href="#messages">Messages <small id="msg-count"></small></a><a href="#tribu">Ma tribu <small>les gens qui comptent</small></a><a href="#cercles">Cercles <small>thèmes partagés</small></a><a href="#reglages">Réglages <small>listes, visibilité</small></a><hr><a href="#apercu">Ce que les autres voient</a><a href="#donnees">Mes données <small>sauvegarde</small></a><a href="#conditions">Aide et conditions</a>`;
     const tabs=document.createElement('nav');tabs.className='tabs';tabs.setAttribute('aria-label','Menu principal');
     tabs.innerHTML='<svg class="tabwave" viewBox="0 0 390 22" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10 L390 22 L0 22 Z" style="fill:var(--bar)"/><path d="M0 14 C40 4 70 20 110 12 S180 2 220 11 S300 22 340 9 S380 6 390 10" fill="none" stroke="#e8456e" stroke-width="1.6" stroke-dasharray="14 4 3 4"/></svg>'+
       [['now','now','Présent'],['resonances','res','Résonances'],['messages','msg','Messages'],['tribu','tribu','Ma tribu'],['portrait','port','Portrait']].map(([h,i,l])=>`<a href="#${h}" data-tab="${h}">${Plus.icon(i)}${h==='messages'?'<span class="tbadge" id="tab-badge" hidden></span>':h==='tribu'?'<span class="tbadge" id="tab-badge-t" hidden></span>':''}<span>${l}</span></a>`).join('');
@@ -113,6 +113,9 @@ window.App=(function(){
     star.addEventListener('click',()=>{menu.classList.toggle('on');star.classList.toggle('on');});
     document.querySelector('.screen').addEventListener('click',closeMenu);
   }
+  /* haut du menu : les propositions, ou « Annuler ma pause » quand le portrait est en pause (les propositions n'ont alors plus de sens) */
+  function menuTop(me){const T=$('menu-top');if(!T)return;const k=me&&me.paused?(me.autoPaused?'auto':'pause'):'prop';if(T.dataset.k===k)return;T.dataset.k=k;
+    T.innerHTML=k==='prop'?Propose.switchHtml():`<div class="prop-box pause-box"><b>Ton portrait est en pause</b><span>Personne ne te voit et personne ne peut t'écrire.</span>${k==='pause'?'<button type="button" class="pause-off">Annuler ma pause</button>':''}</div>`;}
   function closeMenu(){const m=$('menu'),s=$('star');if(m){m.classList.remove('on');s.classList.remove('on');}}
   async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}
     /* invitations dans une tribu en attente de ma réponse : pastille sur « Ma tribu » et fenêtre mise en avant */
@@ -453,7 +456,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,INTENT_DESC,shownIntent,intentHtml,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,menuTop,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,declineText,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

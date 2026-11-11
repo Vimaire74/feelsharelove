@@ -11,7 +11,7 @@ window.Propose=(function(){
   function scan(){const S=document.querySelector('.screen');if(!S)return;
     document.querySelectorAll('.prop-switch').forEach(b=>{const v=String(on());if(b.dataset.on!==v){b.dataset.on=v;b.textContent=label();}});
     const F=document.getElementById('prop-foot');if(F&&!F.firstChild)F.innerHTML=switchHtml();
-    if(!on()){S.querySelectorAll('.prop-btn').forEach(b=>b.remove());return;}
+    if(!on()||document.body.classList.contains('paused')){S.querySelectorAll('.prop-btn').forEach(b=>b.remove());return;} // pas de propositions pendant la pause
     if(!S.querySelector('.prop-page')){const b=document.createElement('button');b.type='button';b.className='prop-btn prop-page';b.textContent='Proposer une correction sur cette page';S.prepend(b);}
     S.querySelectorAll('h1,h2').forEach(h=>{if(h.closest('.prop-sheet')||h.closest('.prop-btn'))return;const n=h.nextElementSibling;if(n&&n.classList.contains('prop-btn'))return;
       const b=document.createElement('button');b.type='button';b.className='prop-btn';b.textContent='Proposer une correction';h.after(b);});}

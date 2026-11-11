@@ -21,13 +21,17 @@
     <div class="sec pause-card">${me.autoPaused
       ?`<p class="exp">Ton portrait a été mis en pause après plusieurs signalements. L'équipe regarde la situation et te répondra.</p><p class="exp">Pour nous écrire : <a href="mailto:contact@feelsharelove.com" style="color:var(--saffron)">contact@feelsharelove.com</a></p>`
       :`<p class="exp">Personne ne te voit et personne ne peut t'écrire. Tes conversations et ta tribu t'attendent : tu les retrouveras en revenant.</p>
-        <p class="exp"><b>Pour revenir</b></p><p class="exp">Ouvre le menu (l'étoile en haut à droite), puis « Réglages », puis « Revenir sur FeelShareLove ».</p>`}</div>`;};
+        <p class="exp"><b>Pour revenir</b></p><p class="exp">Ouvre le menu (l'étoile en haut à droite) et touche « Annuler ma pause ».</p>`}</div>`;};
+  /* « Annuler ma pause », en haut du menu */
+  document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('.pause-off');if(!b)return;b.disabled=true;
+    try{const f=await DB.get('profiles','me');f.paused=null;await DB.put('profiles',f);}catch(x){}App.closeMenu();route().catch(()=>{});});
   let busy=false,again=false;
   async function route(){if(busy){again=true;return;}busy=true;
     try{do{again=false;await routeOnce();}while(again);}finally{busy=false;}}
   async function routeOnce(){
     const h=(location.hash||'#now').slice(1);const [name,param]=h.split('/');
     const me=await DB.get('profiles','me');
+    document.body.classList.toggle('paused',!!me.paused);App.menuTop(me);
     if(!me.pseudo&&!FREE.has(name)){location.hash='#accueil';return;}
     let page=Pages[name]||Pages.now;
     /* portrait en pause : les pages de rencontre sont remplacées par un écran qui le dit clairement ;

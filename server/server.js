@@ -480,6 +480,7 @@ async function delPage(req, res, url) {
 
 async function wipeUser(me) {
   await q('DELETE FROM docs WHERE owner=$1', [me]);
+  await q("DELETE FROM docs WHERE store='alerts' AND data->>'user'=$1", [me]);
   await q("DELETE FROM docs WHERE store='invites' AND (data->>'to'=$1 OR data->>'from'=$1)", [me]);
   await q("DELETE FROM docs WHERE store='profiles' AND id=$1", [me]);
   await q('DELETE FROM files WHERE owner=$1', [me]);
@@ -643,6 +644,73 @@ async function api(req, res, url) {
   throw err(405, 'méthode');
 }
 
+/* ---------- veille des contenus publics : une fois par jour ----------
+   Le serveur relit ce que les autres membres peuvent voir (portrait, « en ce moment », pourquoi des entrées, questions ouvertes, cercles)
+   et cherche des mots qui peuvent signaler une menace, une violence, une arnaque ou une détresse, dans les six langues du site.
+   Les messages privés ne sont PAS analysés. Rien n'est sanctionné automatiquement : chaque alerte attend dans l'admin (onglet Alertes).
+   Les mots sont écrits sans accents ni majuscules ; un espace dans une expression accepte plusieurs espaces. */
+const WATCH = {
+  violence: ['attentats?', 'bombes?', 'explosifs?', 'meurtres?', 'meurtrier(e|s|es)?', 'assassin(s|er|e|es|at|ats)?', 'tuer', 'tu(e|es|ent|ons|ez|erai|eras|era|erais|erait)', 'massacr(e|es|er)', 'tueries?', 'fusillades?', 'egorg(er|e|es|ent)', 'poignard(er|e|es|ent)', 'decapit(er|e|ation)', 'terroris(te|tes|me)', 'djihad(iste|istes)?', 'kamikazes?', 'armes? a feu', 'kalachnikov', 'menaces? de mort', 'faire sauter', 'lyncher',
+    'anschlag', 'anschlage', 'sprengstoff', 'bomben?', 'mord', 'morde', 'morden', 'morder(in)?', 'ermord(en|e|et|ung)', 'tot(en|e|et|ung)', 'umbringen', 'massaker', 'amok(lauf)?', 'erschiess(en|e|t)', 'erstech(en|e)', 'terror(ist|isten|ismus|anschlag)?', 'dschihad', 'schusswaffen?', 'morddrohung(en)?', 'enthaupt(en|ung)',
+    'bomb(s|ing|ings)?', 'explosives?', 'murder(s|er|ers|ed|ing)?', 'kill(s|ing|ed|er|ers)?', 'assassinat(e|ed|ion)', 'mass shooting', 'shootings?', 'stab(bing|bed)', 'behead(ing|ed)?', 'terroris(t|ts|m)', 'terror attack', 'jihad(ist|ists)?', 'death threats?', 'slaughter',
+    'attentat(o|i)', 'bomba', 'esplosiv(o|i)', 'omicid(io|i|a)', 'assassin(o|i|are|io)', 'uccid(ere|o|i|e|ero|era|erti)', 'ammazz(are|o|i|a|arti)', 'strag(e|i)', 'massacr(o|are)', 'sparatoria', 'accoltell(are|o|ato)', 'decapit(are|azione)', 'terroris(ta|ti|mo)', 'minacc(ia|e) di morte', 'arm(a|i) da fuoco',
+    'atentados?', 'bombas?', 'explosivos?', 'asesin(o|a|os|ar|ato|atos)', 'homicidios?', 'matar(te|lo|la|los)?', 'masacre', 'tiroteos?', 'apunal(ar|o|ado)', 'degoll(ar|ado)', 'decapit(ar|acion)', 'terroristas?', 'terrorismo', 'yihad(ista)?', 'amenazas? de muerte', 'armas? de fuego',
+    'assassin(a|os|ato|io)', 'chacina', 'tiroteios?', 'esfaque(ar|ado|ou)', 'degol(ar|ado)', 'decapit(ar|acao)', 'ameacas? de morte', 'armas? de fogo'],
+  sexuel: ['viols?', 'viol(er|e|es|ent|ee|ees|erai|eur|eurs)', 'agressions? sexuelles?', 'abus sexuels?', 'pedophil(e|es|ie)', 'pedocriminel(s|le)?', 'inceste',
+    'vergewaltig(en|e|t|ung|er)', 'sexuelle(r|n)? (ubergriff|gewalt|missbrauch)', 'padophil(e|er|ie)?', 'kindesmissbrauch', 'missbrauch(en|t)?', 'inzest',
+    'rape(s|d)?', 'raping', 'rapists?', 'sexual (assault|abuse|violence)', 'molest(ed|ing|er)?', 'pa?edophil(e|es|ia)', 'incest', 'child abuse',
+    'stupr(o|i|are|atore|ata)', 'violentar(e|ti|la)', 'violentat(o|a)', 'violenza sessuale', 'abus(o|i) sessual(e|i)', 'pedofil(o|i|ia)', 'incesto',
+    'violacion(es)?', 'violar(te|la)?', 'viol(ada|ado|ador|adores)', 'agresion(es)? sexual(es)?', 'abusos? sexual(es)?', 'pedofil(os|a)', 'pederast(a|ia)',
+    'violacao', 'violacoes', 'estupr(o|ar|ador|ada)', 'agressao sexual', 'abusos? sexua(l|is)'],
+  agression: ['agressions?', 'agress(er|e|es|ent|eur|eurs)', 'tabass(er|e)', 'casser la gueule', 'tortur(e|es|er)', 'sequestr(er|ation)', 'kidnapp(er|ing)',
+    'angriffe?', 'angreifen', 'verprugel(n|t)', 'zusammenschlagen', 'folter(n|ung)?', 'entfuhr(en|ung)', 'uberfall(en)?', 'korperverletzung',
+    'assault(s|ed)?', 'beat (you|him|her|them) up', 'tortur(ed|ing)', 'kidnap(ped|ping)?', 'abduct(ion|ed)?',
+    'aggression(e|i)', 'aggredi(re|sco|to)', 'picchi(are|o|ato)', 'tortur(a|are)', 'rapi(re|mento)', 'sequestr(o|are)',
+    'agresion(es)?', 'agredir', 'agred(io|ido)', 'golpear', 'dar una paliza', 'torturar', 'secuestr(o|ar)', 'raptar',
+    'agressao', 'agressoes', 'agred(iu|ido)', 'espanc(ar|ado|ou)', 'rapt(o|ar)'],
+  arnaque: ['virements?', 'western union', 'moneygram', 'bitcoins?', 'crypto(s|monnaie|monnaies)?', 'iban', 'cartes? cadeaux?', 'investissements?', 'gagner de l argent', 'paypal', 'frais de douane',
+    'uberweisung(en)?', 'krypto(wahrung|wahrungen)?', 'geschenkkarten?', 'gutscheinkarten?', 'investition(en)?', 'investieren', 'geld verdienen',
+    'wire transfer', 'bank transfer', 'crypto(currency|currencies)?', 'gift cards?', 'invest(ment|ments|ing)', 'make money', 'cash app',
+    'bonific(o|i)', 'cripto(valuta|valute)?', 'carta regalo', 'buono regalo', 'investiment(o|i)', 'investire', 'guadagnare soldi',
+    'transferencias? bancarias?', 'cripto(moneda|monedas)?', 'tarjetas? (de )?regalo', 'inversion(es)?', 'invertir', 'ganar dinero',
+    'cripto(moeda|moedas)', 'cart(ao|oes) presente', 'vale presente', 'investimentos?', 'ganhar dinheiro'],
+  contact: ['https?:', 'www\\.', 'whatsapp', 'telegram', 'snapchat', 'instagram', 'tiktok', 'onlyfans', '[a-z0-9.]+@[a-z0-9-]+\\.[a-z]{2,}', '\\+?[0-9][0-9 ]{8,}[0-9]'],
+  detresse: ['suicid(e|es|er|aire|aires)', 'me tuer', 'en finir', 'envie de mourir', 'plus envie de vivre', 'me foutre en l air', 'mettre fin a mes jours',
+    'selbstmord', 'suizid', 'mich umbringen', 'nicht mehr leben', 'leben beenden',
+    'suicidal', 'kill myself', 'end my life', 'want to die', 'don t want to live',
+    'suicid(io|a|armi|arsi)', 'uccidermi', 'ammazzarmi', 'farla finita', 'voglia di morire', 'non voglio piu vivere', 'togliermi la vita',
+    'suicidarme', 'suicidarse', 'matarme', 'quitarme la vida', 'ganas de morir', 'no quiero vivir', 'acabar con todo',
+    'me matar', 'tirar a minha vida', 'vontade de morrer', 'nao quero viver', 'acabar com tudo']
+};
+const WATCH_LABEL = { violence: 'Violence, attentat, meurtre', sexuel: 'Violence sexuelle', agression: 'Agression', arnaque: 'Argent : arnaque possible', contact: 'Lien, numéro ou réseau extérieur', detresse: 'Détresse' };
+const WATCH_RE = Object.fromEntries(Object.entries(WATCH).map(([k, l]) => [k, new RegExp('(?<![a-z0-9])(?:' + [...new Set(l)].map(t => t.replace(/ /g, ' +')).join('|') + ')(?![a-z0-9])', 'g')]));
+/* texte simplifié caractère par caractère (même longueur que l'original), pour retrouver l'extrait exact */
+function watchFold(chars) { return chars.map(ch => { const f = ch.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()[0] || ' '; return /[a-z0-9@+.:\/]/.test(f) ? f : ' '; }).join(''); }
+function watchFind(text) { const chars = [...String(text || '')]; if (chars.length < 3) return []; const folded = watchFold(chars); const out = [];
+  for (const [cat, re] of Object.entries(WATCH_RE)) { re.lastIndex = 0; let m, n = 0; const seen = new Set();
+    while ((m = re.exec(folded)) && n < 3) { const term = m[0].replace(/ +/g, ' '); if (seen.has(term)) continue; seen.add(term); n++;
+      const a = Math.max(0, m.index - 70), b = Math.min(chars.length, m.index + m[0].length + 70);
+      out.push({ cat, term, before: (a ? '…' : '') + chars.slice(a, m.index).join(''), hit: chars.slice(m.index, m.index + m[0].length).join(''), after: chars.slice(m.index + m[0].length, b).join('') + (b < chars.length ? '…' : '') }); } }
+  return out; }
+async function watchScan() {
+  const profiles = await listDocs('profiles'); const fake = new Set(profiles.filter(p => p.fake).map(p => p.id)); const found = [];
+  const add = (user, where, text) => { if (!user || fake.has(user) || user === 'system') return;
+    for (const h of watchFind(text)) found.push({ id: 'al-' + crypto.createHash('sha1').update([user, where, h.cat, h.term, String(text)].join('|')).digest('hex').slice(0, 24), user, where, ...h }); };
+  for (const p of profiles) { add(p.id, 'Portrait › pseudo', p.pseudo); add(p.id, 'Portrait › En ce moment', p.now); add(p.id, 'Présent › phrase de disponibilité', p.avail && p.avail.note);
+    for (const [k, f] of Object.entries(p.facts || {})) if (f && typeof f.v === 'string' && k !== 'birth' && k !== 'sign') add(p.id, 'Portrait › Qui je suis (' + k + ')', f.v);
+    for (const c of p.chinois || []) add(p.id, 'Portrait › personnage ' + (c.n || ''), c.why); }
+  for (const e of await listDocs('entries')) add(e.profileId, 'Ce qui me fait vibrer › ' + String(e.title || '').slice(0, 60), e.why);
+  for (const x of await listDocs('questions')) { add(x.profileId, 'Questions ouvertes › question', x.k); add(x.profileId, 'Questions ouvertes › ' + String(x.k || '').slice(0, 60), x.a); }
+  const circles = await listDocs('circles'); const cById = Object.fromEntries(circles.map(c => [c.id, c]));
+  for (const c of circles) { add(c.createdBy, 'Cercle › titre', c.title); add(c.createdBy, 'Cercle « ' + String(c.title || '').slice(0, 50) + ' » › description', c.about); }
+  for (const x of await listDocs('circlePosts')) add(x.author, 'Cercle « ' + String((cById[x.circleId] || {}).title || x.circleId || '').slice(0, 50) + ' »', x.text);
+  let fresh = 0;
+  for (const a of found) { if (await getDoc('alerts', a.id)) continue; await putDoc('alerts', a.id, 'system', { ...a, status: 'open', ts: Date.now() }); fresh++; }
+  await putDoc('admin', 'watch', 'admin', { id: 'watch', at: Date.now(), found: found.length, fresh });
+  return fresh;
+}
+const watchTick = () => watchScan().catch(e => logErr('veille', e.message, { stack: String(e.stack || '').slice(0, 800) }));
+
 /* ---------- administration : /admin?key=ADMIN_KEY ---------- */
 const H = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /* ---------- e-mail de vérification de l'adresse, dans la langue de l'app ---------- */
@@ -747,7 +815,7 @@ form.inline{display:inline-flex;gap:6px;align-items:center;margin:0 6px 6px 0;fl
 .pics{display:flex;gap:10px;flex-wrap:wrap}.pics img{width:150px;height:150px;object-fit:cover;border-radius:12px;background:#000}figure{margin:0}figcaption{font-size:12px;color:var(--muted)}
 .ph{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#000;vertical-align:middle}
 .copy{background:#140a0c;border-left:3px solid var(--rose);padding:8px 10px;border-radius:8px;margin:6px 0;white-space:pre-wrap}
-.flash{background:rgba(95,191,143,.15);border:1px solid var(--ok);border-radius:12px;padding:8px 12px;margin-bottom:12px}`;
+mark{background:#f0b429;color:#2a1408;border-radius:3px;padding:0 2px}\n.flash{background:rgba(95,191,143,.15);border:1px solid var(--ok);border-radius:12px;padding:8px 12px;margin-bottom:12px}`;
 
 /* fichier texte des propositions, à donner à Claude : une proposition par bloc, avec la page et la rubrique précises */
 async function proposalsText(all) {
@@ -773,6 +841,9 @@ async function admin(req, res, url) {
       await q('DELETE FROM docs WHERE store=$1 AND id=$2', ['settings', id + ':idcheck']); // la photo de la carte est supprimée dans les deux cas
       await alog(a === 'verify' ? 'Identité vérifiée' : 'Vérification refusée', id); return go(back, backId, 'C\'est fait.');
     }
+    if (a === 'alert-done') { const r = await getDoc('alerts', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('alerts', id, 'system', r); } return go('alerts', '', 'Alerte classée.'); }
+    if (a === 'alert-all') { if (f.get('sure') !== 'oui') return go('alerts', '', 'Coche la case pour tout classer.'); let n = 0; for (const r of await listDocs('alerts')) if (r.status === 'open') { r.status = 'done'; r.doneAt = Date.now(); await putDoc('alerts', r.id, 'system', r); n++; } await alog('Alertes toutes classées', '', n + ' alertes'); return go('alerts', '', n + ' alertes classées.'); }
+    if (a === 'alert-scan') { const n = await watchScan(); await alog('Veille lancée à la main', '', n + ' nouvelles alertes'); return go('alerts', '', 'Analyse terminée : ' + n + ' nouvelle(s) alerte(s).'); }
     if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('reports', id, r.by, r); await alog('Signalement traité', r.target, r.kind); } return go(back, backId, 'Signalement classé.'); }
     if (a === 'prop-done') { const r = await getDoc('proposals', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('proposals', id, r.by, r); } return go('proposals', '', 'Proposition classée.'); }
     if (a === 'prop-mail') { if (!mailReady()) return go('proposals', '', 'L\'adresse d\'envoi n\'est pas encore configurée.');
@@ -893,6 +964,15 @@ async function admin(req, res, url) {
       ${kpi(reports.length, 'signalements à traiter')}${kpi(pend.length, 'vérifications en attente')}${kpi(users.filter(u => u.banned).length, 'comptes suspendus')}</div>
       ${(await config()).closed ? '<p class="card">Les inscriptions sont <b>fermées</b> (sauf lien d\'invitation). <a href="/admin?key=' + K + '&tab=settings">Réglages</a></p>' : ''}`;
   }
+  const alertsOpen = (await listDocs('alerts')).filter(r => r.status === 'open').sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (tab === 'alerts') { const w = (await getDoc('admin', 'watch')) || {}; const order = ['violence', 'sexuel', 'agression', 'detresse', 'arnaque', 'contact'];
+    const card = r => `<div class="card"><b>${H(WATCH_LABEL[r.cat] || r.cat)}</b> · mot repéré : <b>${H(r.term)}</b> · <small>${fmtDT(r.ts)}</small>
+      <p>${who(r.user)} · ${H(r.where)}</p><div class="copy">${H(r.before)}<mark>${H(r.hit)}</mark>${H(r.after)}</div>
+      <div>${btn('alert-done', r.id, 'Classer')} ${btn('warn', r.user, 'Avertir', reasonSel)} ${btn('ban', r.user, 'Suspendre', reasonSel, 'danger')}</div></div>`;
+    body = `<h2>Alertes à lire (${alertsOpen.length})</h2>
+      <p class="muted">Une fois par jour, le serveur relit les contenus visibles par les autres membres (portraits, « en ce moment », pourquoi des entrées, questions ouvertes, cercles) et repère des mots liés à la violence, aux arnaques ou à la détresse, dans les six langues. Les messages privés ne sont pas analysés. Un mot repéré n'est pas une faute : lis l'extrait avant de décider. Une alerte classée ne revient pas tant que le texte ne change pas.</p>
+      <div class="card">Dernière analyse : ${w.at ? fmtDT(w.at) + ' · ' + (w.found || 0) + ' passage(s) repéré(s), dont ' + (w.fresh || 0) + ' nouveau(x)' : 'pas encore faite'} ${btn('alert-scan', '', 'Analyser maintenant')} ${alertsOpen.length ? btn('alert-all', '', 'Tout classer', sure('Je confirme'), 'danger') : ''}</div>
+      ${order.map(c => { const l = alertsOpen.filter(r => r.cat === c); return l.length ? `<h2>${H(WATCH_LABEL[c])} (${l.length})</h2>${l.map(card).join('')}` : ''; }).join('') || '<p class="muted">Aucune alerte.</p>'}`; }
   if (tab === 'reports') body = `<h2>Signalements à traiter (${reports.length})</h2>${reports.map(reportCard).join('') || '<p class="muted">Aucun.</p>'}
     <h2>Suggestions (${suggestions.length})</h2>${suggestions.map(r => `<div class="card">${H(r.reason)} <small>· ${who(r.by)} · ${fmtDT(r.ts)}</small> ${btn('report-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune.</p>'}`;
   if (tab === 'verif') {
@@ -970,7 +1050,7 @@ async function admin(req, res, url) {
       <h2>Profils de démonstration (${nf})</h2><div class="card"><p class="muted">Dix personnages inventés : Elio, Nora, Paul, Claire et André (portraits en français), Lena (allemand), Owen (anglais), Giulia (italien), Mateo (espagnol) et Inês (portugais). Ils portent l'étiquette « profil de démonstration » dans l'app. Le bouton les met à jour et crée ceux qui manquent. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
         ${btn('fakes', '', 'Remplir les profils de démonstration')} ${btn('fakes-delete', '', 'Supprimer les profils de démonstration', sure('Je confirme'), 'danger')}</div>`; }
 
-  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
+  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['alerts', 'Alertes', alertsOpen.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
 <link rel="stylesheet" href="/fonts/fonts.css"><style>${ADMIN_CSS}</style>
 <header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
@@ -1041,5 +1121,6 @@ http.createServer(async (req, res) => {
   try { await migrateTribes(); } catch (e) { console.error('migration tribu', e.message); }
   backfillGeo().catch(e => console.error('distances', e.message));
   setInterval(remindInvites, 36e5); setTimeout(remindInvites, 6e4);
+  setInterval(watchTick, 864e5); setTimeout(watchTick, 12e4); // veille des contenus publics : deux minutes après le démarrage, puis une fois par jour
   console.log('FeelShareLove sur le port ' + PORT);
 });

@@ -608,3 +608,8 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .prop-own{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .prop-own label.btn{cursor:pointer}
 .prop-hint{margin:-4px 0 0}
+
+/* menu : « Annuler ma pause » à la place des propositions */
+.prop-box.pause-box{background:linear-gradient(135deg,#f0b429,#e8862e);color:#2a1408}
+.pause-off{align-self:flex-start;background:none;border:0;padding:2px 0;color:#2a1408;font:700 14px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
+body.paused #prop-foot{display:none}
