@@ -222,9 +222,15 @@ async function putThread(me, other, body) {
 async function myThreads(me) { return (await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).map(t => threadView(t, me)); }
 
 /* messages : rangés par paire ; chacun voit le champ thread = l'autre personne */
-function msgView(m, me) { const other = m.from === me ? m.to : m.from; const { pairId, ...rest } = m; return { ...rest, thread: other }; }
+function msgView(m, me) { const other = m.from === me ? m.to : m.from; const { pairId, reactions, ...rest } = m;
+  const r = reactions || {}; if (r[me] || r[other]) rest.rx = { me: r[me] || '', them: r[other] || '' }; // réactions : la mienne et celle de l'autre
+  return { ...rest, thread: other }; }
+const REACTIONS = new Set(['❤️', '😂', '😮', '😢', '🙏', '👍']);
 async function putMessage(me, id, body, old) {
-  if (old) { // seule modification permise : la personne qui reçoit marque une photo éphémère comme vue
+  if (old) { // modifications permises : réagir à un message de la conversation, ou marquer comme vue une photo éphémère reçue
+    if (old.from !== me && old.to !== me) throw err(403, 'message');
+    if ('react' in body) { const e = String(body.react || ''); if (e && !REACTIONS.has(e)) throw err(400, 'réaction'); limit(me, 'react', 60, 6e4);
+      const r = { ...(old.reactions || {}) }; if (e) r[me] = e; else delete r[me]; old.reactions = r; await putDoc('messages', id, old.from, old); return msgView(old, me); }
     if (old.to !== me) throw err(403, 'message'); old.seen = !!body.seen; await putDoc('messages', id, old.from, old); return msgView(old, me);
   }
   const other = body.to; if (body.from !== me || !other) throw err(403, 'message');
@@ -236,6 +242,8 @@ async function putMessage(me, id, body, old) {
   } else body.text = String(body.text || '').slice(0, 5000);
   if (body.kind === 'ephemeral') body.seconds = Math.min(60, Math.max(1, Math.round(+body.seconds) || 10)); else delete body.seconds;
   if ('secs' in body) body.secs = Math.min(600, Math.max(0, Math.round(+body.secs) || 0));
+  if (body.re && !DOC_ID.test(String(body.re))) delete body.re; // message auquel on répond
+  delete body.reactions; delete body.react; delete body.rx;
   limit(me, 'msg', 40, 6e4);
   const t = await getDoc('threads', pair(me, other)); if (!t) throw err(403, 'Pas de conversation.');
   const ok = t.state === 'open' || (t.state === 'pending' && t.a === me) || (body.kind === 'decline' && (t.decliner === me || (t.state === 'pending' && t.b === me)));

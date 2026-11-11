@@ -446,7 +446,7 @@ window.App=(function(){
       th={id:p.id,status:'pending-out',startedBy:'me',firstAt:o.free?null:Date.now(),acceptAt:Date.now()+6000,viaNod:o.nod||undefined};await DB.put('threads',th);
     }else if(th.status==='pending-out'){return {error:'Attends que '+dn(p)+' ouvre la conversation.'};}
     else if(th.status==='pending-in'){th.status='open';await DB.put('threads',th);}
-    const msg=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'text',text,about:about&&about.id,aboutTitle:about&&about.title,ts:Date.now()});
+    const msg=await DB.put('messages',{thread:p.id,from:'me',to:p.id,kind:'text',text,about:about&&about.id,aboutTitle:about&&about.title,re:o.re||undefined,ts:Date.now()});
     return {ok:true,msg,thread:th,left:await firstLeft()};}
   function sendResultText(p,r){if(r.error)return r.error;
     if(r.thread.status==='pending-out')return `Envoyé. ${esc(dn(p))} lira ta réponse à côté de son entrée et choisira d'ouvrir la conversation. Il te reste ${r.left} premier${r.left>1?'s':''} message${r.left>1?'s':''} aujourd'hui. <a href="#messages/${p.id}">Voir</a>`;
