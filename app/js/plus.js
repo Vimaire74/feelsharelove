@@ -26,14 +26,14 @@ window.Plus=(function(){
   /* ---------- affichage sur un portrait ---------- */
   function investGroups(keys){const g={};(keys||[]).forEach(k=>{const c=k.split(':')[0];(g[c]=g[c]||[]);if(k.includes(':'))g[c].push(k);});return g;}
   function viewHtml(p,me,preview,only){let h='';const ex=preview?[]:extraCommon(me,p);
-    const rp=(preview||p.repShow!==false)?(p.rep||[]):[];
+    const rp=(p.repShow!==false)?(p.rep||[]):[];
     if(rp.length){const mr=new Set(!preview&&me?me.rep||[]:[]);h+=`<h2>${preview?'Mes métiers, mes rôles, <em>mes tendances</em>':'Ses métiers, ses rôles, <em>ses tendances</em>'}</h2><div class="inv-show">${rp.map(k=>`<span class="chip on ro${mr.has(k)?' hit':''}">${esc(repLabel(k,p))}</span>`).join('')}</div>`;}
     if(window.Genres)h+=Genres.viewHtml(p,me,preview);
     if(only==='rep')return h;
     const hitPc=new Set(ex.filter(x=>x.k==='pc').map(x=>x.theirs.id)),hitW=new Set(ex.filter(x=>x.k==='pcw').map(x=>x.theirs.wid));
-    const pc=(preview||p.chinoisShow!==false)?(p.chinois||[]):[];
+    const pc=(p.chinoisShow!==false)?(p.chinois||[]):[];
     if(pc.length){h+=`<h2>Si ${preview?'j\'étais':'c\'était'} <em>un personnage</em></h2><div class="pc-show">${pc.map(x=>`<div class="pc-item${hitPc.has(x.id)?' hit':hitW.has(x.wid)?' near':''}"><div class="pc-n">${esc(x.n)}${x.w?` <small>${esc(x.w)}</small>`:''}</div>${x.why?`<div class="pc-why">${esc(x.why)}</div>`:''}${hitPc.has(x.id)?'<div class="tag">En commun avec toi</div>':hitW.has(x.wid)?'<div class="tag">Le même univers que toi</div>':''}</div>`).join('')}</div>`;}
-    const inv=(preview||p.investShow!==false)?C.fixInv(p.invest):[];
+    const inv=(p.investShow!==false)?C.fixInv(p.invest):[];
     if(inv.length){const mi=new Set(me&&!preview?C.fixInv(me.invest):[]);const g=investGroups(inv);
       h+=`<h2>Là où ${preview?'je mets <em>mon cœur</em>':(App.fem(p)?'elle':'il')+' met <em>son cœur</em>'}</h2><div class="inv-show">${Object.entries(g).map(([c,subs])=>{const cat=C.INV[c];if(!cat)return'';
         const hit=mi.has(c)||subs.some(k=>mi.has(k));

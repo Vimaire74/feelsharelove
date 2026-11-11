@@ -13,7 +13,7 @@ Pages._view=async function(S,p,preview){
     facts.push([x.k,s.v]);});
   Object.entries(F).forEach(([k,v])=>{if(typeof v==='string'&&v&&!FACTS.some(x=>x.id===k))facts.push([FACT_LABEL[k]||k,v]);});
   S.innerHTML=(preview?`<a class="back" href="#portrait">← Modifier mon portrait</a><p class="eyebrow">Ce que les autres voient</p>`:`<a class="back" href="#now">← Maintenant</a><p class="eyebrow">Portrait</p>`)+`
-  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Ta tribu</span>':''}${preview?'':App.langTag(me,p)}<p class="muted">${esc(preview?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
+  <div class="hero">${App.avatarHtml(p)}<div><h1>${esc(dn(p))}</h1>${App.badge(p)}${p.intimate?' <span class="rtag t-int">Ta tribu</span>':''}${preview?'':App.langTag(me,p)}<p class="muted">${esc(preview&&!p.limited?(p.city||''):App.place(p))}${p.travel?' · en voyage':''}${preview?'':' · '+localTime(p)+' chez '+(f?'elle':'lui')}</p></div></div>
   ${isAvail(p)?`<div class="avail-card"><div class="k">Disponible${preview?' jusqu\'à '+hhmm(p.avail.until):' maintenant'}</div><div class="wants big">${p.avail.wants.map(k=>WANT[k]?WANT[k].l:'').join(' · ')}</div>${p.avail.note?`<p class="txt">${esc(p.avail.note)}</p>`:''}</div>`:''}
   <div class="intent">${App.shownIntent(p.intent).map(i=>`<span class="chip on ro">${INTENT_LABEL[i]}</span>`).join('')}</div>
   ${p.now?`<div class="now"><p class="eyebrow">En ce moment</p><p class="txt">${esc(p.now)}</p></div>`:''}
@@ -23,7 +23,7 @@ Pages._view=async function(S,p,preview){
   ${facts.length?`<h2>Qui ${preview?'je':il} <em>${preview?'suis':'est'}</em></h2><div class="facts">${facts.map(([k,v])=>`<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`:''}
   ${Plus.viewHtml(p,me,preview,p.limited?'rep':null)}
   <h2>Ce qui ${preview?'me':(f?'la':'le')} fait <em>vibrer</em></h2>${preview?'':`<p class="muted small" style="margin-bottom:10px">Ouvre une entrée et réponds-y : c'est comme ça qu'on écrit à quelqu'un sur FeelShareLove.</p>`}<div class="list" id="v-list"></div>
-  ${p.limited?`<div class="locked">Le reste de ${f?'son':'son'} portrait (ce qu'${il} vit en ce moment, sa voix, ses personnages, ce dans quoi ${il} s'investit, ses questions ouvertes…) s'ouvre quand vous aurez commencé à vous parler.</div>`:''}
+  ${p.limited&&preview?`<div class="locked">Le reste de ton portrait (ce que tu vis en ce moment, ta voix, tes personnages, ce dans quoi tu t'investis, tes questions ouvertes…) n'est visible qu'une fois la conversation ouverte.</div>`:p.limited?`<div class="locked">Le reste de ${f?'son':'son'} portrait (ce qu'${il} vit en ce moment, sa voix, ses personnages, ce dans quoi ${il} s'investit, ses questions ouvertes…) s'ouvre quand vous aurez commencé à vous parler.</div>`:''}
   ${p.qs.filter(q=>q.a).length?`<h2>Questions <em>ouvertes</em></h2>${p.qs.filter(q=>q.a).map(q=>`<div class="q ro"><div class="k">${esc(q.k)}</div><div class="a">${esc(q.a)}</div></div>`).join('')}`:''}
   ${preview?'':`<div class="actions2"><button class="btn ghost" type="button" id="red">Ajouter à ma liste rouge</button><button class="btn ghost" type="button" id="rep">Signaler ce portrait</button></div><p class="muted small" id="done" style="margin-top:8px"></p>`}`;
   const L=$('v-list');if(!p.entries.length)L.innerHTML='<p class="muted small">Rien pour l\'instant.</p>';
@@ -45,4 +45,14 @@ Pages.personne=async function(S,id){
   if(!p||p.isMe||await App.isBlocked(p)){S.innerHTML='<a class="back" href="#now">← Maintenant</a><div class="empty">Ce portrait n\'est pas disponible.</div>';return;}
   await Pages._view(S,p,false);
 };
-Pages.apercu=async function(S){const p=await App.loadPerson('me');await Pages._view(S,p,true);};
+/* « Ce que les autres voient » : deux vues, comme sur le site. Avant de se parler, les autres ne voient qu'une partie du portrait
+   (pays, envies, fonctionnement, signe et langues, métiers et rôles, ce qui fait vibrer) ; le reste s'ouvre avec la conversation. */
+Pages.apercu=async function(S){const full=await App.loadPerson('me');let mode='avant';
+  const limited=p=>{const f={};if(p.facts){if(p.facts.sign)f.sign=p.facts.sign;if(p.facts.langs)f.langs=p.facts.langs;}
+    return {...p,limited:true,now:'',facts:f,qs:[],country:((p.city||'').match(/\s([A-Z]{2})$/)||[])[1]||(/^\d{4}$/.test(String(p.npa||'').trim())?'CH':'')};};
+  async function draw(){await Pages._view(S,mode==='avant'?limited(full):full,true);
+    const e=S.querySelector('.eyebrow');if(!e)return;
+    e.insertAdjacentHTML('afterend',`<div class="ap-switch"><button type="button" class="chip${mode==='avant'?' on':''}" data-m="avant">Avant de se parler</button><button type="button" class="chip${mode==='apres'?' on':''}" data-m="apres">Conversation ouverte</button></div>
+      <p class="muted small ap-note">${mode==='avant'?'Ce que voit une personne qui ne t\'a pas encore parlé.':'Ce que voit une personne avec qui la conversation est ouverte, ou qui est dans ta tribu.'}</p>`);
+    S.querySelectorAll('.ap-switch .chip').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.m===mode)return;mode=b.dataset.m;const y=S.scrollTop;draw().then(()=>{S.scrollTop=y;});}));}
+  await draw();};
