@@ -136,18 +136,18 @@ window.Plus=(function(){
        const main=window.Genres&&(Genres.isMainstream(e.title)||Genres.isMainstream(o.title));
        pts+=main&&!(String(e.why||'').trim().length>=PTS.longWhy&&String(o.why||'').trim().length>=PTS.longWhy)?PTS.workMain:PTS.work;}}
     /* personnages : le même personnage, sinon le même univers */
-    const mc=me.chinois||[],pc=p.chinoisShow===false?[]:(p.chinois||[]);
+    const mc=me.chinois||[],pc=p.chinois||[]; // caché ou non : compte dans le score, jamais affiché
     const ids=inter(mc.map(x=>x.id),pc.map(x=>x.id));pts+=ids.length>=3?PTS.perso3:ids.length===2?PTS.perso2:0; // un seul personnage commun : rien ; deux : 4 ; trois ou plus : 10
     const wSeen=new Set(mc.filter(x=>ids.includes(x.id)).map(x=>x.wid));
     pts+=PTS.univers*inter(mc.map(x=>x.wid).filter(w=>w&&!wSeen.has(w)),pc.map(x=>x.wid).filter(Boolean)).length;
     /* ce qui me représente */
-    pts+=PTS.rep*inter(me.rep||[],p.repShow===false?[]:(p.rep||[])).length;
+    pts+=PTS.rep*inter(me.rep||[],p.rep||[]).length;
     /* là où je mets mon cœur : précision commune 5, domaine commun sans précision commune 2 */
-    const IA=C.fixInv(me.invest),IB=p.investShow===false?[]:C.fixInv(p.invest);
+    const IA=C.fixInv(me.invest),IB=C.fixInv(p.invest);
     const subs=inter(IA.filter(k=>k.includes(':')),IB);const hitCat=new Set(subs.map(k=>k.split(':')[0]));
     pts+=PTS.invSub*subs.length+PTS.invCat*inter(IA.map(k=>k.split(':')[0]),IB.map(k=>k.split(':')[0])).filter(c=>!hitCat.has(c)).length;
     /* type de fonctionnement : 15 par type identique, 10 pour sensible avec émotif */
-    const TA=me.types&&me.types.list||[],TB=p.types&&p.types.show!==false&&p.types.list||[];
+    const TA=me.types&&me.types.list||[],TB=p.types&&p.types.list||[];
     if(TA.length&&TB.length){const left=[...TB];
       [...TA].sort((x,y)=>(TB.includes(y)?1:0)-(TB.includes(x)?1:0)).forEach(a=>{let bi=-1,bv=0;left.forEach((b,j)=>{const v=(TYPE_MATCH[a]||{})[b]||0;if(v>bv){bv=v;bi=j;}});
         if(bi>=0){pts+=bv===1?PTS.type:PTS.typeNear;left.splice(bi,1);}});}

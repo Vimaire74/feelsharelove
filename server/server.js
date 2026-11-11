@@ -163,11 +163,15 @@ function qSame(a, b) { const fa = qFold(a), fb = qFold(b); if (!fa || !fb || fa.
   const wa = qWords(a), wb = qWords(b); let n = 0; for (const w of wa) if (wb.has(w)) n++; return n >= 2; }
 function qMatches(mine, theirs) { let n = 0; for (const q of mine || []) { if (!q.a) continue; const t = (theirs || []).find(x => x.a && qFold(x.k) === qFold(q.k)); if (t && qSame(q.a, t.a)) n++; } return n; }
 const selfView = p => { const { redlisted, redlistCheck, ...rest } = p; return rest; }; // la marque de la liste rouge ne sort jamais du serveur
-function publicProfile(p, intimate, opened, myGeo, qmatch, myIntent) {
+/* portrait complet : il n'apparaît dans les Résonances des autres qu'à ce moment-là (mêmes critères que App.portraitTodo dans l'app) */
+function portraitDone(p, nEntries) { return !!(p.fake || (p.photo && p.types && p.types.list && p.types.list.length && p.facts && p.facts.birth && p.facts.birth.v && (p.langs || []).length && (p.rep || []).length && (p.invest || []).length && (p.genres || []).length && nEntries >= 3)); }
+function publicProfile(p, intimate, opened, myGeo, qmatch, myIntent, nEntries) {
+  const done = portraitDone(p, nEntries || 0);
   const { name, lastName, npa, email, phone, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, redlisted, redlistCheck, ...rest } = p; // couleur de tribu et langues de lecture restent privées
   if (!rest.textLang) rest.textLang = 'fr'; // anciens portraits : écrits en français
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
+  rest.done = done;
   /* points calculés ici sans rien dévoiler : questions ouvertes concordantes (6 chacune, 12 au plus) et « Rompre ma solitude » choisi par les deux (5).
      « Rompre ma solitude » n'est jamais transmis aux autres, même dans la tribu. */
   const lonely = (p.intent || []).includes('seul') && (myIntent || []).includes('seul');
@@ -321,7 +325,8 @@ async function readList(store, me, query) {
     if (store === 'questions') rows = rows.filter(r => r.profileId === me || opened.has(r.profileId));
     if (store === 'profiles') { const mg = (rows.find(p => p.id === me) || {}).geo; const qs = await listDocs('questions'); const byP = {}; for (const x of qs) (byP[x.profileId] = byP[x.profileId] || []).push(x);
       const mi = (rows.find(p => p.id === me) || {}).intent;
-      rows = rows.map(p => p.id === me ? selfView(p) : publicProfile(p, intimate, opened, mg, qMatches(byP[me], byP[p.id]), mi)); }
+      const nE = {}; for (const e of await listDocs('entries')) nE[e.profileId] = (nE[e.profileId] || 0) + 1;
+      rows = rows.map(p => p.id === me ? selfView(p) : publicProfile(p, intimate, opened, mg, qMatches(byP[me], byP[p.id]), mi, nE[p.id])); }
   }
   return rows;
 }
@@ -334,7 +339,7 @@ async function readOne(store, me, id) {
   if (store === 'nods') return d.owner === me || d.target === me ? d : null;
   if (store === 'invites') return d.from === me || d.to === me ? d : null;
   if (store === 'notices') return d.to === me ? d : null;
-  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); if (hidden.has(d.id)) return null; const qs = await listDocs('questions'); return publicProfile(d, intimate, opened, (byId[me] || {}).geo, qMatches(qs.filter(x => x.profileId === me), qs.filter(x => x.profileId === d.id)), (byId[me] || {}).intent); }
+  if (store === 'profiles' && d.id !== me) { const { hidden, intimate, opened, byId } = await hiddenFor(me); if (hidden.has(d.id)) return null; const qs = await listDocs('questions'); return publicProfile(d, intimate, opened, (byId[me] || {}).geo, qMatches(qs.filter(x => x.profileId === me), qs.filter(x => x.profileId === d.id)), (byId[me] || {}).intent, (await listDocs('entries', "AND data->>'profileId'=$2", [d.id])).length); }
   if (store === 'profiles' && d.id === me) return selfView(d);
   if (store === 'questions' && d.profileId !== me) { const { opened } = await hiddenFor(me); return opened.has(d.profileId) ? d : null; }
   if (store === 'voices' && d.owner !== me && d.kind === 'presentation') { const { opened } = await hiddenFor(me); return opened.has(d.owner) ? d : null; }

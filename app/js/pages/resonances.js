@@ -5,12 +5,13 @@ Pages.resonances=async function(S,id){
   const {me,entries}=await App.loadMe();const meName='Toi';
   if(!id){
     S.innerHTML=`<p class="eyebrow">Résonances</p><h1>Qui résonne avec moi ?</h1>
+    ${App.portraitTodo(me,entries.length).length?`<div class="sec todo" style="margin-top:12px"><p class="exp"><b>Les autres ne te voient pas encore dans leurs résonances.</b></p><p class="exp">Tu y apparaîtras dès que ton portrait sera complet.</p><a class="btn ghost" href="#portrait">Compléter mon portrait</a></div>`:''}
     <div class="finder"><div class="search" style="margin-top:12px"><input id="r-q" placeholder="Je cherche… un film, une passion" autocomplete="off"></div>
       <div class="or">ou</div>
       <button class="crit-btn" type="button" id="r-crit" aria-expanded="false"><span id="r-crit-l">Choisir ce que je cherche</span><span aria-hidden="true">▾</span></button>
       <div class="crit-panel" id="r-panel" hidden></div></div>
     <div id="r-info" class="muted small" style="margin:10px 0 4px"></div>${Plus.legendHtml()}<div id="r-list"></div>`;
-    const L=$('r-list');const people=await App.others();for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
+    const L=$('r-list');const people=(await App.others()).filter(p=>p.done!==false);for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
     const C=window.CATALOGUE,norm=App.norm,WANT=App.WANT;
     /* critères : dans un même groupe, l'un OU l'autre ; entre les groupes, tous à la fois */
     const GROUPS=[

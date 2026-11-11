@@ -6,7 +6,7 @@ Pages.portrait=async function(S){
   const Q4="Qu'est-ce qui fait que mon cœur s'emballe";
   if(!qs.length){for(const k of ["Un moment où j'ai pleuré devant un écran","L'odeur de mon enfance","La chose que je referais mille fois",Q4])qs.push(await DB.put('questions',{profileId:'me',k,a:''}));}
   else if(!me.q4Added){me.q4Added=true;await DB.put('profiles',me);if(!qs.some(q=>App.norm(q.k)===App.norm(Q4)))qs.push(await DB.put('questions',{profileId:'me',k:Q4,a:''}));} // ajoutée une fois aux portraits existants
-  S.innerHTML=`<p class="eyebrow">Mon portrait</p>
+  S.innerHTML=`<p class="eyebrow">Mon portrait</p><div id="todo-box"></div>
   <div class="hero">
     <div class="avatar"><img id="photo" alt="" hidden></div>
     <div><h1 id="pseudo-h">${esc(me.pseudo)}</h1>${App.badge(me)}<div><button class="linkbtn" type="button" id="pseudo-change">Changer de pseudo</button></div></div>
@@ -54,7 +54,12 @@ Pages.portrait=async function(S){
   <div class="add" id="add-q" style="margin-top:12px">+ Ajouter ma propre question</div>
   <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div><div id="prop-foot" style="margin-top:18px"></div>`;
 
-  let t=null;function saveMe(){clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
+  /* tant que le portrait n'est pas complet, il n'apparaît pas dans les Résonances des autres : on dit ce qui manque */
+  function renderTodo(){const B=$('todo-box');if(!B)return;const m=App.portraitTodo(me,entries.length);
+    if(m.length){B.dataset.was='todo';B.innerHTML=`<div class="sec todo"><p class="exp"><b>Ton portrait n'apparaît pas encore dans les Résonances.</b></p><p class="exp">Les autres te verront dans leurs résonances dès qu'il sera complet. Il te reste à remplir :</p><ul class="todo-list">${m.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;}
+    else if(B.dataset.was==='todo'||B.dataset.was==='ok'){B.dataset.was='ok';B.innerHTML=`<div class="sec todo ok"><p class="exp"><b>Ton portrait est complet.</b></p><p class="exp">Tu apparais maintenant dans les Résonances des autres.</p></div>`;}
+    else B.innerHTML='';}
+  let t=null;function saveMe(){renderTodo();clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
   /* langues : app, portrait, portraits que je veux voir */
   function renderLangs(){const B=$('lang-box');if(!me.textLang)me.textLang=I18N.lang;if(!me.readLangs||!me.readLangs.length)me.readLangs=App.readLangsOf(me);
     const name=c=>I18N.name(c);const pool=[...new Set([I18N.lang,...I18N.available(),...(me.langs||[]),me.textLang,...me.readLangs])];
@@ -160,7 +165,7 @@ Pages.portrait=async function(S){
   /* œuvres et passions */
   function closeForm(){$('form-slot').innerHTML='';$('add').style.display='';}
   let nods=[];try{nods=(await DB.all('nods')).filter(n=>n.target==='me');}catch(x){}
-  function renderList(){const L=$('list');L.innerHTML='';
+  function renderList(){renderTodo();const L=$('list');L.innerHTML='';
     if(!entries.length){L.innerHTML='<p class="muted" style="font-size:14px">Aucune entrée pour l\'instant.</p>';return;}
     entries.forEach((e,i)=>{const el=App.entryEl(e,{
       edit:()=>{const f=App.entryForm(e,async ne=>{const saved=await DB.put('entries',{...ne,profileId:'me'});entries[i]=saved;renderList();},()=>renderList());el.replaceWith(f);},

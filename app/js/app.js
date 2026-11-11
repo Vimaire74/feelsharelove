@@ -116,6 +116,17 @@ window.App=(function(){
   /* haut du menu : les propositions, ou « Annuler ma pause » quand le portrait est en pause (les propositions n'ont alors plus de sens) */
   function menuTop(me){const T=$('menu-top');if(!T)return;const k=me&&me.paused?(me.autoPaused?'auto':'pause'):'prop';if(T.dataset.k===k)return;T.dataset.k=k;
     T.innerHTML=k==='prop'?Propose.switchHtml():`<div class="prop-box pause-box"><b>Ton portrait est en pause</b><span>Personne ne te voit et personne ne peut t'écrire.</span>${k==='pause'?'<button type="button" class="pause-off">Annuler ma pause</button>':''}</div>`;}
+  /* ce qui manque pour que le portrait apparaisse dans les Résonances des autres (mêmes critères que portraitDone sur le serveur) */
+  function portraitTodo(me,n){const m=[];if(!me)return m;
+    if(!me.photo)m.push('Ma photo');
+    if(!(me.types&&me.types.list&&me.types.list.length))m.push('Mon fonctionnement (le test)');
+    if(!(me.facts&&me.facts.birth&&me.facts.birth.v))m.push('Ma date de naissance');
+    if(!(me.langs||[]).length)m.push('Mes langues');
+    if(!(me.rep||[]).length)m.push('Mes métiers, mes rôles, mes tendances');
+    if(!(me.invest||[]).length)m.push('Là où je mets mon cœur');
+    if(!(me.genres||[]).length)m.push('Mes histoires préférées');
+    if((n||0)<3)m.push('Trois choses qui me font vibrer');
+    return m;}
   function closeMenu(){const m=$('menu'),s=$('star');if(m){m.classList.remove('on');s.classList.remove('on');}}
   async function refreshMsgCount(){const th=await DB.all('threads');const n=th.filter(t=>t.status==='pending-in').length;const el=$('msg-count');if(el)el.textContent=n?n+' demande'+(n>1?'s':''):th.filter(t=>t.status==='open').length+' ouvertes';const tb=$('tab-badge');if(tb){tb.textContent=n;tb.hidden=!n;}
     /* invitations dans une tribu en attente de ma réponse : pastille sur « Ma tribu » et fenêtre mise en avant */
@@ -456,7 +467,7 @@ window.App=(function(){
     return `Envoyé. <a href="#messages/${p.id}">Ouvrir la conversation</a>`;}
 
   return {$,INTENT_LABEL,INTENT_DESC,shownIntent,intentHtml,FACT_LABEL,FACTS,FEELS,FEEL,WANTS,WANT,FAMILIES,qdjToday,esc,norm,words,grow,zodiac,chinese,chineseAnimal,localTime,hhmm,fem,dn,isAvail,today,
-    shell,closeMenu,menuTop,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
+    shell,closeMenu,menuTop,portraitTodo,refreshMsgCount,textLangOf,readLangsOf,canRead,langTag,langOk,TRIBE_COLORS,applyTribeColor,verifOnly,hiddenList,hideAdd,favOf,isFav,favToggle,invites,inviteWith,tribeInvite,tribeBox,REFUS,loadMe,loadPerson,others,isBlocked,resonance,workKey,feelTags,entryEl,avatarHtml,personEl,
     catalogSearch,catalogField,entryForm,stylize,STYLES,dominantFeels,prefixes,pseudoProposals,recorder,voiceRecorder,audioEl,speak,place,firstLeft,tickThreads,sendTo,sendResultText,
     REPLY_FOR:p=>REPLY[p.id]||'Merci pour ton message.',accord,declineChoices,declineText,pendingIn,pseudoRule,photoRule,badge,isVerified,camera};
 })();

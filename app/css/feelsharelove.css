@@ -614,7 +614,14 @@ h1,h2,.title,.wants,.st,.nm,.k,.v,.exp,.chip,.rtag{overflow-wrap:anywhere}
 .pause-off{align-self:flex-start;background:none;border:0;padding:2px 0;color:#2a1408;font:700 14px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer;text-align:left}
 body.paused #prop-foot{display:none}
 
-/* ce que les autres voient : avant de se parler / conversation ouverte */
-.ap-switch{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 6px}
-.ap-switch .chip{min-height:40px}
-.ap-note{margin:0 0 14px}
+/* ce que les autres voient : un bandeau clair et un cadre, pour ne pas le confondre avec « Mon portrait » */
+.ap-banner{background:#f5ece6;color:#2a1408;border-radius:18px;padding:14px 16px;margin:10px 0 14px}
+.ap-banner p{margin:0}
+.ap-k{font:700 11px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:#a8362a}
+.ap-t{font:600 22px/1.15 var(--display);margin:6px 0 4px!important}
+.ap-d{font-size:14px;line-height:1.4;color:#4a2a1c}
+.ap-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}
+.ap-tab{background:transparent;border:2px solid #4a1a22;color:#4a1a22;border-radius:12px;padding:9px 10px;font:600 13px/1.25 var(--body);cursor:pointer;min-height:44px}
+.ap-tab.on{background:#4a1a22;color:#fff}
+.ap-frame{border:2px dashed #f5ece6;border-radius:18px;padding:14px 14px 4px}
+@media(max-width:420px){.ap-switch{grid-template-columns:1fr}}

@@ -93,7 +93,8 @@ Pages.accueil=async function(S){
       <div class="row" style="justify-content:flex-start;margin-top:12px"><button class="btn ghost" type="button" id="take">${me.photo?'Reprendre ma photo':'Prendre ma photo'}</button>${me.photo?'<button class="btn ghost" type="button" id="edit">Recadrer ou dessiner</button>':''}</div>
       <h2>Ce que les autres <em>verront</em></h2>
       <div class="sec"><p><b>${esc(me.pseudo)}</b>${me.city?' · '+esc(me.city):''}</p><p class="muted small">${App.shownIntent(me.intent).map(i=>`<span>${INTENT_LABEL[i]}</span>`).join(' · ')||'Intention non précisée'}</p>${me.now?`<p class="txt" style="margin-top:6px">${esc(me.now)}</p>`:''}<p class="muted small" style="margin-top:6px">${entries.length} chose${entries.length>1?'s':''} qui te ${entries.length>1?'font':'fait'} vibrer · ni ton prénom ni ton nom n'apparaissent</p></div>
-      <p class="muted small" style="margin-top:10px">Tu pourras changer ta photo librement pendant un mois, puis une fois par an. Tu pourras aussi faire vérifier ton profil avec ta carte d'identité, dans Réglages.</p>
+      <p class="muted small" style="margin-top:10px">Une fois sur le site, complète ton portrait : tu n'apparaîtras dans les Résonances des autres que lorsqu'il sera complet.</p>
+      <p class="muted small" style="margin-top:6px">Tu pourras changer ta photo librement pendant un mois, puis une fois par an. Tu pourras aussi faire vérifier ton profil avec ta carte d'identité, dans Réglages.</p>
       <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn flame" type="button" id="go">Entrer dans FeelShareLove</button></div><p class="muted small" id="err"></p>`;
       if(me.photo){$('photo').src=me.photo;$('photo').hidden=false;}
       $('take').addEventListener('click',async()=>{const url=await App.camera({title:'Ta photo de portrait',hint:'Visage reconnaissable. Retardateur pour une photo en pied.'});if(!url)return;
@@ -103,20 +104,24 @@ Pages.accueil=async function(S){
       const applyPhoto=(src,r)=>{me.photoSrc=src;me.photoCrop=r.crop;me.photoStyle=r.style;me.photo=r.photo;if(r.style==='real')delete me.photoReal;else me.photoReal=r.real;};
       if($('edit'))$('edit').addEventListener('click',async()=>{const src=me.photoSrc||me.photoReal||me.photo;if(!src)return;const r=await Photo.edit(src,me.photoSrc?{crop:me.photoCrop,style:me.photoStyle}:{});if(!r)return;applyPhoto(src,r);await save();render();});
       $('back').addEventListener('click',()=>{step=4;render();});
-      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();delete me.onboardStep;await save();if(DB.remote){step=6;render();}else location.hash='#now';});}
+      $('go').addEventListener('click',async()=>{if(!me.photo){$('err').textContent='La photo est nécessaire pour entrer : elle protège tout le monde des faux profils.';return;}me.onboardedAt=me.onboardedAt||Date.now();delete me.onboardStep;await save();step=DB.remote?6:7;render();});}
     /* dernière étape (version en ligne) : être prévenu des messages */
     if(step===6){const st=await DB.pushState();const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!navigator.standalone;const f=App.fem(me);
-      if(st==='on'||st==='denied'||(st==='unsupported'&&!ios)){location.hash='#now';return;}
+      if(st==='on'||st==='denied'||(st==='unsupported'&&!ios)){step=7;return draw();}
       S.innerHTML=head+`<p class="eyebrow">Dernière chose</p><h1>Être prévenu${f?'e':''} quand quelqu'un t'écrit</h1>`+(st==='off'
         ?`<p class="muted" style="margin:10px 0 16px">Une notification sur ce téléphone, même quand l'app est fermée. Le contenu des messages n'y apparaît jamais. Tu peux changer d'avis dans Réglages.</p>
           <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="n-on">Activer les notifications</button><button class="btn ghost" type="button" id="n-later">Plus tard</button></div><p class="small" id="n-err" style="margin-top:10px;color:var(--flame)"></p>`
         :`<p class="muted" style="margin:10px 0 12px">Sur iPhone, les notifications marchent quand FeelShareLove est installée sur l'écran d'accueil :</p>
           <ol class="ios-steps"><li>Touche le bouton Partager du navigateur (le carré avec une flèche vers le haut).</li><li>Choisis « Sur l'écran d'accueil », puis « Ajouter ».</li><li>Ouvre FeelShareLove depuis la nouvelle icône : l'app te proposera les notifications.</li></ol>
           <div class="row" style="justify-content:flex-start;margin-top:14px"><button class="btn flame" type="button" id="n-later">Compris, entrer</button></div>`);
-      const done=()=>{location.hash='#now';};
+      const done=()=>{step=7;render();};
       $('n-later').addEventListener('click',done);
       const on=$('n-on');if(on)on.addEventListener('click',async()=>{on.disabled=true;try{await DB.pushOn();done();}catch(e){$('n-err').textContent=e.message;on.disabled=false;}});
       return;}
+    /* avant d'entrer : pourquoi compléter son portrait (montré une seule fois) */
+    if(step===7){S.innerHTML=`<p class="eyebrow">Avant de compléter ton portrait</p><h1>${Pages.whyTitle}</h1><p class="muted" style="margin:10px 0 14px">${Pages.whyIntro}</p>${Pages.whyHtml}
+      <div class="row" style="justify-content:flex-start;margin-top:16px"><button class="btn flame" type="button" id="w-go">Je complète mon portrait</button></div>`;
+      $('w-go').addEventListener('click',()=>{location.hash='#portrait';});}
   }
   render();
 };

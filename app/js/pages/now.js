@@ -2,7 +2,7 @@
 Pages.now=async function(S){
   const {$,esc,norm,WANTS,WANT,isAvail,hhmm,dn}=App;
   let {me,entries}=await App.loadMe();
-  const people=await App.others();for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
+  const people=(await App.others()).filter(p=>p.done!==false);for(const p of people)p.entries=await DB.where('entries','profileId',p.id);
   S.innerHTML=`<p class="eyebrow">Présent <span class="beta-tag soft">bêta</span></p><h1 id="now-title"></h1>
     ${window.Genres&&me.onboardedAt&&!(me.genres||[]).length?`<a class="g-new" href="#portrait" id="g-new"><b>Nouveau</b> · Tes histoires préférées : choisis tes 5 genres de films, livres et séries.</a>`:''}
     <div class="avail-card" id="my-avail"></div>

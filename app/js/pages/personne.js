@@ -51,8 +51,13 @@ Pages.apercu=async function(S){const full=await App.loadPerson('me');let mode='a
   const limited=p=>{const f={};if(p.facts){if(p.facts.sign)f.sign=p.facts.sign;if(p.facts.langs)f.langs=p.facts.langs;}
     return {...p,limited:true,now:'',facts:f,qs:[],country:((p.city||'').match(/\s([A-Z]{2})$/)||[])[1]||(/^\d{4}$/.test(String(p.npa||'').trim())?'CH':'')};};
   async function draw(){await Pages._view(S,mode==='avant'?limited(full):full,true);
+    /* l'aperçu doit trancher avec la page « Mon portrait » : bandeau clair en haut, portrait présenté dans un cadre */
     const e=S.querySelector('.eyebrow');if(!e)return;
-    e.insertAdjacentHTML('afterend',`<div class="ap-switch"><button type="button" class="chip${mode==='avant'?' on':''}" data-m="avant">Avant de se parler</button><button type="button" class="chip${mode==='apres'?' on':''}" data-m="apres">Conversation ouverte</button></div>
-      <p class="muted small ap-note">${mode==='avant'?'Ce que voit une personne qui ne t\'a pas encore parlé.':'Ce que voit une personne avec qui la conversation est ouverte, ou qui est dans ta tribu.'}</p>`);
-    S.querySelectorAll('.ap-switch .chip').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.m===mode)return;mode=b.dataset.m;const y=S.scrollTop;draw().then(()=>{S.scrollTop=y;});}));}
+    const ban=document.createElement('div');ban.className='ap-banner';
+    ban.innerHTML=`<p class="ap-k">Aperçu</p><p class="ap-t">Ton portrait, vu par les autres</p><p class="ap-d">Tu ne peux rien modifier ici. Choisis qui regarde :</p>
+      <div class="ap-switch"><button type="button" class="ap-tab${mode==='avant'?' on':''}" data-m="avant">Quelqu'un qui ne t'a pas encore parlé</button><button type="button" class="ap-tab${mode==='apres'?' on':''}" data-m="apres">Quelqu'un avec qui tu parles déjà</button></div>
+      <p class="ap-d ap-note">${mode==='avant'?'Cette personne voit seulement une partie de ton portrait.':'Cette personne voit ton portrait complet. C\'est aussi ce que voit ta tribu.'}</p>`;
+    e.replaceWith(ban);
+    const fr=document.createElement('div');fr.className='ap-frame';while(ban.nextSibling)fr.appendChild(ban.nextSibling);ban.after(fr);
+    S.querySelectorAll('.ap-tab').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.m===mode)return;mode=b.dataset.m;const y=S.scrollTop;draw().then(()=>{S.scrollTop=y;});}));}
   await draw();};
