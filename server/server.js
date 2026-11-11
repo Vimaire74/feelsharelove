@@ -522,6 +522,7 @@ function serveStatic(req, res, p) {
 async function api(req, res, url) {
   const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // après "api"
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  if (parts[0] === 'diag' && req.method === 'POST') { const b = JSON.parse((await readBody(req, 4e4)).toString('utf8') || '{}'); await diagIn(b.items, String(ip).split(',')[0].trim()); return send(res, 200, { ok: true }); }
   /* comptes */
   if (parts[0] === 'auth') {
     if (req.method !== 'POST') throw err(405, 'méthode');
@@ -716,6 +717,85 @@ async function watchScan() {
 }
 const watchTick = () => watchScan().catch(e => logErr('veille', e.message, { stack: String(e.stack || '').slice(0, 800) }));
 
+/* ---------- vérification quotidienne du site : fichiers, liens, traductions, erreurs vues par les navigateurs ---------- */
+const vm = require('vm');
+const walkFiles = (dir, out = []) => { for (const f of fs.readdirSync(dir, { withFileTypes: true })) { const p = path.join(dir, f.name); if (f.isDirectory()) walkFiles(p, out); else out.push(p); } return out; };
+const CHECK_ROUTES = new Set(['', 'app', 'health', ...SITE_LANGS]); // adresses servies par le serveur lui-même
+const DIAG_LANGS = new Set(['de', 'en', 'it', 'es', 'pt']);
+async function linkAlive(u) { // un lien extérieur répond-il ? (401, 403, 405, 429 : le site existe mais refuse les robots)
+  try { const c = new AbortController(); const t = setTimeout(() => c.abort(), 8000);
+    const r = await fetch(u, { method: 'GET', redirect: 'follow', signal: c.signal, headers: { 'User-Agent': 'FeelShareLove-verification' } }); clearTimeout(t);
+    return r.status < 400 || [401, 403, 405, 429].includes(r.status) ? '' : 'réponse ' + r.status; } catch (e) { return e.name === 'AbortError' ? 'pas de réponse en 8 secondes' : 'injoignable'; } }
+async function siteCheck() {
+  const t0 = Date.now(), sec = { files: [], links: [], routes: [], ext: [], lang: [], js: [], i18n: [] };
+  const all = walkFiles(PUBLIC), rel = p => path.relative(PUBLIC, p).split(path.sep).join('/');
+  const have = new Set(all.map(rel)), read = p => { try { return fs.readFileSync(p, 'utf8'); } catch (e) { return ''; } };
+  const local = (ref, from) => { ref = ref.split('#')[0].split('?')[0]; if (!ref) return; const r = ref.replace(/^\.?\//, '');
+    if (!have.has(r) && !have.has(decodeURIComponent(r)) && !CHECK_ROUTES.has(r)) sec.links.push(from + ' → ' + ref + ' (fichier absent)'); };
+  const skip = r => !r || /^(https?:|\/\/|mailto:|tel:|data:|blob:|javascript:|#|%23)/i.test(r) || /[${}<>+ ]/.test(r);
+  const pages = new Set(), routes = new Map(), ext = new Map();
+  for (const p of all) { const r = rel(p), e = path.extname(p); if (!['.js', '.html', '.css', '.webmanifest'].includes(e)) continue; const src = read(p); const vendor = r.includes('/vendor/');
+    /* 1. chaque fichier de code doit être lisible par un navigateur */
+    if (e === '.js' && !vendor) { try { new vm.Script(src, { filename: r }); } catch (x) { const l = String(x.stack || '').split('\n')[0]; sec.files.push(r + ' : ' + x.message + (/:\d+$/.test(l) ? ' (ligne ' + l.split(':').pop() + ')' : '')); } }
+    if (!src.trim()) sec.files.push(r + ' : fichier vide');
+    /* 2. fichiers appelés par les pages, les feuilles de style et le manifeste */
+    if (e === '.html') { for (const m of src.matchAll(/\b(?:src|href)=["']([^"']+)["']/g)) if (!skip(m[1])) local(m[1], r); }
+    if (e === '.css') { for (const m of src.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) if (!skip(m[1])) local(m[1].startsWith('/') ? m[1] : path.posix.join(path.posix.dirname(r), m[1]), r); }
+    if (e === '.webmanifest') { try { const j = JSON.parse(src); for (const i of j.icons || []) if (i.src && !skip(i.src)) local(i.src, r); } catch (x) { sec.files.push(r + ' : ' + x.message); } }
+    if (vendor) continue;
+    /* 3. écrans de l'app et liens internes qui y mènent */
+    if (e === '.js') { for (const m of src.matchAll(/\bPages\.([A-Za-z]\w*)\s*=/g)) pages.add(m[1]);
+      for (const m of src.matchAll(/(?:href=\\?["']|location\.hash\s*=\s*[`'"])#([a-z][a-z0-9]*)(?![\w-])/g)) if (!routes.has(m[1])) routes.set(m[1], r); }
+    /* 4. liens vers d'autres sites */
+    if (e === '.js' || e === '.html') for (const m of src.matchAll(/href=\\?["'](https?:\/\/[^"'\\$ ]+)/g)) if (!ext.has(m[1]) && !m[1].startsWith(SITE)) ext.set(m[1], r);
+  }
+  for (const [n, r] of routes) if (!pages.has(n)) sec.routes.push(r + ' → #' + n + ' (aucun écran de ce nom)');
+  if (typeof fetch === 'function') for (const [u, r] of [...ext].slice(0, 40)) { const bad = await linkAlive(u); if (bad) sec.ext.push(r + ' → ' + u + ' (' + bad + ')'); }
+  /* 5. dictionnaires : une phrase traduite dans une langue doit l'être dans les autres */
+  const dict = {};
+  for (const l of DIAG_LANGS) { try { vm.runInNewContext(read(path.join(PUBLIC, 'js', 'lang', l + '.js')), { I18N: { add: (c, d) => { dict[c] = d; } } }, { timeout: 5000 }); } catch (x) { /* déjà signalé au point 1 */ } if (!dict[l]) sec.lang.push(l + ' : dictionnaire absent ou illisible'); }
+  const keys = new Set(Object.values(dict).flatMap(d => Object.keys(d)));
+  for (const l of Object.keys(dict)) { const miss = [...keys].filter(k => dict[l][k] == null || dict[l][k] === ''); if (miss.length) sec.lang.push(l + ' : ' + miss.length + ' phrase(s) sans traduction, par exemple « ' + miss.slice(0, 5).map(k => k.slice(0, 80)).join(' » · « ') + ' »'); }
+  /* 6. ce que les navigateurs des membres ont signalé */
+  const diag = (await listDocs('diag')).sort((a, b) => (b.n || 0) - (a.n || 0));
+  /* ce que les membres ont écrit eux-mêmes (cercles) n'est pas un texte du site : on ne le compte pas */
+  const own = new Set((await listDocs('circles')).flatMap(c => [c.title, c.about]).filter(Boolean).map(t => String(t).replace(/\s+/g, ' ').trim().slice(0, 300)));
+  const byText = new Map();
+  for (const d of diag) { const tail = ' — vu ' + (d.n || 1) + ' fois, écran « ' + (d.page || '?') + ' », dernière fois le ' + fmtDT(d.last);
+    if (d.kind === 'js') sec.js.push(d.text + (d.src ? ' [' + d.src + ']' : '') + tail);
+    else if (!own.has(d.text)) { const g = byText.get(d.text) || { langs: [], n: 0, page: d.page, last: 0 }; g.langs.push(d.lang); g.n += d.n || 1; g.last = Math.max(g.last, d.last || 0); byText.set(d.text, g); } }
+  for (const [t, g] of byText) sec.i18n.push('[' + g.langs.sort().join(', ') + '] ' + t + ' — vu ' + g.n + ' fois, écran « ' + (g.page || '?') + ' », dernière fois le ' + fmtDT(g.last));
+  const hard = sec.files.length + sec.links.length + sec.routes.length, total = hard + sec.ext.length + sec.lang.length + sec.js.length + sec.i18n.length;
+  const rep = { id: 'check', at: Date.now(), ms: Date.now() - t0, nFiles: all.length, nExt: ext.size, nKeys: keys.size, hard, total, sec };
+  const old = (await getDoc('admin', 'check')) || {}; rep.mailAt = old.mailAt || 0; rep.prevHard = old.hard || 0;
+  await putDoc('admin', 'check', 'admin', rep); return rep;
+}
+const CHECK_TITLES = [['files', 'Fichiers illisibles ou vides'], ['links', 'Fichiers appelés mais absents'], ['routes', 'Liens internes vers un écran qui n\'existe pas'], ['ext', 'Liens vers d\'autres sites qui ne répondent pas'], ['lang', 'Dictionnaires de traduction incomplets'], ['js', 'Erreurs survenues dans le navigateur des membres'], ['i18n', 'Textes restés en français dans une autre langue (vus par les membres)']];
+function checkText(r) {
+  const out = ['FeelShareLove — vérification du site', 'Faite le ' + fmtDT(r.at) + ' en ' + r.ms + ' ms · ' + r.nFiles + ' fichiers, ' + r.nKeys + ' phrases par langue, ' + r.nExt + ' liens extérieurs', r.total ? r.total + ' point(s) à regarder' : 'Rien à signaler', ''];
+  for (const [k, t] of CHECK_TITLES) { const L = r.sec[k] || []; out.push('== ' + t + ' : ' + (L.length || 'aucun') + ' =='); for (const x of L.slice(0, 200)) out.push('- ' + x); if (L.length > 200) out.push('… et ' + (L.length - 200) + ' autres'); out.push(''); }
+  return out.join('\n'); }
+async function checkMail(r, to) {
+  const day = new Date(r.at).toISOString().slice(0, 10);
+  await getMailer().sendMail({ from: `FeelShareLove <${SMTP.from}>`, to: to || SMTP.from, subject: 'FeelShareLove · vérification du ' + day + ' : ' + (r.total ? r.total + ' point(s) à regarder' : 'rien à signaler'),
+    text: 'Le rapport complet est joint.\n\n' + CHECK_TITLES.map(([k, t]) => t + ' : ' + ((r.sec[k] || []).length || 'aucun')).join('\n'), attachments: [{ filename: 'verification-feelsharelove-' + day + '.txt', content: checkText(r) }] });
+}
+/* une fois par jour ; l'e-mail part au plus une fois par 20 heures, sauf si un redéploiement vient de casser un fichier ou un lien */
+const checkTick = async () => { try { const r = await siteCheck();
+  if (mailReady() && (Date.now() - (r.mailAt || 0) > 20 * 36e5 || (r.hard && r.hard !== r.prevHard))) { await checkMail(r); r.mailAt = Date.now(); await putDoc('admin', 'check', 'admin', r); }
+} catch (e) { logErr('vérification', e.message, { stack: String(e.stack || '').slice(0, 800) }); } };
+/* signalement envoyé par le navigateur d'un membre : erreur de script, ou texte resté en français */
+async function diagIn(items, ip) {
+  limit('ip:' + ip, 'diag', 30, 36e5);
+  const n = (await q("SELECT count(*)::int AS n FROM docs WHERE store='diag'")).rows[0].n;
+  for (const it of (Array.isArray(items) ? items : []).slice(0, 40)) { if (!it || typeof it.t !== 'string') continue;
+    const kind = it.k === 'js' ? 'js' : 'i18n', lang = DIAG_LANGS.has(it.l) ? it.l : '', text = strip(it.t).replace(/\s+/g, ' ').trim().slice(0, 300);
+    if (!text || (kind === 'i18n' && !lang)) continue;
+    const id = 'dg-' + crypto.createHash('sha1').update([kind, lang, text].join('|')).digest('hex').slice(0, 24); const old = await getDoc('diag', id);
+    if (!old && n >= 1000) continue; // plafond : la table ne peut pas grossir sans fin
+    await putDoc('diag', id, 'system', { id, kind, lang, text, src: strip(String(it.x || '')).slice(0, 200), page: /^[\w-]{0,30}$/.test(it.p || '') ? it.p : '', n: (old && old.n || 0) + 1, first: old && old.first || Date.now(), last: Date.now() }); }
+}
+
 /* ---------- administration : /admin?key=ADMIN_KEY ---------- */
 const H = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /* ---------- e-mail de vérification de l'adresse, dans la langue de l'app ---------- */
@@ -849,6 +929,10 @@ async function admin(req, res, url) {
     if (a === 'alert-done') { const r = await getDoc('alerts', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('alerts', id, 'system', r); } return go('alerts', '', 'Alerte classée.'); }
     if (a === 'alert-all') { if (f.get('sure') !== 'oui') return go('alerts', '', 'Coche la case pour tout classer.'); let n = 0; for (const r of await listDocs('alerts')) if (r.status === 'open') { r.status = 'done'; r.doneAt = Date.now(); await putDoc('alerts', r.id, 'system', r); n++; } await alog('Alertes toutes classées', '', n + ' alertes'); return go('alerts', '', n + ' alertes classées.'); }
     if (a === 'alert-scan') { const n = await watchScan(); await alog('Veille lancée à la main', '', n + ' nouvelles alertes'); return go('alerts', '', 'Analyse terminée : ' + n + ' nouvelle(s) alerte(s).'); }
+    if (a === 'check-run') { const r = await siteCheck(); await alog('Vérification du site lancée à la main', '', r.total + ' point(s)'); return go('check', '', 'Vérification terminée : ' + (r.total ? r.total + ' point(s) à regarder.' : 'rien à signaler.')); }
+    if (a === 'check-clear') { if (f.get('sure') !== 'oui') return go('check', '', 'Coche la case pour vider.'); await q("DELETE FROM docs WHERE store='diag'"); await siteCheck(); await alog('Signalements des navigateurs vidés'); return go('check', '', 'Signalements des navigateurs vidés.'); }
+    if (a === 'check-mail') { if (!mailReady()) return go('check', '', 'L\'adresse d\'envoi n\'est pas encore configurée.'); const r = (await getDoc('admin', 'check')) || await siteCheck(); const to = (f.get('to') || SMTP.from).trim();
+      try { await checkMail(r, to); return go('check', '', 'Rapport envoyé à ' + to + '.'); } catch (e) { return go('check', '', 'Échec de l\'envoi : ' + e.message); } }
     if (a === 'report-done') { const r = await getDoc('reports', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('reports', id, r.by, r); await alog('Signalement traité', r.target, r.kind); } return go(back, backId, 'Signalement classé.'); }
     if (a === 'prop-done') { const r = await getDoc('proposals', id); if (r) { r.status = 'done'; r.doneAt = Date.now(); await putDoc('proposals', id, r.by, r); } return go('proposals', '', 'Proposition classée.'); }
     if (a === 'prop-mail') { if (!mailReady()) return go('proposals', '', 'L\'adresse d\'envoi n\'est pas encore configurée.');
@@ -936,6 +1020,8 @@ async function admin(req, res, url) {
     return res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>FeelShareLove · propositions</title><style>body{font:15px system-ui;max-width:1000px;margin:20px auto;padding:0 16px}section{border-top:1px solid #ccc;padding:12px 0}h2{font-size:17px;margin:0}.m{color:#666;font-size:13px}.t{white-space:pre-wrap}img{max-width:100%;border:1px solid #ccc}</style><h1>FeelShareLove — propositions et corrections</h1><p>${L.length} proposition(s) · exporté le ${fmtDT(Date.now())}</p>${parts.join('')}</html>`); }
   if (tab === 'proposals' && url.searchParams.get('dl')) { const txt = await proposalsText(url.searchParams.get('dl') === 'all');
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'attachment; filename="propositions-feelsharelove-' + new Date().toISOString().slice(0, 10) + '.txt"' }); return res.end(txt); }
+  if (tab === 'check' && url.searchParams.get('dl')) { const r = (await getDoc('admin', 'check')) || await siteCheck();
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': 'attachment; filename="verification-feelsharelove-' + new Date(r.at).toISOString().slice(0, 10) + '.txt"' }); return res.end(checkText(r)); }
   /* ---------- données ---------- */
   const now = Date.now(), D7 = now - 7 * 864e5, D1 = now - 864e5;
   const users = (await q('SELECT id, email, created, banned, ban_reason, last_seen, invited_by, no_mail, redlisted FROM users ORDER BY created DESC')).rows;
@@ -1050,12 +1136,20 @@ async function admin(req, res, url) {
       <div class="card"><a class="flame" style="text-decoration:none;padding:8px 12px;border-radius:10px;display:inline-block" href="/admin?key=${K}&tab=proposals&dl=open">Télécharger le fichier (à lire)</a> <a href="/admin?key=${K}&tab=proposals&dl=all">tout télécharger, classées comprises</a> · <a href="/admin?key=${K}&tab=proposals&dl=html">fichier avec les captures (.html)</a> · <a href="/admin?key=${K}&tab=proposals&dl=html&all=1">avec les captures, classées comprises</a>
         <form method="post" style="margin-top:10px"><input type="hidden" name="a" value="prop-mail"><input name="to" value="${H(SMTP.from)}" style="min-width:240px"> <label class="muted" style="font-size:13px"><input type="checkbox" name="all" value="1"> classées comprises</label> <button type="submit">Recevoir le fichier par e-mail</button></form></div>
       ${open.map(r => `<div class="card"><b>${H(r.page || '')}${r.section ? ' › ' + H(r.section) : ''}</b> · <small>${fmtDT(r.ts)} · langue ${H(r.lang || '')} · ${who(r.by)}</small><div class="copy">${H(r.text || '')}</div>${r.img ? `<a href="/admin?key=${K}&tab=propimg&id=${encodeURIComponent(r.img)}" target="_blank"><img src="/admin?key=${K}&tab=propimg&id=${encodeURIComponent(r.img)}" alt="capture" style="max-width:320px;border-radius:8px;border:1px solid #333;display:block;margin:6px 0"></a>` : ''}${btn('prop-done', r.id, 'Classer')}</div>`).join('') || '<p class="muted">Aucune proposition à lire.</p>'}`; }
+  if (tab === 'check') { const r = await getDoc('admin', 'check');
+    body = `<h2>Vérification du site</h2>
+      <div class="card">${r ? 'Dernière vérification : ' + fmtDT(r.at) + ' · ' + (r.total ? '<b>' + r.total + ' point(s) à regarder</b>' : 'rien à signaler') + ' · ' + r.nFiles + ' fichiers, ' + r.nKeys + ' phrases par langue, ' + r.nExt + ' liens extérieurs' : 'Pas encore faite.'}
+        <div style="margin-top:8px">${btn('check-run', '', 'Vérifier maintenant')} ${r ? `<a href="/admin?key=${K}&tab=check&dl=1">Télécharger le rapport (.txt)</a>` : ''}</div>
+        <form method="post" style="margin-top:10px"><input type="hidden" name="a" value="check-mail"><input name="to" value="${H(SMTP.from)}" style="min-width:240px"> <button type="submit">Recevoir le rapport par e-mail</button></form>
+        <p class="muted" style="font-size:13px">Faite chaque jour, et cinq minutes après chaque redéploiement. Le rapport part par e-mail une fois par jour à ${H(SMTP.from || '(adresse non configurée)')}.</p></div>
+      ${r ? CHECK_TITLES.map(([k, t]) => { const L = r.sec[k] || []; return `<h2>${H(t)} (${L.length})</h2>` + (L.length ? `<div class="card"><div class="copy">${L.slice(0, 200).map(x => H('- ' + x)).join('\n')}${L.length > 200 ? '\n… et ' + (L.length - 200) + ' autres' : ''}</div></div>` : '<p class="muted">Aucun.</p>'); }).join('') : ''}
+      ${r && (r.sec.js.length || r.sec.i18n.length) ? `<div class="card">Une fois les corrections déployées : ${btn('check-clear', '', 'Vider les signalements des navigateurs', sure('Je confirme'), 'danger')}</div>` : ''}`; }
   if (tab === 'settings') { const c = await config(); const nf = Object.values(profiles).filter(p => p.fake === true).length;
     body = `<h2>Inscriptions</h2><div class="card">Les inscriptions sont <b>${c.closed ? 'fermées' : 'ouvertes'}</b>.${c.closed ? ' Seules les personnes avec un lien d\'invitation d\'un membre peuvent entrer.' : ''}<div style="margin-top:8px">${btn('closed', '', c.closed ? 'Ouvrir les inscriptions' : 'Fermer les inscriptions', `<input type="hidden" name="v" value="${c.closed ? '0' : '1'}">`)}</div></div>
       <h2>Profils de démonstration (${nf})</h2><div class="card"><p class="muted">Dix personnages inventés : Elio, Nora, Paul, Claire et André (portraits en français), Lena (allemand), Owen (anglais), Giulia (italien), Mateo (espagnol) et Inês (portugais). Ils portent l'étiquette « profil de démonstration » dans l'app. Le bouton les met à jour et crée ceux qui manquent. À garder au début pour que les premiers inscrits comprennent comment ça marche.</p>
         ${btn('fakes', '', 'Remplir les profils de démonstration')} ${btn('fakes-delete', '', 'Supprimer les profils de démonstration', sure('Je confirme'), 'danger')}</div>`; }
 
-  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['alerts', 'Alertes', alertsOpen.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['log', 'Journal'], ['settings', 'Réglages']];
+  const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['alerts', 'Alertes', alertsOpen.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['check', 'Vérification', ((await getDoc('admin', 'check')) || {}).total || 0], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
 <link rel="stylesheet" href="/fonts/fonts.css"><style>${ADMIN_CSS}</style>
 <header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
@@ -1126,6 +1220,7 @@ http.createServer(async (req, res) => {
   try { await migrateTribes(); } catch (e) { console.error('migration tribu', e.message); }
   backfillGeo().catch(e => console.error('distances', e.message));
   setInterval(remindInvites, 36e5); setTimeout(remindInvites, 6e4);
+  setInterval(checkTick, 864e5); setTimeout(checkTick, 3e5); // vérification du site : cinq minutes après le démarrage, puis une fois par jour
   setInterval(watchTick, 864e5); setTimeout(watchTick, 12e4); // veille des contenus publics : deux minutes après le démarrage, puis une fois par jour
   console.log('FeelShareLove sur le port ' + PORT);
 });

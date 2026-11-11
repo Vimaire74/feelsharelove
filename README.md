@@ -1,11 +1,14 @@
-# FeelShareLove — lot 55 (regroupe les anciens lots 58, 59, 60 et 61)
+# FeelShareLove — lot 56
 
-Version 1.24.0 (11/11/2026)
-- Fonctionnement, résultat du questionnaire : on peut ajouter un seul type en plus de ceux trouvés par le questionnaire (en choisir un autre remplace le précédent), et toujours retirer un type trouvé
-- Là où je mets mon cœur, Nature : cinq choix ajoutés (Être dehors, Vivre dans la nature, Cueillir et cultiver, Sauver les animaux, Chasser)
-- Mon portrait, bas de page : « Base locale » remplacé par « Tout s'enregistre automatiquement »
-- Mes données : page refaite pour le public (résumé lisible, bouton « Télécharger mes données », liens vers Réglages et la politique de confidentialité)
-- Mes données : supprimé la liste des tables, « Mon profil (brut) » et « Recharger un fichier »
-- Textes traduits dans les 5 langues
+Version 1.25.0 (11/11/2026)
+- Mentions légales et politique de confidentialité : toute la page est traduite en allemand, anglais, italien, espagnol et portugais
+- Correction du texte français : « les télécharger (menu › Mes données) »
+- Nouveau : vérification automatique du site, chaque jour et cinq minutes après chaque redéploiement
+- Elle contrôle : fichiers illisibles ou vides, fichiers appelés mais absents, liens internes vers un écran inexistant, liens vers d'autres sites qui ne répondent pas, dictionnaires de traduction incomplets
+- Les navigateurs des membres signalent au serveur les erreurs de script et les textes restés en français dans une autre langue (aucune donnée personnelle)
+- Admin : nouvel onglet « Vérification » (rapport, « Vérifier maintenant », téléchargement .txt, envoi par e-mail, vidage des signalements)
+- Le rapport part par e-mail une fois par jour, en pièce jointe .txt
+- Politique de confidentialité : nouvelle ligne « Des signalements techniques », dans les 6 langues ; date de mise à jour au 11 novembre 2026
+- Page d'accueil de l'app : suppression du texte de prototype « application locale »
 
-Fichiers : app/js/catalogue-portrait.js, app/js/pages/test.js, app/js/pages/portrait.js, app/js/pages/donnees.js, app/js/lang/*.js
+Fichiers : server/server.js, app/index.html, app/js/i18n.js, app/js/diag.js (nouveau), app/js/pages/legal.js, app/js/lang/*.js

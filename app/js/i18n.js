@@ -37,6 +37,8 @@ window.I18N=(function(){
   /* ce que les gens ont écrit eux-mêmes n'est jamais traduit */
   const USER='.txt,.chat,.why,.pc-why,.pc-n,.fact .v,.res .who p,.post,.q .a,.a-txt,[data-notranslate]';
   const isUser=el=>!!(el&&el.closest&&el.closest(USER));
+  /* mots qui n'existent qu'en français parmi les six langues de l'app : servent à repérer une phrase non traduite */
+  const FRX=/(^|[\s(«'’])(une|est|pour|avec|dans|tes|nous|vous|cette|et|mon|leur|leurs|tout|très|être|c'est|n'est|votre|notre|ici|quand|peux|peut|aussi|déjà)(?=[\s,.:;!?)»]|$)/i;
   let pats=null,patLang='';
   function patterns(){if(patLang===lang&&pats)return pats;pats=[];patLang=lang;const D=DICT[lang]||{};
     for(const k in D){if(!/\{\w+\}/.test(k))continue;const names=[];const re=new RegExp('^'+k.replace(/[.*+?^${}()|[\]\\]/g,m=>m==='{'||m==='}'?m:'\\'+m).replace(/\{(\w+)\}/g,(m,n)=>{names.push(n);return '(.+?)';})+'$');pats.push({re,names,v:D[k]});}
@@ -60,11 +62,13 @@ window.I18N=(function(){
       /* élément « simple » (texte + mise en forme) : on traduit la phrase entière, balises comprises.
          Jamais en texte brut si l'élément contient des liens, ni quand la phrase n'est reconnue que par un motif à trous (sinon deux boutons ou deux étiquettes côte à côte seraient fondus en un seul texte) */
       const kids=[...el.children];if(kids.length&&kids.every(c=>INLINE.has(c.tagName)&&!c.children.length&&!c.id)){const tr=lookup(el.textContent);
-        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else if(kids.some(c=>c.tagName==='A')||DICT[lang][norm(el.textContent)]==null)continue;else el.textContent=hun(tr);[...el.childNodes].forEach(n=>{if(n.nodeType===3)n.__tr=n.nodeValue;});}}}
+        if(tr!=null&&norm(el.textContent)!==norm(tr.replace(/<[^>]+>/g,''))){if(/<[a-z]/i.test(tr))el.innerHTML=tr;else if(kids.some(c=>c.tagName==='A')||DICT[lang][norm(el.textContent)]==null)continue;else el.textContent=hun(tr);{const w2=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let x;while(x=w2.nextNode())x.__tr=x.nodeValue;}}}}
     const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const list=[];let n;while(n=w.nextNode())list.push(n);
     for(const tn of list){const par=tn.parentNode;if(!par||SKIP.has(par.tagName)||(par.closest&&par.closest('svg')))continue;const v=tn.nodeValue;if(!v||!v.trim()||tn.__tr===v)continue; /* déjà traduit : on ne retraduit pas une traduction */
       /* dans ce que les gens ont écrit, seule une phrase entière de l'app (longue, exacte) est traduite */
-      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+hun(tr)+trail;tn.__tr=tn.nodeValue;}}}
+      let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+hun(tr)+trail;tn.__tr=tn.nodeValue;}}
+      /* phrase de l'app restée en français : signalée au serveur pour la vérification quotidienne */
+      else if(window.Diag&&!isUser(par)&&FRX.test(v)){const k=norm(v);if(k.length>=8&&k.includes(' '))Diag.miss(k);}}
     if(window.__fitTabs)try{window.__fitTabs();}catch(e){}}
   let observing=false;
   function watch(){if(observing||lang==='fr')return;observing=true;
