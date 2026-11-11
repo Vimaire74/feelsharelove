@@ -24,14 +24,15 @@ Pages.test=async function(S){
       <p class="muted" style="margin:8px 0 14px">${dom.length===1?'Un type domine nettement chez toi.':dom.length===2?'Deux types dominent chez toi.':dom.length===3?'Trois types sont presque équilibrés chez toi.':'Les quatre types sont équilibrés chez toi, ce qui est rare.'}</p>
       <div class="scores">${T.list.map(t=>`<div class="sc ${dom.includes(t.k)?'dom':''}"><span>${t.name}</span><div class="sbar"><i style="width:${max?scores[t.k]/max*100:0}%"></i></div><b>${scores[t.k]}</b></div>`).join('')}</div>
       <div id="texts"></div>
-      <h2>Tu te <em>reconnais ?</em></h2><p class="muted small" style="margin-bottom:10px">Tu peux corriger le résultat : coche les types qui te correspondent vraiment (un à quatre).</p>
+      <h2>Tu te <em>reconnais ?</em></h2><p class="muted small" style="margin-bottom:10px">Tu peux corriger le résultat : retire un type qui ne te correspond pas, ou ajoutes-en un seul en plus de ceux trouvés par le questionnaire.</p>
       <div class="intent" id="pick" style="margin-top:0">${T.list.map(t=>`<button class="chip ${chosen.has(t.k)?'on':''}" type="button" data-k="${t.k}">${t.name}</button>`).join('')}</div>
       <label class="check"><input type="checkbox" id="show" ${show?'checked':''}> Afficher mon fonctionnement sur mon portrait</label>
       <div class="row" style="justify-content:space-between"><button class="linkbtn" type="button" id="redo">Refaire le test</button><button class="btn flame" type="button" id="ok">Valider</button></div><p class="muted small" id="err"></p>`;
     const texts=()=>{$('texts').innerHTML=[...chosen].map(k=>{const t=T.list.find(x=>x.k===k);return `<div class="sec ttext"><h3>${t.name}</h3><p class="exp">${esc(t.text)}</p></div>`;}).join('')+
       `<details class="others"><summary>Lire les autres types</summary>${T.list.filter(t=>!chosen.has(t.k)).map(t=>`<div class="sec ttext"><h3>${t.name}</h3><p class="exp">${esc(t.text)}</p></div>`).join('')}</details>`;};
     texts();
-    S.querySelectorAll('#pick .chip').forEach(c=>c.addEventListener('click',()=>{const k=c.dataset.k;if(chosen.has(k)){if(chosen.size>1)chosen.delete(k);}else chosen.add(k);S.querySelectorAll('#pick .chip').forEach(x=>x.classList.toggle('on',chosen.has(x.dataset.k)));texts();}));
+    S.querySelectorAll('#pick .chip').forEach(c=>c.addEventListener('click',()=>{const k=c.dataset.k;if(chosen.has(k)){if(chosen.size>1)chosen.delete(k);}else{if(!dom.includes(k))[...chosen].forEach(x=>{if(!dom.includes(x))chosen.delete(x);});chosen.add(k);} // un seul type en plus de ceux du questionnaire : le nouveau remplace l'ancien
+      S.querySelectorAll('#pick .chip').forEach(x=>x.classList.toggle('on',chosen.has(x.dataset.k)));texts();}));
     $('redo').addEventListener('click',()=>{reset();question();});
     $('ok').addEventListener('click',async()=>{me=await DB.get('profiles','me');me.types={list:T.list.map(t=>t.k).filter(k=>chosen.has(k)),scores,show:$('show').checked,at:Date.now(),fromTest:true};await DB.put('profiles',me);location.hash='#portrait';});
     S.scrollTop=0;}

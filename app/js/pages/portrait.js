@@ -52,7 +52,7 @@ Pages.portrait=async function(S){
   <div class="qform" id="qform" hidden><label for="q-k">Question</label><input id="q-k" placeholder="Ma question"><label for="q-a">Ma réponse</label><textarea id="q-a" placeholder="En quelques lignes…"></textarea>
     <div class="row"><button class="btn ghost" type="button" id="q-cancel">Annuler</button><button class="btn" type="button" id="q-save">Valider</button></div></div>
   <div class="add" id="add-q" style="margin-top:12px">+ Ajouter ma propre question</div>
-  <div class="foot"><span id="saved">Base locale</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div><div id="prop-foot" style="margin-top:18px"></div>`;
+  <div class="foot"><span id="saved">Tout s'enregistre automatiquement</span><a href="#apercu" style="color:var(--saffron)">Ce que les autres voient</a></div><div id="prop-foot" style="margin-top:18px"></div>`;
 
   /* tant que le portrait n'est pas complet, il n'apparaît pas dans les Résonances des autres : on dit ce qui manque */
   function renderTodo(){const B=$('todo-box');if(!B)return;const m=App.portraitTodo(me,entries.length);

@@ -147,7 +147,7 @@ window.CATALOGUE=(function(){
     {k:'jeux',l:'Jeux de société',sub:['Stratégie','Coopératifs','Ambiance','Jeux de rôle','Échecs','Cartes','Poker','Puzzles','Mots croisés','Quiz']},
     {k:'jv',l:'Jeux vidéo',sub:['Aventure et action','RPG','FPS (jeux de tir)','Battle royale','Extraction shooter','MOBA','Stratégie','Simulation et gestion','Sandbox et construction (Minecraft, Sims)','Survie et crafting','Sport et course','Combat','Soulslike','Roguelike','Jeux narratifs','Horreur','Cosy games','Jeux indépendants','MMO','Gacha (Genshin…)','Jeux en coopération','Jeux mobiles','Rétrogaming','Réalité virtuelle','Esport','Streaming (Twitch)','PC','PlayStation','Xbox','Nintendo Switch']},
     {k:'numerique',l:'Numérique',sub:['Programmation','Intelligence artificielle','Impression 3D','Photo numérique']},
-    {k:'nature',l:'Nature',sub:['Jardinage','Écologie']},
+    {k:'nature',l:'Nature',sub:['Être dehors','Vivre dans la nature','Cueillir et cultiver','Jardinage','Sauver les animaux','Écologie','Chasser']},
     {k:'animaux',l:'Animaux',sub:['Chiens','Chats','Chevaux','Oiseaux','NAC (nouveaux animaux de compagnie)']},
     {k:'ciel',l:'Ciel et étoiles',sub:['Astronomie','Observation du ciel']},
     {k:'cuisine',l:'Cuisine et gastronomie',sub:['Cuisiner','Pâtisserie','Cuisine du monde','Végétarien ou végane','Barbecue','Fermentation','Vin','Restaurants']},
