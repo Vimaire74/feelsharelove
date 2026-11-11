@@ -134,7 +134,8 @@ Pages.connexion=function(S){
   <div class="sec" style="margin-top:14px"><p class="exp">Indique l'adresse e-mail de ton compte. On t'envoie un lien pour choisir un nouveau mot de passe (valable 1 heure).</p>
     <label class="muted small" for="c-mail" style="display:block;margin-top:12px">Adresse e-mail</label><input class="in" id="c-mail" type="email" autocomplete="email" style="margin:6px 0 12px">
     <div class="row" style="justify-content:flex-start;flex-wrap:wrap;gap:10px"><button class="btn flame" type="button" id="c-send">Recevoir le lien par e-mail</button></div>
-    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p></div>
+    <p class="small" id="c-err" style="margin-top:12px;color:var(--flame)"></p>
+    <p class="muted small" style="margin-top:12px">Si tu n'as plus accès à cette adresse e-mail, écris à contact@feelsharelove.com en indiquant le numéro de mobile de ton compte. Après vérification, l'équipe pourra remplacer ton adresse. C'est une solution de secours.</p></div>
   <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="linkbtn" type="button" id="c-back">← Retour</button></div>`;
   if(mail)$('c-mail').value=mail;
   async function go(){const e=$('c-mail').value.trim();$('c-err').textContent='';$('c-send').disabled=true;
@@ -171,3 +172,9 @@ Pages.connexion=function(S){
     try{await DB.register(mail,p);location.hash='#accueil';location.reload();}catch(x){$('c-err').textContent=x.message;$('c-go').disabled=false;}});}
   if(DB.resetToken&&DB.resetToken())newPass();else if(DB.verifyToken&&DB.verifyToken())password();else intro();
 };
+/* sous chaque champ de mot de passe : un lien pour l'afficher en clair et vérifier ce qu'on a tapé */
+window.pwEyes=function(root){(root||document).querySelectorAll('input[type=password]:not([data-eye])').forEach(inp=>{inp.dataset.eye='1';
+  const b=document.createElement('button');b.type='button';b.className='linkbtn pw-eye';b.textContent='Afficher le mot de passe';
+  b.addEventListener('click',()=>{const on=inp.type==='password';inp.type=on?'text':'password';b.textContent=on?'Masquer le mot de passe':'Afficher le mot de passe';});
+  inp.insertAdjacentElement('afterend',b);});};
+{const sc=document.getElementById('screen');if(sc&&window.MutationObserver)new MutationObserver(()=>window.pwEyes(sc)).observe(sc,{childList:true});}

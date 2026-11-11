@@ -68,7 +68,7 @@ window.I18N=(function(){
       /* dans ce que les gens ont écrit, seule une phrase entière de l'app (longue, exacte) est traduite */
       let tr=isUser(par)?(norm(v).length>=15&&DICT[lang]&&DICT[lang][norm(v)]!=null?DICT[lang][norm(v)]:null):lookup(v);if(tr!=null){tr=tr.replace(/<[^>]+>/g,'');if(norm(tr)!==norm(v)){const lead=v.match(/^\s*/)[0],trail=v.match(/\s*$/)[0];tn.nodeValue=lead+hun(tr)+trail;tn.__tr=tn.nodeValue;}}
       /* phrase de l'app restée en français : signalée au serveur pour la vérification quotidienne */
-      else if(window.Diag&&!isUser(par)&&FRX.test(v)){const k=norm(v);if(k.length>=8&&k.includes(' '))Diag.miss(k);}}
+      else if(window.Diag&&!isUser(par)&&!(par.closest&&par.closest('.st,.desc,.title,.nm'))&&FRX.test(v)){ /* .st .desc .title .nm : phrases, descriptions, titres et pseudos écrits par les membres */const k=norm(v);if(k.length>=8&&k.includes(' '))Diag.miss(k);}}
     if(window.__fitTabs)try{window.__fitTabs();}catch(e){}}
   let observing=false;
   function watch(){if(observing||lang==='fr')return;observing=true;

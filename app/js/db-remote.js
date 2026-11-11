@@ -71,6 +71,9 @@
     verifyToken:()=>store.get('fsl_verify')||'',
     finish:async(password)=>{const r=await call('POST','/api/auth/finish',{token:store.get('fsl_verify')||'',password,invite:store.get('fsl_invite')||undefined});store.set('fsl_invite',null);store.set('fsl_verify',null);token=r.token;myId=r.id;store.set(T,token);store.set(U,myId);},
     forgetVerify:()=>store.set('fsl_verify',null),
+    /* mon compte : adresse e-mail, changement de mot de passe */
+    account:()=>call('GET','/api/account'),
+    changePass:(old,nw)=>call('POST','/api/account/password',{old,new:nw}),
     /* mot de passe oublié */
     forgot:(email)=>call('POST','/api/auth/forgot',{email,lang:(window.I18N&&I18N.lang)||'fr'}),
     resetToken:()=>store.get('fsl_reset')||'',

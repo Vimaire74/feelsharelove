@@ -14,7 +14,13 @@ Pages.reglages=async function(S){
   <div class="sec" id="pause"></div>
   <div class="sec"><h3>Signalements envoyés</h3><div class="names" id="reports"></div></div>
   <div class="sec"><h3>Compte</h3>
-    <div class="acc-btns"><a class="btn ghost" href="#donnees">Mes données</a><a class="btn ghost" href="#conditions">Conditions</a><a class="btn ghost" href="#legal">Confidentialité</a>${DB.remote?'<button class="btn ghost" type="button" id="logout">Se déconnecter</button>':''}</div>
+    ${DB.remote?`<div class="vis acc-id"><div><span>Adresse e-mail</span><span class="s" id="acc-mail" data-notranslate>…</span></div><div><span>Mobile</span><span class="s" id="acc-tel" data-notranslate></span></div></div>
+    <p class="muted small" style="margin:6px 0 12px">Toi seul·e vois ces deux informations.</p>`:''}
+    <div class="acc-btns"><a class="btn ghost" href="#donnees">Mes données</a><a class="btn ghost" href="#conditions">Conditions</a><a class="btn ghost" href="#legal">Confidentialité</a>${DB.remote?'<button class="btn ghost" type="button" id="pw-open">Changer mon mot de passe</button><button class="btn ghost" type="button" id="logout">Se déconnecter</button>':''}</div>
+    ${DB.remote?`<div id="pw-box" class="pw-box" hidden><label class="muted small" for="pw-old">Mot de passe actuel</label><input class="in" id="pw-old" type="password" autocomplete="current-password">
+      <label class="muted small" for="pw-new">Nouveau mot de passe</label><input class="in" id="pw-new" type="password" autocomplete="new-password">
+      <p class="muted small" style="margin:0 0 10px">10 caractères au moins, une majuscule, une minuscule et un chiffre ou un signe.</p>
+      <button class="btn" type="button" id="pw-go">Enregistrer le nouveau mot de passe</button><p class="small" id="pw-msg" style="margin-top:8px"></p></div>`:''}
     ${DB.remote?`<div class="del-acc"><p class="exp" style="margin:0"><b>Supprimer mon compte</b></p><p class="exp">Ton portrait, tes conversations, tes photos et toutes tes données seront effacés définitivement. Ce n'est pas réversible.</p>
     <button class="btn ghost del-open" type="button" id="del-open">Supprimer mon compte…</button>
     <div id="del-box" hidden><label class="check" style="margin:10px 0"><input type="checkbox" id="del-ok"> Je comprends que tout sera effacé définitivement</label>
@@ -64,6 +70,14 @@ Pages.reglages=async function(S){
       try{const r=await fetch('/api/account/delete-request',{method:'POST',headers:{Authorization:'Bearer '+DB.token}});if(!r.ok){let m='';try{m=(await r.json()).error;}catch(x){}throw new Error(m||'Envoi impossible pour le moment. Réessaie plus tard.');}
         $('del-msg').textContent='E-mail envoyé. Ouvre le lien qu\'il contient pour terminer la suppression.';}
       catch(e){$('del-msg').textContent=e.message;b.disabled=false;}finally{b.classList.remove('busy');}});}
+  if(DB.remote){DB.account().then(a=>{if($('acc-mail'))$('acc-mail').textContent=a.email||'';}).catch(()=>{if($('acc-mail'))$('acc-mail').textContent='';});
+    $('acc-tel').textContent=me.phone||'';if(!me.phone){$('acc-tel').removeAttribute('data-notranslate');$('acc-tel').textContent='non indiqué';}
+    $('pw-open').addEventListener('click',()=>{$('pw-box').hidden=!$('pw-box').hidden;if(!$('pw-box').hidden){if(window.pwEyes)pwEyes($('pw-box'));$('pw-old').focus();}});
+    $('pw-go').addEventListener('click',async()=>{const o=$('pw-old').value,n=$('pw-new').value,M=$('pw-msg'),b=$('pw-go');M.style.color='var(--flame)';
+      if(!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z]).{10,}$/.test(n)){M.textContent='Le nouveau mot de passe ne respecte pas encore les règles.';return;}
+      b.disabled=true;b.classList.add('busy');
+      try{await DB.changePass(o,n);$('pw-old').value='';$('pw-new').value='';M.style.color='';M.textContent='Ton mot de passe est changé. Tes autres appareils sont déconnectés.';}catch(x){M.textContent=x.message;}
+      b.disabled=false;b.classList.remove('busy');});}
   if(DB.remote)$('logout').addEventListener('click',async e=>{e.preventDefault();await DB.logout();location.hash='';location.reload();});
   const profs=Object.fromEntries((await DB.all('profiles')).map(p=>[p.id,p]));
   const reps=await DB.all('reports');$('reports').innerHTML=reps.length?reps.map(r=>`<div class="nm-row"><span>${r.kind==='photo'?'Photo':r.kind==='block'?'Blocage':'Portrait'} · ${esc(dn(profs[r.target])||r.target)} <small>${esc(r.reason||'')} · ${r.status==='open'?'en cours':'traité'}</small></span></div>`).join(''):'<p class="muted small">Aucun.</p>';

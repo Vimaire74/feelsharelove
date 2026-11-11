@@ -621,6 +621,17 @@ async function api(req, res, url) {
     if (parts[1] === 'unsubscribe' && sub && sub.endpoint) { await q('DELETE FROM push_subs WHERE endpoint=$1 AND user_id=$2', [sub.endpoint, me]); return send(res, 200, { ok: true }); }
     throw err(400, 'push');
   }
+  /* mon compte : l'adresse e-mail (visible seulement par moi), et le changement de mot de passe */
+  if (parts[0] === 'account' && !parts[1] && req.method === 'GET') { const u = (await q('SELECT email FROM users WHERE id=$1', [me])).rows[0]; if (!u) throw err(404, 'compte'); return send(res, 200, { email: u.email }); }
+  if (parts[0] === 'account' && parts[1] === 'password' && req.method === 'POST') {
+    limit(me, 'password', 6, 36e5); const b = await json(req);
+    const u = (await q('SELECT pass FROM users WHERE id=$1', [me])).rows[0]; if (!u) throw err(404, 'compte');
+    if (typeof b.old !== 'string' || !checkPass(b.old, u.pass)) throw err(403, 'Le mot de passe actuel n\'est pas le bon.');
+    if (typeof b.new !== 'string' || b.new.length > 200 || !/^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z]).{10,}$/.test(b.new)) throw err(400, 'Mot de passe : 10 caractères au moins, une majuscule, une minuscule et un chiffre ou un signe.');
+    await q('UPDATE users SET pass=$2 WHERE id=$1', [me, hashPass(b.new)]);
+    await q('DELETE FROM sessions WHERE user_id=$1 AND token<>$2', [me, (req.headers.authorization || '').replace(/^Bearer /, '')]); // les autres appareils sont déconnectés
+    await alog('Mot de passe changé', me, 'depuis Réglages'); return send(res, 200, { ok: true });
+  }
   /* suppression du compte, étape 1 : un lien de confirmation part par e-mail (valable 1 heure) */
   if (parts[0] === 'account' && parts[1] === 'delete-request' && req.method === 'POST') {
     if (!mailReady()) throw err(503, 'L\'e-mail de confirmation ne peut pas partir pour le moment. Écris à contact@feelsharelove.com.');
@@ -951,6 +962,13 @@ async function admin(req, res, url) {
       await alog('Compte suspendu', id, reason); return go(back, backId, 'Compte suspendu.');
     }
     if (a === 'unban') { await q('UPDATE users SET banned=false, ban_reason=null WHERE id=$1', [id]); const p = await getDoc('profiles', id); if (p) { delete p.paused; delete p.autoPaused; await putDoc('profiles', id, id, p); } await alog('Compte réactivé', id); return go(back, backId, 'Compte réactivé.'); }
+    /* accès perdu (plus de mot de passe ni d'accès à l'e-mail) : après vérification du mobile, l'équipe remplace l'adresse ; la personne fait ensuite « Mot de passe oublié » */
+    if (a === 'set-mail') { const e = norm(f.get('mail')); if (f.get('sure') !== 'oui') return go(back, backId, 'Coche la case pour confirmer.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) || e.length > 200) return go(back, backId, 'Adresse e-mail invalide.');
+      if ((await q('SELECT 1 FROM users WHERE email=$1', [e])).rowCount) return go(back, backId, 'Un autre compte utilise déjà cette adresse.');
+      const old = (await q('SELECT email FROM users WHERE id=$1', [id])).rows[0]; if (!old) return go(back, backId, 'Compte introuvable.');
+      await q('UPDATE users SET email=$2 WHERE id=$1', [id, e]); await q('DELETE FROM sessions WHERE user_id=$1', [id]);
+      await alog('Adresse e-mail changée', id, old.email + ' → ' + e); return go(back, backId, 'Adresse changée. La personne peut maintenant faire « Mot de passe oublié ? » avec ' + e + '.'); }
     if (a === 'unpause') { const p = await getDoc('profiles', id); if (p) { delete p.paused; delete p.autoPaused; await putDoc('profiles', id, id, p); } await alog('Pause levée', id); return go(back, backId, 'Pause levée.'); }
     if (a === 'delete') {
       if (f.get('sure') !== 'oui') return go(back, backId, 'Suppression annulée : coche la case de confirmation.');
@@ -1095,7 +1113,9 @@ async function admin(req, res, url) {
       <div class="card"><b>Actions</b><div style="margin-top:8px">${btn('warn', id, 'Avertir', reasonSel)}
         ${u.banned ? btn('unban', id, 'Réactiver') : btn('ban', id, 'Suspendre', reasonSel, 'danger')}${p.paused && !u.banned ? btn('unpause', id, 'Lever la pause') : ''}
         ${btn('delete', id, 'Supprimer définitivement', reasonSel + sure('Je confirme : tout sera effacé'), 'danger')}</div></div>
-      <h2>Identité</h2><table>${row('Prénom et nom', H([p.name, p.lastName].filter(Boolean).join(' ')))}${row('E-mail', H(u.email) + (u.no_mail ? ' <span class="tag">ne veut pas d\'e-mails</span>' : ''))}${row('Accord', H({ m: 'masculin', f: 'féminin', n: 'neutre' }[p.accord] || ''))}
+      <div class="card"><b>Accès perdu</b><p class="muted" style="font-size:13px;margin:6px 0">Si la personne n'a plus son mot de passe ni accès à son adresse e-mail : vérifie que le numéro de mobile qu'elle t'écrit est bien celui de la ligne « Mobile » ci-dessous, puis remplace son adresse. Elle fera ensuite « Mot de passe oublié ? » avec la nouvelle adresse.</p>
+        ${btn('set-mail', id, 'Changer l\'adresse e-mail', '<input name="mail" type="email" placeholder="nouvelle adresse e-mail" style="min-width:240px"> ' + sure('J\'ai vérifié le mobile'))}</div>
+      <h2>Identité</h2><table>${row('Prénom et nom', H([p.name, p.lastName].filter(Boolean).join(' ')))}${row('E-mail', H(u.email) + (u.no_mail ? ' <span class="tag">ne veut pas d\'e-mails</span>' : ''))}${row('Mobile', H(p.phone || '') || '<span class="muted">non indiqué</span>')}${row('Accord', H({ m: 'masculin', f: 'féminin', n: 'neutre' }[p.accord] || ''))}
         ${row('Ville', H([p.npa, p.city].filter(Boolean).join(' ')) + (p.travel ? ' <small>(en voyage)</small>' : ''))}${row('Inscription', fmtDT(u.created))}${row('Dernière visite', fmtDT(u.last_seen))}${row('Invité par', u.invited_by ? who(u.invited_by) : '')}
         ${row('Vérification', H(p.verified ? p.verified.status : 'non demandée'))}</table>
       <h2>Portrait</h2><table>${row('Langue du portrait', H(p.textLang || 'fr'))}${row('Intention', H((p.intent || []).map(k => INTENT_NAME[k] || k).join(', ')))}${row('En ce moment', H(p.now))}
