@@ -154,23 +154,28 @@ async function bigName(id, lang) { // nom de la ville dans la langue du portrait
   try { const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=20&format=json&language=' + lang + '&name=' + encodeURIComponent(c[0]));
     const x = ((await r.json()).results || []).find(y => y.id === id); if (x && x.name) n = x.name; } catch (e) {}
   nameCache.set(k, n); return n; }
-async function geocode(city, npa) {
+async function geocode(city, npa, lang, home) {
   const name = String(city || '').replace(/\s+[A-Z]{2}$/, '').trim(); if (!name) return null;
-  const cc = (String(city).match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
-  const k = name.toLowerCase() + '|' + cc; if (geoCache.has(k)) return geoCache.get(k);
+  const cc = (String(city).match(/\s([A-Z]{2})$/) || [])[1] || home || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : ''); // pays : écrit après la ville, sinon choisi par la personne, sinon code postal suisse
+  const k = name.toLowerCase() + '|' + cc + '|' + (lang || ''); if (geoCache.has(k)) return geoCache.get(k);
   try {
-    const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=fr&format=json&name=' + encodeURIComponent(name));
-    const res = ((await r.json()).results || []); const x = (cc && res.find(y => y.country_code === cc)) || res[0];
+    const search = async l => ((await (await fetch('https://geocoding-api.open-meteo.com/v1/search?count=20&language=' + l + '&format=json&name=' + encodeURIComponent(name))).json()).results || []);
+    let res = await search('fr'); if (!res.length && lang && lang !== 'fr') res = await search(lang); // nom écrit dans une autre langue (« Ciudad de México »)
+    /* plusieurs villes du même nom : celle du pays indiqué, sinon d'un pays de la langue du portrait, sinon la plus peuplée (Roma en Italie, pas un village de Roumanie) */
+    const LC = { fr: ['FR', 'CH', 'BE', 'LU', 'CA'], de: ['DE', 'AT', 'CH', 'LU'], it: ['IT', 'CH'], es: ['ES', 'MX', 'AR', 'CO'], pt: ['PT', 'BR'], en: ['GB', 'IE', 'US', 'CA', 'AU'] }[lang || 'fr'] || [];
+    let pool = cc ? res.filter(y => y.country_code === cc) : []; if (!pool.length) pool = res.filter(y => LC.includes(y.country_code));
+    /* sinon, un pays où l'on parle la langue du portrait (Valencia en Espagne) */
+    const x = (pool.length ? pool : res).slice().sort((a, b) => (b.population || 0) - (a.population || 0))[0];
     const b = x ? nearestBig(x.latitude, x.longitude) : null;
-    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20, cc: String(x.country_code || '').toUpperCase(), big: b ? b[4] : 0, self: !!(b && b[4] === x.id) } : null; // cc : pays de la ville, affiché avant la conversation
+    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20, cc: String(x.country_code || '').toUpperCase(), v: 2, big: b ? b[4] : 0, self: !!(b && b[4] === x.id) } : null; // cc : pays de la ville, affiché avant la conversation
     geoCache.set(k, v); return v;
   } catch (e) { return null; }
 }
-async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; delete p.cityShown; } }
+async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined || p.geo.v !== 2 || (p.geo.hc || '') !== (p.homeCC || ''))) { const g = await geocode(p.city, p.npa, p.textLang, p.homeCC); if (g) { p.geo = { ...g, hc: p.homeCC || '' }; p.geoCity = p.city; delete p.cityShown; } }
   if (p.city && p.geo && p.geoCity === p.city && !p.cityShown) p.cityShown = p.geo.self || !p.geo.big ? p.city : (await bigName(p.geo.big, ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(p.textLang) ? p.textLang : 'fr')) || p.city; else if (!p.city) { delete p.geo; delete p.geoCity; delete p.cityShown; } return p; }
 function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
-async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined || !p.cityShown)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
+async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined || !p.cityShown || p.geo.v !== 2)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
 /* questions ouvertes : même question, réponses qui se ressemblent. Seul le nombre de concordances sort du serveur, jamais le texte. */
 const QSTOP = new Set(['dans', 'avec', 'pour', 'sans', 'sous', 'chez', 'vers', 'mais', 'donc', 'puis', 'quand', 'comme', 'cette', 'cela', 'celui', 'celle', 'ceux', 'elle', 'elles', 'nous', 'vous', 'leur', 'leurs', 'mon', 'ma', 'mes', 'ton', 'tes', 'son', 'ses', 'notre', 'votre', 'tout', 'tous', 'toute', 'toutes', 'plus', 'moins', 'tres', 'bien', 'fois', 'etre', 'avoir', 'fait', 'faire', 'suis', 'etais', 'etait', 'quelque', 'chose', 'jamais', 'toujours', 'encore', 'aussi', 'meme', 'alors', 'parce', 'lorsque', 'that', 'this', 'with', 'from', 'when', 'what', 'have', 'been', 'were', 'they', 'them', 'their', 'your', 'there', 'where', 'which', 'about', 'nicht', 'aber', 'auch', 'dass', 'wenn', 'eine', 'einer', 'einem', 'einen', 'mein', 'meine', 'dein', 'deine', 'sein', 'seine', 'ihre', 'noch', 'immer', 'sehr', 'oder', 'como', 'pero', 'para', 'cuando', 'donde', 'esta', 'este', 'esto', 'esos', 'esas', 'todo', 'toda', 'todos', 'nunca', 'siempre', 'anche', 'come', 'quando', 'dove', 'questo', 'questa', 'sempre', 'tutto', 'tutti', 'della', 'delle', 'dello', 'degli', 'nella', 'nelle', 'sono', 'essere', 'mais', 'quando', 'onde', 'esse', 'essa', 'isso', 'tudo', 'todos', 'sempre', 'nunca']);
 const qFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -196,7 +201,7 @@ function publicProfile(p, intimate, opened, myGeo, qmatch, myIntent, nEntries) {
   const hp = Math.min(12, 6 * (qmatch || 0)) + (lonely ? 5 : 0); if (hp) rest.hp = hp;
   if (Array.isArray(rest.intent)) rest.intent = rest.intent.filter(k => k !== 'seul');
   /* pays seulement, au début : code à deux lettres écrit après la ville, sinon le pays trouvé pour la ville, sinon Suisse si le code postal est suisse */
-  rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (geo && geo.cc) || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
+  rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || p.homeCC || (geo && geo.cc) || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
   /* avant que la conversation soit ouverte : pas de « Qui il est » (âge, langues, métier…) */
   if (opened && !opened.has(p.id)) { rest.limited = true; delete rest.now;
     const f = {}; if (rest.facts) { if (rest.facts.sign) f.sign = rest.facts.sign; if (rest.facts.langs) f.langs = rest.facts.langs; } rest.facts = f; } // signe et langues seulement
@@ -402,6 +407,7 @@ async function writeOne(store, me, id, body) {
     if (old && old.fake) data.fake = true;
     if (old && old.autoPaused) { data.paused = old.paused; data.autoPaused = true; } // pause après signalements : seule l'équipe la lève
     if (data.pseudo) { const r = await q("SELECT 1 FROM docs WHERE store='profiles' AND id<>$1 AND lower(data->>'pseudo')=lower($2)", [me, data.pseudo]); if (r.rowCount) throw err(409, 'Ce pseudo est déjà pris.'); }
+    if (data.homeCC !== undefined && !/^[A-Z]{2}$/.test(String(data.homeCC))) delete data.homeCC; // pays du domicile : un code à deux lettres, rien d'autre
     if (old && old.geo && old.geoCity === data.city) { data.geo = old.geo; data.geoCity = old.geoCity; if (old.cityShown) data.cityShown = old.cityShown; }
     await withGeo(data);
     /* liste rouge : numéro de mobile ou prénom + nom ; la pause ne peut pas être levée par la personne */

@@ -19,7 +19,7 @@ Pages.portrait=async function(S){
   <div class="facts" style="margin-top:14px">
     <div class="fact id-mini"><div class="k">Prénom et nom <span class="muted">(privés : servent à ton pseudo, à la liste rouge et à la vérification)</span></div>
       <div class="v id-row"><input class="in" id="f-name" placeholder="Prénom"><input class="in" id="f-last" placeholder="Nom de famille"></div>
-      <div class="k" style="margin-top:6px">Ville et code postal</div><div class="v id-row"><input class="in" id="f-npa" placeholder="NPA"><input class="in" id="f-place" placeholder="Ville"></div>
+      <div class="k" style="margin-top:6px">Ville, code postal et pays</div><div class="v id-row"><input class="in" id="f-npa" placeholder="NPA"><input class="in" id="f-place" placeholder="Ville"><select class="in sel-cc" id="f-cc" aria-label="Pays"></select></div>
       <p class="muted small vis-note">Écris ta ville exacte : elle reste privée. Les autres voient la ville de 20 000 habitants ou plus la plus proche. Le code postal reste privé aussi : il sert seulement à calculer les distances, arrondies à 5 km.</p><p class="muted small city-shown" id="city-shown"></p></div>
   </div>
   <div id="travel-box" style="margin:8px 4px 0"></div>
@@ -84,6 +84,7 @@ Pages.portrait=async function(S){
   $('f-name').value=me.name||'';$('f-place').value=(me.travel?me.travel.homeCity:me.city)||'';$('f-last').value=me.lastName||'';$('f-npa').value=me.npa||'';
   $('f-last').addEventListener('input',e=>{me.lastName=e.target.value;saveMe();});$('f-npa').addEventListener('input',e=>{me.npa=e.target.value;saveMe();});$('f-now').value=me.now||'';grow($('f-now'));
   $('f-name').addEventListener('input',e=>{me.name=e.target.value;saveMe();});
+  $('f-cc').innerHTML=App.countryOptions(me.homeCC||App.ccFromPhone(me.phone));$('f-cc').addEventListener('change',e=>{me.homeCC=e.target.value;saveMe();});
   $('f-place').addEventListener('input',e=>{if(me.travel)me.travel.homeCity=e.target.value;else me.city=e.target.value;saveMe();});
   const tvBox=()=>Photo.travelBox($('travel-box'),me,saveMe,tvBox);tvBox();
   $('f-now').addEventListener('input',e=>{me.now=e.target.value;grow(e.target);saveMe();});

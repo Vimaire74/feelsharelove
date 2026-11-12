@@ -1,14 +1,14 @@
-# FeelShareLove — version 1.1
+# FeelShareLove — version 1.2
 
-Version 1.1 (12/11/2026)
-- CORRECTION URGENTE : depuis la version 1.0, la recherche des villes ne répondait plus (distances et pays non calculés pour une ville nouvelle ou modifiée)
-- Ville : la personne écrit sa ville exacte, qui reste privée ; les autres voient la ville de 20 000 habitants ou plus la plus proche (ex. Pully → Lausanne, Savièse → Sion)
-- Mon portrait : sous la ville, « Affiché aux autres : … »
-- Textes d'explication de la ville mis à jour (portrait et création du compte)
-- Les portraits existants sont convertis automatiquement au démarrage du serveur
-- Admin, fiche d'un compte : la ville affichée est indiquée à côté de la ville exacte
-- Mentions légales : nouvelle rubrique « Données » (liste des villes GeoNames, licence CC BY 4.0)
-- Nouveau fichier app/data/villes.json : 18 877 villes de 20 000 habitants ou plus
+Version 1.2 (13/11/2026)
+- Résonances : un mot tapé dans la recherche remplace les critères choisis (OU, plus ET) ; une phrase le signale
+- Présent : « Regarder un film ensemble* » ; en bas du cadre, « * à distance, avec un outil de partage comme Teleparty » (lien qui s'ouvre dans un nouvel onglet)
+- Présent : suppression du champ « Préciser (facultatif) »
+- Villes : quand plusieurs villes portent le même nom, choix du pays indiqué, sinon d'un pays de la langue du portrait, sinon la plus peuplée (corrige Lisboa → Mozambique, Roma → Roumanie)
+- Villes : nouvel essai dans la langue du portrait si le nom n'est pas trouvé (Ciudad de México)
+- Pays du domicile : nouvelle liste déroulante à la création du compte (étape 3) et dans Mon portrait, déjà réglée d'après l'indicatif du mobile ; elle sert à trouver la bonne ville et à afficher le pays
+- Résonances : le filtre « Dans mon pays » utilise ce pays
+- Les villes déjà enregistrées sont recalculées au démarrage du serveur
 - Textes traduits dans les 5 langues
 
-Fichiers : server/server.js, app/data/villes.json (nouveau), app/js/version.js, app/js/db-remote.js, app/js/pages/portrait.js, app/js/pages/accueil.js, app/js/pages/legal.js, app/css/feelsharelove.css, app/js/lang/*.js
+Fichiers : server/server.js, app/js/version.js, app/js/app.js, app/js/pages/now.js, app/js/pages/accueil.js, app/js/pages/portrait.js, app/js/pages/resonances.js, app/css/feelsharelove.css, app/js/lang/*.js

@@ -34,16 +34,16 @@ Pages.now=async function(S){
     if(isAvail(me)){A.innerHTML=`<div class="k">Tu es disponible jusqu'à ${hhmm(me.avail.until)}</div><div class="wants big">${me.avail.wants.map(k=>WANT[k].l).join(' · ')}</div>${me.avail.note?`<p class="txt">${esc(me.avail.note)}</p>`:''}<div class="row" style="justify-content:flex-start;margin-top:10px"><button class="btn ghost" type="button" id="av-stop">Ne plus être disponible</button></div>`;
       $('av-stop').addEventListener('click',async()=>{me.avail=null;await DB.put('profiles',me);renderAvail();render();});return;}
     A.innerHTML=`<div class="k">Tu n'es pas affiché comme disponible</div><button class="btn flame" type="button" id="av-open" style="margin-top:8px">Me rendre disponible</button>
-      <div id="av-form" hidden><p class="muted small" style="margin:10px 0 6px">Ce dont j'ai envie</p><div class="intent" id="av-wants" style="margin-top:0">${WANTS.map(w=>`<button class="chip" type="button" data-k="${w.k}"${w.hint?` title="${w.hint}"`:''}>${w.s}</button>`).join('')}</div><p class="muted small" style="margin-top:6px">Regarder un film ensemble : à distance, avec un outil de partage comme Teleparty.</p>
-      <input class="in" id="av-note" placeholder="Préciser (facultatif) : un film en même temps, un café en visio…" style="margin-top:10px">
+      <div id="av-form" hidden><p class="muted small" style="margin:10px 0 6px">Ce dont j'ai envie</p><div class="intent" id="av-wants" style="margin-top:0">${WANTS.map(w=>`<button class="chip" type="button" data-k="${w.k}"${w.hint?` title="${w.hint}"`:''}>${w.s}${w.k==='film'?'<span aria-hidden="true">*</span>':''}</button>`).join('')}</div>
       <p class="muted small" style="margin:10px 0 6px">Pendant</p><div class="intent" id="av-dur" style="margin-top:0"><button class="chip on" type="button" data-d="1">1 heure</button><button class="chip" type="button" data-d="3">3 heures</button><button class="chip" type="button" data-d="soir">Jusqu'à ce soir</button></div>
-      <div class="row" style="margin-top:12px"><button class="btn" type="button" id="av-go">Je suis disponible</button></div><p class="muted small" id="av-err"></p></div>`;
+      <div class="row" style="margin-top:12px"><button class="btn" type="button" id="av-go">Je suis disponible</button></div><p class="muted small" id="av-err"></p>
+      <p class="muted small av-star">* <span>à distance, avec un outil de partage comme</span> <a href="https://www.teleparty.com" target="_blank" rel="noopener">Teleparty</a></p></div>`;
     $('av-open').addEventListener('click',()=>{$('av-form').hidden=false;$('av-open').hidden=true;});
     $('av-wants').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{c.classList.toggle('on');draft.wants=[...$('av-wants').querySelectorAll('.chip.on')].map(x=>x.dataset.k);}));
     $('av-dur').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{$('av-dur').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));draft.dur=c.dataset.d;}));
     $('av-go').addEventListener('click',async()=>{if(!draft.wants.length){$('av-err').textContent='Choisis au moins une envie.';return;}
       let until;if(draft.dur==='soir'){const d=new Date();d.setHours(23,59,0,0);until=d.getTime();if(until<Date.now()+3600e3)until=Date.now()+3600e3;}else until=Date.now()+(+draft.dur)*3600e3;
-      me.avail={wants:draft.wants,note:$('av-note').value.trim(),until};await DB.put('profiles',me);renderAvail();render();});}
+      me.avail={wants:draft.wants,note:'',until};await DB.put('profiles',me);renderAvail();render();});}
   renderAvail();
 
   /* --- question du jour --- */

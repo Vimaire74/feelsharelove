@@ -37,7 +37,7 @@ Pages.accueil=async function(S){
   /* « Enregistrer et reprendre plus tard » : garde ce qui est déjà écrit, même incomplet */
   async function later(){const v=id=>{const e=$(id);return e?e.value.trim():null;};
     if(step===1){const n=v('a-name'),l=v('a-last');if(n)me.name=n;if(l)me.lastName=l;}
-    if(step===3){const i=$('intent');if(i)me.intent=[...i.querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=v('a-city')??me.city;me.npa=v('a-npa')??me.npa;me.now=v('a-now')??me.now;}
+    if(step===3){const i=$('intent');if(i)me.intent=[...i.querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=v('a-city')??me.city;me.npa=v('a-npa')??me.npa;me.homeCC=v('a-cc')??me.homeCC;me.now=v('a-now')??me.now;}
     me.onboardStep=step;await save();
     S.innerHTML=`<p class="eyebrow">C'est enregistré</p><h1>Tu reprendras ici</h1><p class="muted" style="margin:10px 0 18px">Tu peux fermer FeelShareLove. La prochaine fois, tu retrouveras tout ce que tu as rempli, à l'étape ${step} sur ${N}.</p>
       <div class="row" style="justify-content:flex-start"><button class="btn ghost" type="button" id="resume">Continuer maintenant</button></div>`;
@@ -67,7 +67,7 @@ Pages.accueil=async function(S){
     if(step===3){S.innerHTML=head+`<p class="eyebrow">Ce que tu cherches</p><h1>${esc(me.pseudo)}, qu'est-ce qui t'amène ?</h1>
       <p class="muted small" style="margin:8px 0 10px">Visible sur ton portrait, sauf ce qui est marqué « Privé ».</p>
       <div id="intent">${App.intentHtml(me.intent)}</div>
-      <div class="fact" style="margin-top:14px"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="a-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="a-city" placeholder="Ville"></div>
+      <div class="fact" style="margin-top:14px"><div class="k">Ville, code postal et pays</div><div class="v" style="display:flex;gap:10px;flex-wrap:wrap"><input class="in" id="a-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="a-city" placeholder="Ville" style="flex:1;min-width:120px"><select class="in sel-cc" id="a-cc" aria-label="Pays">${App.countryOptions(me.homeCC||App.ccFromPhone(me.phone))}</select></div>
         <p class="muted small vis-note">Écris ta ville exacte : elle reste privée. Les autres voient la ville de 20 000 habitants ou plus la plus proche. Le code postal reste privé aussi : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
       <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="a-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea><p class="muted small" style="margin:6px 0 0">Visible seulement une fois une conversation ouverte.</p></div>
       <p class="muted small" style="margin:12px 0 0">Tu pourras tout modifier ensuite dans ton portrait.</p>
@@ -75,7 +75,7 @@ Pages.accueil=async function(S){
       $('a-city').value=me.city||'';$('a-npa').value=me.npa||'';$('a-now').value=me.now||'';App.grow($('a-now'));$('a-now').addEventListener('input',e=>App.grow(e.target));
       $('intent').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
       $('back').addEventListener('click',()=>{step=2;render();});
-      $('next').addEventListener('click',async()=>{me.intent=[...$('intent').querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=$('a-city').value.trim();me.npa=$('a-npa').value.trim();me.now=$('a-now').value.trim();await save();step=4;render();});return;}
+      $('next').addEventListener('click',async()=>{me.intent=[...$('intent').querySelectorAll('.chip.on')].map(x=>x.dataset.k);me.city=$('a-city').value.trim();me.npa=$('a-npa').value.trim();me.homeCC=$('a-cc').value;me.now=$('a-now').value.trim();await save();step=4;render();});return;}
     if(step===4&&window.Genres&&!me.storiesSeen){S.innerHTML=head+`<p class="eyebrow">Tes histoires préférées</p><h1>Films, livres, séries : ce que tu aimes</h1><p class="muted" style="margin:10px 0">Choisis tes genres préférés, puis, si tu veux, des œuvres dans chacun. Tu pourras tout changer plus tard dans ton portrait.</p>
       <div class="sec" id="g-on"></div>
       <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn" type="button" id="next">Continuer</button></div>`;

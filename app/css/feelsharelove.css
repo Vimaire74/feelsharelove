@@ -639,3 +639,8 @@ body.paused #prop-foot{display:none}
 /* numéro de version, en bas du menu */
 .menu-ver{font-size:11px;color:var(--muted);text-align:center;margin:12px 0 4px;opacity:.7}
 .fact.id-mini p.city-shown{font-size:11px;margin:2px 0 0;color:var(--saffron)}
+/* Présent : renvoi de « Regarder un film ensemble* », en bas du cadre */
+.av-star{margin:14px 0 0;font-size:12px}.av-star a{color:var(--saffron)}
+/* pays du domicile */
+.sel-cc{background:transparent;color:inherit;border:0;border-bottom:1px solid var(--line);font:inherit;max-width:150px;padding:3px 0}.sel-cc option{background:#2a1418;color:#fbeadb}
+.id-row .sel-cc{flex:0 1 120px;font-size:13px}

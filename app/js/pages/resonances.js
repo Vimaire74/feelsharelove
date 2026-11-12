@@ -26,11 +26,11 @@ Pages.resonances=async function(S,id){
     let hid=await App.hiddenList(),shown=20,showHidden=false;
     const keep=()=>{App.verifOnly(sel.more.has('verif'));try{localStorage.setItem(KEY,JSON.stringify(Object.fromEntries(GROUPS.map(g=>[g.k,[...sel[g.k]]]))));}catch(e){}};
     const cityOf=s=>norm(String(s||'').replace(/\s+[A-Z]{2}$/,'')),countryOf=s=>(String(s||'').match(/\s([A-Z]{2})$/)||[])[1]||'';
-    const myCity=cityOf(me.city),myCountry=countryOf(me.city);
+    const myCity=cityOf(me.city),myCountry=countryOf(me.city)||me.homeCC||(me.geo&&me.geo.cc)||'';
     /* force de la résonance : chaque point commun a son poids */
     const all=people.map(p=>{const r=App.resonance(entries,p.entries);const ct=commonTypes(me,p);const ex=Plus.extraCommon(me,p);
       r.n=r.common.length+r.feels.length+ct.length+ex.length;r.pct=Plus.similarity(me,p,entries,p.entries);
-      const near=p.km!=null?p.km<=100:(myCity&&cityOf(p.city)===myCity),samec=myCountry&&countryOf(p.city)===myCountry;
+      const near=p.km!=null?p.km<=100:(myCity&&cityOf(p.city)===myCity),samec=myCountry&&(countryOf(p.city)||p.country)===myCountry;
       const w=r.score+ct.length+ex.reduce((s,x)=>s+(x.k==='pc'?3:x.k==='pcw'?1:x.k==='inv'?(x.sub?1:.4):1),0)+(near?2:samec?.5:0);
       const text=norm([dn(p),p.city,p.now,...p.entries.flatMap(e=>[e.title,e.why,e.desc,e.kind]),...(p.chinois||[]).flatMap(x=>[x.n,x.w]),...C.fixInv(p.invest).map(k=>C.INV[k]&&C.INV[k].l),...(p.rep||[]).map(k=>Plus.repLabel(k,p))].filter(Boolean).join(' | '));
       return {p,r,ct,ex,w,near,samec,text};});
@@ -47,14 +47,17 @@ Pages.resonances=async function(S,id){
     function draw(){L.innerHTML='';const q=norm($('r-q').value);
       const hidSet=new Set(hid.map(l=>l.target)),minP=sel.min.size?+[...sel.min][0]:0;
       let list=all.filter(x=>{const p=x.p,a=App.isAvail(p);
-        if(hidSet.has(p.id))return false;if(minP&&(x.r.pct||0)<minP)return false;if(!App.langOk(me,p,x.r.pct))return false;
-        if(q&&!q.split(' ').every(w=>x.text.includes(w)))return false;
+        if(hidSet.has(p.id))return false;if(!App.langOk(me,p,x.r.pct))return false;if(sel.more.has('verif')&&!App.isVerified(p))return false;
+        /* recherche par mot OU critères : un mot tapé remplace les critères choisis */
+        if(q)return q.split(' ').every(w=>x.text.includes(w));
+        if(minP&&(x.r.pct||0)<minP)return false;
         if(sel.intent.size&&!(p.intent||[]).some(k=>sel.intent.has(k)))return false;
         if(sel.near.size&&!((sel.near.has('ville')&&x.near)||(sel.near.has('pays')&&(x.samec||x.near))))return false;
         if(sel.more.has('verif')&&!App.isVerified(p))return false;if(sel.more.has('reso')&&!x.r.n)return false;
         return true;}).sort((a,b)=>((b.r.pct||0)-(a.r.pct||0))||(b.w-a.w));
       const n=GROUPS.reduce((s,g)=>s+sel[g.k].size,0);
-      $('r-info').textContent=list.length?(list.length+' personne'+(list.length>1?'s':'')+(q||n?' trouvée'+(list.length>1?'s':''):'')+', de la plus forte à la plus faible'):'';
+      const crit=GROUPS.some(g=>g.k!=='more'&&sel[g.k].size)||sel.more.has('reso');
+      $('r-info').textContent=(q&&crit?I18N.t('Recherche par mot : tes critères ne sont pas appliqués.')+' ':'')+(list.length?(list.length+' personne'+(list.length>1?'s':'')+(q||n?' trouvée'+(list.length>1?'s':''):'')+', de la plus forte à la plus faible'):'');
       if(!entries.length&&!q&&!n)L.insertAdjacentHTML('beforeend','<div class="empty">Ton portrait n\'a pas encore de passions. Ajoute par exemple un film, ce qu\'il te fait et pourquoi : les résonances partent de là.</div>');
       if(!list.length){L.insertAdjacentHTML('beforeend','<div class="empty">Personne ne correspond pour l\'instant. Enlève un critère, ou essaie un autre mot.</div>');hiddenBlock();return;}
       const total=list.length;list=list.slice(0,shown);
