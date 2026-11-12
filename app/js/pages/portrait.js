@@ -17,9 +17,9 @@ Pages.portrait=async function(S){
   <label class="check" id="photo-int-l" style="margin-top:8px" hidden><input type="checkbox" id="photo-int"> Montrer ma vraie photo à ma tribu</label>
   <p class="muted small" id="photo-rule" style="margin-top:6px"></p>
   <div class="facts" style="margin-top:14px">
-    <div class="fact"><div class="k">Prénom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à ton pseudo et à la liste rouge)</span></div><div class="v"><input class="in" id="f-name" placeholder="Prénom"></div></div>
-    <div class="fact"><div class="k">Nom <span class="muted" style="text-transform:none;letter-spacing:0">(privé, sert à la vérification)</span></div><div class="v"><input class="in" id="f-last" placeholder="Nom de famille"></div></div>
-    <div class="fact"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="f-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="f-place" placeholder="Ville"></div>
+    <div class="fact id-mini"><div class="k">Prénom et nom <span class="muted">(privés : servent à ton pseudo, à la liste rouge et à la vérification)</span></div>
+      <div class="v id-row"><input class="in" id="f-name" placeholder="Prénom"><input class="in" id="f-last" placeholder="Nom de famille"></div>
+      <div class="k" style="margin-top:6px">Ville et code postal</div><div class="v id-row"><input class="in" id="f-npa" placeholder="NPA"><input class="in" id="f-place" placeholder="Ville"></div>
       <p class="muted small vis-note">La ville est visible par les autres, sans adresse ; la grande ville la plus proche suffit. Le code postal reste privé : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
   </div>
   <div id="travel-box" style="margin:8px 4px 0"></div>

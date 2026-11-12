@@ -2,7 +2,9 @@
    Ils portent l'étiquette « profil de démonstration » dans l'app. À garder au début, tant qu'il y a peu d'inscrits.
    Le bouton « Remplir les profils de démonstration » de l'admin réécrit les comptes marqués fake:true, reconnus par un de leurs
    anciens pseudos (from), et crée ceux qui n'existent pas encore (create: true). La photo et la vérification déjà en place sont gardées.
-   Un personnage par langue : son portrait est écrit dans sa langue (textLang). */
+   Chaque portrait est écrit dans la langue du personnage (textLang). Chaque personnage a un seul type de fonctionnement
+   (mental, émotionnel, sensible ou physique) et des goûts cohérents avec ce type et son âge ; tous parlent au moins deux langues.
+   Ils répondent automatiquement aux messages et acceptent les invitations dans la tribu (voir fakeReply dans server.js). */
 const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const H = (n, g, why = '') => ({ id: 'h:' + slug(n), n, src: 'h', g, w: null, wid: null, why });
@@ -10,11 +12,11 @@ const F = (w, n, g, why = '') => ({ id: 'f:' + slug(w) + ':' + slug(n), n, src: 
 const E = (kind, title, feel, why, desc = '') => ({ kind, title, workId: ['Activité', 'Souvenir', 'Objet', 'Autre'].includes(kind) ? '' : 'wp:' + norm(title), desc, feel, why });
 const LATER = () => Date.now() + 864e5 * 30;
 
-module.exports = [
+const ALL = [
   /* ---------- français ---------- */
   { from: ['ThéoLoup', 'BradOcre', 'ElioOcre'],
     p: { name: 'Elio', lastName: 'Demo', pseudo: 'ElioOcre', g: 'm', accord: 'm', city: 'Genève', npa: '1204', intent: ['amour', 'amis'], textLang: 'fr', langs: ['fr', 'it', 'en'],
-      types: { list: ['phys', 'sens'], show: true },
+      types: { list: ['phys'], show: true },
       facts: { age: '54 ans', langs: 'français, italien, anglais', sign: 'Sagittaire', work: 'Paysagiste', roots: 'Un village du Tessin, une grand-mère qui cultivait des figues', pets: 'Un vieux chien, Pistache' },
       now: 'Je retape une petite maison en pierre au-dessus du lac. Les mains dans le mortier, la tête tranquille.',
       avail: { wants: ['parler', 'decouvrir'], note: 'Parler jardins, pierre, ou de la vie.', until: LATER() },
@@ -31,7 +33,7 @@ module.exports = [
 
   { from: ['NadSafran', 'SandraLys', 'NoraLys'],
     p: { name: 'Nora', lastName: 'Demo', pseudo: 'NoraLys', g: 'f', accord: 'f', city: 'Fribourg', npa: '1700', intent: ['amis', 'amour'], textLang: 'fr', langs: ['fr', 'de'],
-      types: { list: ['emo', 'phys'], show: true },
+      types: { list: ['emo'], show: true },
       facts: { age: '47 ans', langs: 'français, allemand', sign: 'Lion', work: 'Sage-femme', roots: 'Entre la Gruyère et la Singine, une famille qui parle deux langues à table', pets: 'Deux chats recueillis' },
       now: 'Mes enfants grandissent trop vite. J\'apprends à leur laisser de la place.',
       avail: { wants: ['rire', 'film', 'parler'], note: 'Une comédie et des fous rires.', until: LATER() },
@@ -48,7 +50,7 @@ module.exports = [
 
   { from: ['KofiCèdre', 'TomPlume', 'PaulPlume'],
     p: { name: 'Paul', lastName: 'Demo', pseudo: 'PaulPlume', g: 'm', accord: 'm', city: 'Neuchâtel', npa: '2000', intent: ['parler', 'amis'], textLang: 'fr', langs: ['fr', 'en'], travel: null,
-      types: { list: ['emo', 'mental'], show: true },
+      types: { list: ['mental'], show: true },
       facts: { age: '68 ans', langs: 'français, anglais', sign: 'Cancer', work: 'Horloger, à la retraite', roots: 'Le Jura, une enfance entre deux ateliers', pets: 'Un chien, Barnabé' },
       now: 'J\'écris des nouvelles sur une machine à écrire de 1950. Le bruit des touches me tient compagnie.',
       avail: { wants: ['parler', 'texter', 'ecoute'], note: 'Raconter des histoires, en écouter.', until: LATER() },
@@ -65,7 +67,7 @@ module.exports = [
 
   { from: ['MaëlleJasmin', 'SophieAube', 'ClaireAube'],
     p: { name: 'Claire', lastName: 'Demo', pseudo: 'ClaireAube', g: 'f', accord: 'f', city: 'Lausanne', npa: '1003', intent: ['amour', 'parler'], textLang: 'fr', langs: ['fr', 'en', 'es'],
-      types: { list: ['sens', 'emo'], show: true },
+      types: { list: ['emo'], show: true },
       facts: { age: '51 ans', langs: 'français, anglais, un peu d\'espagnol', sign: 'Scorpion', work: 'Libraire', roots: 'Lyon, une mère institutrice et beaucoup de livres', pets: 'Aucun pour l\'instant' },
       now: 'J\'écris un premier roman. Je n\'arrive à écrire que la nuit.',
       avail: { wants: ['parler', 'ecoute'], note: 'Une vraie conversation, pas de bavardage.', until: LATER() },
@@ -82,7 +84,7 @@ module.exports = [
 
   { from: ['AlexOpale', 'JeanJacquesSol', 'AndréSol'],
     p: { name: 'André', lastName: 'Demo', pseudo: 'AndréSol', g: 'm', accord: 'm', city: 'Lausanne', npa: '1006', intent: ['amis', 'parler'], textLang: 'fr', langs: ['fr', 'en'],
-      types: { list: ['sens', 'mental'], show: true },
+      types: { list: ['sens'], show: true },
       facts: { age: '72 ans', langs: 'français, anglais', sign: 'Balance', work: 'Professeur de guitare, à la retraite', roots: 'Marseille, puis Lausanne depuis quarante ans', pets: 'Un chat qui ne m\'obéit pas' },
       now: 'Je joue de la guitare pour moi, le soir, et je donne un coup de main à la soupe populaire le jeudi.',
       avail: { wants: ['parler', 'ecoute'], note: 'Parler musique, ou de rien.', until: LATER() },
@@ -100,7 +102,7 @@ module.exports = [
   /* ---------- allemand ---------- */
   { from: ['LenaFirn'], create: true,
     p: { name: 'Lena', lastName: 'Demo', pseudo: 'LenaFirn', g: 'f', accord: 'f', city: 'Berlin', npa: '', intent: ['amis', 'parler'], textLang: 'de', langs: ['de', 'en', 'fr'], av: 'b',
-      types: { list: ['emo', 'sens'], show: true },
+      types: { list: ['emo'], show: true },
       facts: { age: '38 Jahre', langs: 'Deutsch, Englisch, ein bisschen Französisch', sign: 'Fische', work: 'Theaterschauspielerin', roots: 'Ein Dorf an der Ostsee, der Wind im Haar', pets: 'Eine Katze namens Brecht' },
       now: 'Wir proben ein neues Stück. Abends bin ich müde und glücklich zugleich.',
       avail: { wants: ['parler', 'soiree'], note: 'Nach der Probe ein Glas Wein und ein gutes Gespräch.', until: LATER() },
@@ -118,7 +120,7 @@ module.exports = [
   /* ---------- anglais ---------- */
   { from: ['OwenTide'], create: true,
     p: { name: 'Owen', lastName: 'Demo', pseudo: 'OwenTide', g: 'm', accord: 'm', city: 'Manchester', npa: '', intent: ['amis', 'parler'], textLang: 'en', langs: ['en', 'fr'], av: 'c',
-      types: { list: ['mental', 'emo'], show: true },
+      types: { list: ['mental'], show: true },
       facts: { age: '45', langs: 'English, school French', sign: 'Virgo', work: 'Actor, mostly small parts in TV dramas', roots: 'A terraced house in Salford, four brothers', pets: 'A greyhound called Biscuit' },
       now: 'Between two jobs, so I am finally reading all the books piled by my bed.',
       avail: { wants: ['parler', 'texter', 'film'], note: 'Films, football, or what keeps you up at night.', until: LATER() },
@@ -136,7 +138,7 @@ module.exports = [
   /* ---------- italien ---------- */
   { from: ['GiuliaAlba'], create: true,
     p: { name: 'Giulia', lastName: 'Demo', pseudo: 'GiuliaAlba', g: 'f', accord: 'f', city: 'Roma', npa: '', intent: ['amour', 'amis'], textLang: 'it', langs: ['it', 'fr', 'en'], av: 'd',
-      types: { list: ['sens', 'emo'], show: true },
+      types: { list: ['sens'], show: true },
       facts: { age: '41 anni', langs: 'italiano, francese, inglese', sign: 'Gemelli', work: 'Doppiatrice', roots: 'Napoli, una nonna che cantava mentre cucinava', pets: 'Nessuno, ma i gatti del quartiere mi conoscono' },
       now: 'Do la voce a un\'attrice francese in una serie. Passo le giornate in una stanza buia a respirare come lei.',
       avail: { wants: ['parler', 'film', 'soiree'], note: 'Un aperitivo e un film in lingua originale.', until: LATER() },
@@ -154,7 +156,7 @@ module.exports = [
   /* ---------- espagnol ---------- */
   { from: ['MateoBrisa'], create: true,
     p: { name: 'Mateo', lastName: 'Demo', pseudo: 'MateoBrisa', g: 'm', accord: 'm', city: 'Sevilla', npa: '', intent: ['amis', 'amour'], textLang: 'es', langs: ['es', 'en', 'pt'], av: 'e',
-      types: { list: ['phys', 'emo'], show: true },
+      types: { list: ['phys'], show: true },
       facts: { age: '36 años', langs: 'español, inglés, algo de portugués', sign: 'Aries', work: 'Actor de televisión', roots: 'Un pueblo blanco de Cádiz, una familia de pescadores', pets: 'Un perro mestizo, Canela' },
       now: 'Ruedo una serie de época. Paso más tiempo a caballo que en casa.',
       avail: { wants: ['rire', 'decouvrir', 'soiree'], note: 'Tapas, guitarra y conversación hasta tarde.', until: LATER() },
@@ -172,7 +174,7 @@ module.exports = [
   /* ---------- portugais ---------- */
   { from: ['InêsMaré'], create: true,
     p: { name: 'Inês', lastName: 'Demo', pseudo: 'InêsMaré', g: 'f', accord: 'f', city: 'Lisboa', npa: '', intent: ['amour', 'parler'], textLang: 'pt', langs: ['pt', 'es', 'fr'], av: 'b',
-      types: { list: ['emo', 'sens'], show: true },
+      types: { list: ['emo'], show: true },
       facts: { age: '33 anos', langs: 'português, espanhol, francês', sign: 'Caranguejo', work: 'Atriz e fadista', roots: 'Alfama, a casa da minha avó com vista para o rio', pets: 'Um canário que canta melhor do que eu' },
       now: 'Canto três noites por semana numa casa de fados. De dia, ensaio uma peça.',
       avail: { wants: ['parler', 'ecoute', 'soiree'], note: 'Ouvir um fado comigo e falar de saudade.', until: LATER() },
@@ -185,5 +187,277 @@ module.exports = [
       E('Film', 'Cinema Paraíso', ['nostalgie', 'bouleverse'], 'Vi-o com o meu pai. Choramos os dois e fingimos que não.'),
       E('Lieu', 'O miradouro da Graça', ['calme', 'mavie'], 'Ao pôr do sol, Lisboa inteira fica cor de mel.'),
       E('Activité', 'Cantar fado à noite', ['vital', 'partager'], 'Quando a sala fica em silêncio, sei que estamos todos a sentir o mesmo.'),
-      E('Souvenir', 'As marchas populares de junho', ['nostalgie', 'vecu'], 'Sardinhas, manjericos, a cidade inteira na rua. A melhor noite do ano.')] }
+      E('Souvenir', 'As marchas populares de junho', ['nostalgie', 'vecu'], 'Sardinhas, manjericos, a cidade inteira na rua. A melhor noite do ano.')] },
+  /* ---------- nouveaux personnages (12/11/2026) : un type de fonctionnement chacun, au moins deux langues ---------- */
+  /* allemand */
+  { from: ['MatthiasGrau'], create: true,
+    p: { name: 'Matthias', lastName: 'Demo', pseudo: 'MatthiasGrau', g: 'm', accord: 'm', city: 'München', npa: '', intent: ['parler', 'passion'], textLang: 'de', langs: ['de', 'en', 'fr'], av: 'c',
+      types: { list: ['mental'], show: true },
+      facts: { age: '49 Jahre', langs: 'Deutsch, Englisch, Schulfranzösisch', sign: 'Steinbock', work: 'Physiklehrer am Gymnasium', roots: 'Regensburg, ein Vater, der Uhren reparierte', pets: 'Keine, aber ein Aquarium mit Guppys' },
+      now: 'Ich lese gerade alles über die Geschichte der Zeitmessung. Abends Schach im Verein.',
+      avail: { wants: ['parler', 'decouvrir'], note: 'Über ein gutes Buch oder eine verrückte Idee reden.', until: LATER() },
+      chinois: [H('Albert Einstein', 'Sciences et découvertes', 'Mit Gedankenexperimenten die Welt verstehen.'), F('Sherlock Holmes', 'Sherlock Holmes', 'Littérature', 'Beobachten, schliessen, schweigen.'), H('Johannes Kepler', 'Sciences et découvertes')],
+      invest: ['sciences', 'ciel', 'ciel:astronomie', 'jeux', 'jeux:echecs', 'jeux:strategie', 'lecture', 'lecture:romans', 'histoire', 'musique', 'musique:concerts'],
+      rep: ['intellectuel', 'chercheur', 'perfectionniste', 'principes', 'solitaire', 'mentor'] },
+    entries: [
+      E('Livre', 'Gödel, Escher, Bach', ['reflechir', 'epate'], 'Ich habe zwei Jahre gebraucht, um es zu lesen. Ich würde es sofort wieder tun.'),
+      E('Livre', 'Der Name der Rose', ['passion', 'reflechir'], 'Ein Krimi in einer Bibliothek. Besser geht es für mich nicht.'),
+      E('Film', 'Interstellar', ['epate', 'reflechir'], 'Die Zeitdilatation stimmt fast. Und trotzdem musste ich am Ende schlucken.'),
+      E('Musique', 'Bach', ['calme', 'reflechir'], 'Die Goldberg-Variationen beim Korrigieren. Alles hat seinen Platz.'),
+      E('Activité', 'Schach im Verein', ['passion', 'vital'], 'Donnerstagabend, drei Partien, kein Wort zu viel.'),
+      E('Lieu', 'Das Deutsche Museum', ['epate', 'passe'], 'Als Kind habe ich dort die Pendel stundenlang angeschaut.')] },
+
+  { from: ['JonasGrat'], create: true,
+    p: { name: 'Jonas', lastName: 'Demo', pseudo: 'JonasGrat', g: 'm', accord: 'm', city: 'Innsbruck', npa: '', intent: ['amis', 'amour'], textLang: 'de', langs: ['de', 'it', 'en'], av: 'e',
+      types: { list: ['phys'], show: true },
+      facts: { age: '31 Jahre', langs: 'Deutsch, Italienisch, Englisch', sign: 'Widder', work: 'Bergführer, im Winter Skilehrer', roots: 'Ein Bauernhof im Zillertal, drei Schwestern', pets: 'Eine Border-Collie-Hündin, Lumpi' },
+      now: 'Ich trainiere für eine Durchquerung der Alpen im Sommer. Jeden Morgen vor der Arbeit auf den Berg.',
+      avail: { wants: ['decouvrir', 'proposer', 'rire'], note: 'Eine Wanderung, ein Bier danach, und lachen.', until: LATER() },
+      chinois: [H('Roald Amundsen', 'Explorateurs et aventuriers', 'Vorbereitung ist alles, dann losgehen.'), F('Le Seigneur des Anneaux', 'Aragorn', 'Littérature', 'Der Waldläufer, der lieber draussen schläft.'), H('Roger Federer', 'Sport')],
+      invest: ['sport', 'sport:randonnee-et-montagne', 'sport:escalade', 'sport:ski-et-snowboard', 'sport:velo', 'pleinair', 'pleinair:camping-et-bivouac', 'pleinair:parapente', 'nature', 'nature:etre-dehors', 'animaux', 'animaux:chiens'],
+      rep: ['sportif', 'aventurier', 'nature', 'competitif', 'protecteur', 'facile'] },
+    entries: [
+      E('Activité', 'Skitouren im Morgengrauen', ['vital', 'force'], 'Oben auf dem Grat, wenn die Sonne kommt, bin ich der glücklichste Mensch.'),
+      E('Film', 'Into the Wild', ['courage', 'perturbe'], 'Ich verstehe ihn total. Und genau deshalb macht mir das Ende Angst.'),
+      E('Film', 'Free Solo', ['scotche', 'force'], 'Ich klettere selbst. Meine Hände haben beim Zuschauen geschwitzt.'),
+      E('Musique', 'AC/DC', ['force', 'adore'], 'Laut, im Auto, auf dem Weg zum Klettern.'),
+      E('Lieu', 'Die Dolomiten', ['vital', 'calme'], 'Fels, der rosa wird am Abend. Da bin ich daheim.'),
+      E('Activité', 'Holz hacken bei meinen Eltern', ['calme', 'vecu'], 'Der Kopf wird leer, die Arme werden schwer. Perfekt.')] },
+
+  { from: ['AnnaMoos'], create: true,
+    p: { name: 'Anna', lastName: 'Demo', pseudo: 'AnnaMoos', g: 'f', accord: 'f', city: 'Zürich', npa: '8003', intent: ['parler', 'amis'], textLang: 'de', langs: ['de', 'fr', 'it'], av: 'd',
+      types: { list: ['sens'], show: true },
+      facts: { age: '62 Jahre', langs: 'Deutsch, Französisch, ein wenig Italienisch', sign: 'Fische', work: 'Kunsttherapeutin', roots: 'Ein Pfarrhaus im Emmental, viel Stille und viele Bücher', pets: 'Eine alte Katze, Mira' },
+      now: 'Ich male wieder, jeden Morgen eine kleine Seite. Ich lasse kommen, was kommt.',
+      avail: { wants: ['ecoute', 'parler'], note: 'Zuhören, ohne gleich eine Antwort zu haben.', until: LATER() },
+      chinois: [H('Hildegarde de Bingen', 'Sagesse et spiritualité', 'Sie hörte Musik in den Pflanzen.'), F('Le Petit Prince', 'le Renard', 'Littérature', 'Man sieht nur mit dem Herzen gut.'), H('Carl Gustav Jung', 'Sagesse et spiritualité')],
+      invest: ['arts', 'arts:peinture', 'arts:ceramique', 'conscience', 'conscience:meditation', 'esoterisme', 'esoterisme:reves', 'nature', 'nature:etre-dehors', 'bienetre', 'bienetre:respiration'],
+      rep: ['reveur', 'artiste', 'spirituel', 'mystique', 'soignant', 'solitaire'] },
+    entries: [
+      E('Musique', 'Arvo Pärt', ['calme', 'console'], 'Spiegel im Spiegel. Die Zeit bleibt stehen, und ich atme anders.'),
+      E('Film', 'Der Himmel über Berlin', ['hallucine', 'mavie'], 'Engel, die zuhören. So möchte ich durch die Stadt gehen.'),
+      E('Livre', 'Siddhartha', ['reflechir', 'console'], 'Mit zwanzig gelesen, mit sechzig wieder. Ein anderes Buch.'),
+      E('Activité', 'Malen am frühen Morgen', ['calme', 'vital'], 'Bevor die Welt spricht, sprechen die Farben.'),
+      E('Lieu', 'Der Wald am Uetliberg', ['calme', 'hallucine'], 'Im Nebel riecht er nach Moos und nach Kindheit.'),
+      E('Souvenir', 'Ein Traum, der wahr wurde', ['perturbe', 'vecu'], 'Ich träumte von meiner Grossmutter, am Morgen kam ihr Brief. Ich glaube seitdem an solche Dinge.')] },
+
+  /* anglais */
+  { from: ['SiobhanKelp'], create: true,
+    p: { name: 'Siobhan', lastName: 'Demo', pseudo: 'SiobhanKelp', g: 'f', accord: 'f', city: 'Dublin', npa: '', intent: ['amis', 'amour'], textLang: 'en', langs: ['en', 'ga', 'es'], av: 'b',
+      types: { list: ['phys'], show: true },
+      facts: { age: '29', langs: 'English, Irish, decent Spanish', sign: 'Leo', work: 'Physiotherapist for a rugby club', roots: 'Galway, a big family and a bigger kitchen table', pets: 'A rescue greyhound, Murphy' },
+      now: 'Training for my first open-water race. Sea swim every morning, whatever the weather.',
+      avail: { wants: ['proposer', 'rire', 'decouvrir'], note: 'Up for a sea swim, a hike or a pint.', until: LATER() },
+      chinois: [H('Serena Williams', 'Sport', 'Strong, loud and not sorry.'), F('Hunger Games', 'Katniss Everdeen', 'Littérature', 'She just gets on with it.'), H('Ernest Shackleton', 'Explorateurs et aventuriers')],
+      invest: ['sport', 'sport:natation', 'sport:course-a-pied', 'sport:sports-d-equipe', 'sport:surf-et-kitesurf', 'pleinair', 'nature', 'nature:etre-dehors', 'bienetre', 'bienetre:massages', 'famille', 'fete', 'fete:bars'],
+      rep: ['sportif', 'joyeux', 'competitif', 'aventurier', 'soignant', 'facile'] },
+    entries: [
+      E('Activité', 'Sea swimming at the Forty Foot', ['vital', 'force'], 'Eleven degrees. You scream, then you laugh. Best start to any day.'),
+      E('Film', 'Into the Wild', ['courage', 'perturbe'], 'Made me want to sell everything and walk. Then I remembered I hate being cold and alone.'),
+      E('Musique', 'Florence + the Machine', ['force', 'adore'], 'My running playlist is basically her whole discography.'),
+      E('Série', 'Normal People', ['bouleverse', 'mavie'], 'Very Irish, very real. I watched it in two nights.'),
+      E('Lieu', 'Connemara', ['calme', 'vital'], 'Stone walls, wild ponies, rain that changes every five minutes.'),
+      E('Activité', 'Gaelic football with my cousins', ['rire', 'vecu'], 'Every Christmas. Someone always ends up in the mud, usually me.')] },
+
+  { from: ['GraceHearth'], create: true,
+    p: { name: 'Grace', lastName: 'Demo', pseudo: 'GraceHearth', g: 'f', accord: 'f', city: 'Bristol', npa: '', intent: ['amis', 'seul'], textLang: 'en', langs: ['en', 'fr'], av: 'd',
+      types: { list: ['emo'], show: true },
+      facts: { age: '58', langs: 'English, holiday French', sign: 'Cancer', work: 'Primary school teacher, thirty years and counting', roots: 'A seaside town in Cornwall, my nan\'s tea room', pets: 'An old cat called Marmalade' },
+      now: 'My youngest has just left for university. The house is very quiet.',
+      avail: { wants: ['parler', 'ecoute', 'film'], note: 'A cuppa and a proper chat.', until: LATER() },
+      chinois: [F('Mary Poppins', 'Mary Poppins', 'Films', 'Kind, firm, and always a bit of magic.'), F('Orgueil et Préjugés', 'Elizabeth Bennet', 'Littérature', 'Clever and warm at the same time.'), H('Florence Nightingale', 'Humanistes et engagés')],
+      invest: ['famille', 'famille:mes-enfants', 'amitie', 'cuisine', 'cuisine:patisserie', 'lecture', 'lecture:clubs-de-lecture', 'mains', 'mains:tricot', 'benevolat', 'benevolat:personnes-agees'],
+      rep: ['protecteur', 'pilier', 'conteur', 'joyeux', 'soignant', 'mediateur'] },
+    entries: [
+      E('Film', 'Love Actually', ['rire', 'bouleverse'], 'Every December, with mince pies. I cry at the airport scenes every single time.'),
+      E('Film', 'Coco', ['bouleverse', 'console'], 'Watched it with my class. Thirty children and one teacher in tears.'),
+      E('Musique', 'Adele', ['bouleverse', 'mavie'], 'Someone Like You was the soundtrack of my divorce. Now it just makes me smile.'),
+      E('Livre', 'The Secret Garden', ['nostalgie', 'console'], 'I read it at ten and again with each of my children.'),
+      E('Activité', 'Baking for the school fair', ['adore', 'partager'], 'Forty scones, flour everywhere, and the children\'s faces.'),
+      E('Souvenir', 'My nan\'s tea room', ['nostalgie', 'vecu'], 'The smell of jam and wet coats. Everyone told her their worries.')] },
+
+  { from: ['CallumMist'], create: true,
+    p: { name: 'Callum', lastName: 'Demo', pseudo: 'CallumMist', g: 'm', accord: 'm', city: 'Edinburgh', npa: '', intent: ['parler', 'amour'], textLang: 'en', langs: ['en', 'de'], av: 'c',
+      types: { list: ['sens'], show: true },
+      facts: { age: '35', langs: 'English, German (I lived in Leipzig)', sign: 'Scorpio', work: 'Sound engineer and folk fiddler', roots: 'The Isle of Skye, a croft and a lot of wind', pets: 'None, but I talk to the seagulls' },
+      now: 'Recording the sound of places: waves, forests, empty churches. I want to make an album out of it.',
+      avail: { wants: ['ecoute', 'parler', 'decouvrir'], note: 'Talk about music, dreams or strange coincidences.', until: LATER() },
+      chinois: [F('Légendes arthuriennes', 'Merlin', 'Mythologie et contes', 'He hears what others don\'t.'), H('David Bowie', 'Musique', 'Always changing, always himself.'), F('Mon voisin Totoro', 'Totoro', 'Dessins animés')],
+      invest: ['musique', 'musique:jouer-d-un-instrument', 'musique:composer', 'nature', 'nature:etre-dehors', 'ciel', 'ciel:observation-du-ciel', 'esoterisme', 'esoterisme:reves', 'arts', 'arts:photo'],
+      rep: ['reveur', 'artiste', 'creatif', 'mystique', 'solitaire', 'nature'] },
+    entries: [
+      E('Musique', 'Sigur Rós', ['hallucine', 'calme'], 'A language that doesn\'t exist and I understand all of it.'),
+      E('Film', 'Spirited Away', ['hallucine', 'mavie'], 'Every time I see it I notice something new in the background.'),
+      E('Série', 'Twin Peaks', ['perturbe', 'scotche'], 'Dreams that tell the truth. It got under my skin.'),
+      E('Lieu', 'The Fairy Pools on Skye', ['calme', 'hallucine'], 'The water is so clear it looks like it\'s not there.'),
+      E('Activité', 'Recording sounds at dawn', ['vital', 'calme'], 'Headphones on, the world opens up. You hear things you never noticed.'),
+      E('Souvenir', 'A ceilidh in my grandfather\'s barn', ['nostalgie', 'vecu'], 'Fiddles, whisky, everyone dancing. I was six and I knew what I wanted to do.')] },
+
+  /* italien */
+  { from: ['LorenzoTorre'], create: true,
+    p: { name: 'Lorenzo', lastName: 'Demo', pseudo: 'LorenzoTorre', g: 'm', accord: 'm', city: 'Bologna', npa: '', intent: ['parler', 'amis'], textLang: 'it', langs: ['it', 'en', 'fr'], av: 'c',
+      types: { list: ['mental'], show: true },
+      facts: { age: '44 anni', langs: 'italiano, inglese, francese', sign: 'Vergine', work: 'Archivista e storico del Medioevo', roots: 'Ferrara, una famiglia di farmacisti', pets: 'Nessuno, ho troppi libri' },
+      now: 'Sto scrivendo un saggio sulle biblioteche perdute. Passo le giornate tra pergamene e caffè.',
+      avail: { wants: ['parler', 'decouvrir'], note: 'Discutere di storia, di libri o di un\'idea strana.', until: LATER() },
+      chinois: [H('Léonard de Vinci', 'Arts et lettres', 'Curioso di tutto, finiva poco.'), F('Sherlock Holmes', 'Sherlock Holmes', 'Littérature', 'Il metodo prima dell\'emozione.'), H('Galilée', 'Sciences et découvertes')],
+      invest: ['histoire', 'lecture', 'lecture:romans', 'lecture:clubs-de-lecture', 'sciences', 'jeux', 'jeux:echecs', 'collections', 'collections:livres-anciens', 'langues', 'sorties', 'sorties:expositions'],
+      rep: ['intellectuel', 'chercheur', 'philosophe', 'collectionneur', 'principes', 'perfectionniste'] },
+    entries: [
+      E('Livre', 'Il nome della rosa', ['passion', 'reflechir'], 'Un giallo in un\'abbazia piena di libri. Ho scelto il mio mestiere dopo averlo letto.'),
+      E('Livre', 'Le città invisibili', ['reflechir', 'epate'], 'Calvino costruisce città con le parole. Ne rileggo una a caso la sera.'),
+      E('Film', 'Oppenheimer', ['reflechir', 'perturbe'], 'Tre ore di dilemmi morali. Ne ho discusso per una settimana.'),
+      E('Musique', 'Bach', ['calme', 'reflechir'], 'L\'arte della fuga mentre lavoro. Matematica che canta.'),
+      E('Lieu', 'La Biblioteca dell\'Archiginnasio', ['epate', 'calme'], 'Gli stemmi sui muri, il silenzio, l\'odore della carta.'),
+      E('Activité', 'Giocare a scacchi per corrispondenza', ['passion', 'vital'], 'Una mossa a settimana con un signore di Cracovia. Da sei anni.')] },
+
+  { from: ['ChiaraRoccia'], create: true,
+    p: { name: 'Chiara', lastName: 'Demo', pseudo: 'ChiaraRoccia', g: 'f', accord: 'f', city: 'Trento', npa: '', intent: ['amis', 'amour'], textLang: 'it', langs: ['it', 'de', 'en'], av: 'e',
+      types: { list: ['phys'], show: true },
+      facts: { age: '34 anni', langs: 'italiano, tedesco, inglese', sign: 'Sagittario', work: 'Maestra di sci e guida di arrampicata', roots: 'Un paese della Val di Fassa, un padre falegname', pets: 'Una cagnolina, Brina' },
+      now: 'D\'estate arrampico, d\'inverno insegno. Sto preparando la mia prima via lunga in Patagonia.',
+      avail: { wants: ['proposer', 'decouvrir', 'rire'], note: 'Una ferrata, una polenta e due risate.', until: LATER() },
+      chinois: [H('Simone Biles', 'Sport', 'Forza e leggerezza insieme.'), F('Heidi', 'Heidi', 'Littérature', 'Scalza sui prati, felice così.'), H('Amelia Earhart', 'Explorateurs et aventuriers')],
+      invest: ['sport', 'sport:escalade', 'sport:ski-et-snowboard', 'sport:randonnee-et-montagne', 'sport:velo', 'pleinair', 'pleinair:camping-et-bivouac', 'nature', 'nature:vivre-dans-la-nature', 'cuisine', 'cuisine:cuisiner'],
+      rep: ['sportif', 'aventurier', 'explorateur', 'nature', 'competitif', 'joyeux'] },
+    entries: [
+      E('Activité', 'Arrampicare sulle Dolomiti', ['vital', 'force'], 'La roccia calda sotto le dita, il vuoto sotto i piedi. Mi sento viva.'),
+      E('Film', 'Free Solo', ['scotche', 'force'], 'L\'ho visto con il cuore in gola e le mani sudate.'),
+      E('Film', 'Into the Wild', ['courage', 'perturbe'], 'Bellissimo e terribile. Mi ha insegnato a non partire mai da sola.'),
+      E('Musique', 'Vasco Rossi', ['adore', 'force'], 'In macchina verso la montagna, a tutto volume.'),
+      E('Lieu', 'Il Sassolungo all\'alba', ['vital', 'calme'], 'Diventa rosa per cinque minuti. Ogni volta mi fermo.'),
+      E('Souvenir', 'La prima discesa con mio padre', ['nostalgie', 'vecu'], 'Avevo tre anni, tra le sue gambe. Non ho più smesso.')] },
+
+  { from: ['FrancoSole'], create: true,
+    p: { name: 'Franco', lastName: 'Demo', pseudo: 'FrancoSole', g: 'm', accord: 'm', city: 'Torino', npa: '', intent: ['amis', 'seul'], textLang: 'it', langs: ['it', 'fr'], av: 'd',
+      types: { list: ['emo'], show: true },
+      facts: { age: '66 anni', langs: 'italiano, francese (mia madre era di Nizza)', sign: 'Toro', work: 'Cuoco di trattoria, in pensione', roots: 'Le Langhe, una cascina e una nonna severa', pets: 'Un gatto rosso, Garibaldi' },
+      now: 'Mia moglie non c\'è più da due anni. Cucino ancora per quattro, e cerco qualcuno con cui mangiare.',
+      avail: { wants: ['parler', 'ecoute', 'soiree'], note: 'Due chiacchiere e magari un bicchiere.', until: LATER() },
+      chinois: [F('Les Misérables', 'Jean Valjean', 'Littérature', 'Un uomo che ricomincia, con il cuore aperto.'), H('Charlie Chaplin', 'Arts et lettres', 'Far ridere con la tristezza.'), F('Ratatouille', 'Rémy', 'Dessins animés')],
+      invest: ['cuisine', 'cuisine:cuisiner', 'cuisine:vin', 'famille', 'famille:mes-petits-enfants', 'amitie', 'musique', 'jeux', 'jeux:cartes', 'sorties', 'sorties:cinema'],
+      rep: ['bonvivant', 'conteur', 'pilier', 'protecteur', 'joyeux', 'facile'] },
+    entries: [
+      E('Film', 'Nuovo Cinema Paradiso', ['bouleverse', 'nostalgie'], 'Il finale con i baci tagliati. Piango ogni volta, e non me ne vergogno.'),
+      E('Film', 'La vita è bella', ['bouleverse', 'rire'], 'Ridere per proteggere chi ami. Mio padre faceva così.'),
+      E('Musique', 'Lucio Dalla', ['nostalgie', 'console'], 'Caruso, cantato in cucina con le finestre aperte.'),
+      E('Activité', 'Fare gli agnolotti con i nipoti', ['adore', 'partager'], 'Farina dappertutto, e loro che rubano il ripieno.'),
+      E('Activité', 'Scopa al circolo', ['rire', 'partager'], 'Si litiga per un sette bello, poi si brinda.'),
+      E('Souvenir', 'Il pranzo di nozze nella cascina', ['nostalgie', 'vecu'], 'Cento persone, quindici portate, mia moglie che rideva.')] },
+
+  /* espagnol */
+  { from: ['LucíaPrisma'], create: true,
+    p: { name: 'Lucía', lastName: 'Demo', pseudo: 'LucíaPrisma', g: 'f', accord: 'f', city: 'Madrid', npa: '', intent: ['parler', 'amour'], textLang: 'es', langs: ['es', 'en', 'fr'], av: 'b',
+      types: { list: ['mental'], show: true },
+      facts: { age: '39 años', langs: 'español, inglés, francés', sign: 'Acuario', work: 'Matemática, profesora en la universidad', roots: 'Salamanca, una casa llena de libros y de discusiones', pets: 'Un gato que se llama Euclides' },
+      now: 'Preparo un curso sobre la historia de los números. Leo mucho, duermo poco.',
+      avail: { wants: ['parler', 'decouvrir'], note: 'Hablar de un libro, de ciencia o de lo que sea, con argumentos.', until: LATER() },
+      chinois: [H('Ada Lovelace', 'Sciences et découvertes', 'Vio poesía en una máquina de calcular.'), F('Alice au pays des merveilles', 'Alice', 'Littérature', 'Preguntar siempre por qué.'), H('Marie Curie', 'Sciences et découvertes')],
+      invest: ['sciences', 'numerique', 'numerique:intelligence-artificielle', 'lecture', 'lecture:romans', 'jeux', 'jeux:strategie', 'jeux:puzzles', 'ciel', 'ciel:astronomie', 'langues'],
+      rep: ['intellectuel', 'chercheur', 'philosophe', 'principes', 'rebelle', 'mentor'] },
+    entries: [
+      E('Livre', 'Ficciones', ['epate', 'reflechir'], 'Borges y su biblioteca infinita. Un laberinto en cada página.'),
+      E('Livre', 'El problema de los tres cuerpos', ['passion', 'reflechir'], 'Física, historia y vértigo. Lo terminé en tres noches.'),
+      E('Film', 'Interstellar', ['epate', 'reflechir'], 'La escena del agujero negro la he pausado para hacer cálculos.'),
+      E('Film', 'Ágora', ['reflechir', 'perturbe'], 'Hipatia, la razón contra la multitud. Me quedé callada un buen rato.'),
+      E('Activité', 'Resolver problemas de lógica', ['passion', 'vital'], 'Un café, un cuaderno, un problema imposible. Mi domingo ideal.'),
+      E('Lieu', 'La Biblioteca Nacional', ['calme', 'epate'], 'Allí escribí mi tesis. Aún reconozco el olor.')] },
+
+  { from: ['CarmenAzahar'], create: true,
+    p: { name: 'Carmen', lastName: 'Demo', pseudo: 'CarmenAzahar', g: 'f', accord: 'f', city: 'Valencia', npa: '', intent: ['amis', 'amour'], textLang: 'es', langs: ['es', 'ca', 'it'], av: 'd',
+      types: { list: ['emo'], show: true },
+      facts: { age: '57 años', langs: 'español, valenciano, italiano', sign: 'Piscis', work: 'Enfermera de pediatría', roots: 'Un pueblo de la huerta, naranjos y una familia enorme', pets: 'Una perrita, Lola' },
+      now: 'Mis hijos ya vuelan solos. Tengo tiempo y ganas de reír con gente nueva.',
+      avail: { wants: ['rire', 'parler', 'soiree'], note: 'Una paella, una sobremesa larga y risas.', until: LATER() },
+      chinois: [F('Forrest Gump', 'Jenny', 'Films', 'Perdida y querida a la vez.'), H('Frida Kahlo', 'Arts et lettres', 'Pintar el dolor con colores alegres.'), F('Le Roi Lion', 'Rafiki', 'Dessins animés')],
+      invest: ['famille', 'famille:mes-enfants', 'amitie', 'amour', 'cuisine', 'cuisine:cuisiner', 'danse', 'danse:salsa', 'fete', 'fete:soirees-dansantes', 'benevolat', 'benevolat:aide-aux-enfants'],
+      rep: ['soignant', 'joyeux', 'bonvivant', 'protecteur', 'conteur', 'pilier'] },
+    entries: [
+      E('Film', 'Coco', ['bouleverse', 'console'], 'Recordar a los que se fueron con música. Lloré como una niña.'),
+      E('Film', 'Volver', ['bouleverse', 'mavie'], 'Las mujeres de mi familia son así: fuertes, ruidosas y tiernas.'),
+      E('Musique', 'Rosalía', ['passion', 'adore'], 'La pongo para limpiar la casa y acabo bailando.'),
+      E('Série', 'La casa de papel', ['scotche', 'rire'], 'La vi con mis hijos, gritando todos delante de la tele.'),
+      E('Activité', 'Bailar salsa los jueves', ['vital', 'rire'], 'Empecé a los cincuenta. Ojalá lo hubiera hecho antes.'),
+      E('Souvenir', 'Las Fallas con mi abuela', ['nostalgie', 'vecu'], 'La cremà, el calor del fuego en la cara, su mano en la mía.')] },
+
+  { from: ['DiegoNiebla'], create: true,
+    p: { name: 'Diego', lastName: 'Demo', pseudo: 'DiegoNiebla', g: 'm', accord: 'm', city: 'Ciudad de México', npa: '', intent: ['parler', 'amour'], textLang: 'es', langs: ['es', 'en', 'pt'], av: 'e',
+      types: { list: ['sens'], show: true },
+      facts: { age: '42 años', langs: 'español, inglés, portugués de Brasil', sign: 'Cáncer', work: 'Fotógrafo y músico', roots: 'Oaxaca, una abuela curandera y mucho copal', pets: 'Un xoloitzcuintle, Mictlán' },
+      now: 'Fotografío altares del Día de Muertos en los pueblos. Escucho mucho y hablo poco.',
+      avail: { wants: ['ecoute', 'parler'], note: 'Hablar de sueños, de música o de lo invisible.', until: LATER() },
+      chinois: [H('Frida Kahlo', 'Arts et lettres', 'Ver lo que duele y hacerlo bello.'), F('Le Voyage de Chihiro', 'Chihiro', 'Dessins animés', 'Entrar en otro mundo sin miedo.'), H('Gabriel García Márquez', 'Arts et lettres')],
+      invest: ['arts', 'arts:photo', 'musique', 'musique:jouer-d-un-instrument', 'conscience', 'conscience:spiritualite', 'esoterisme', 'esoterisme:reves', 'voyages', 'nature', 'nature:etre-dehors'],
+      rep: ['artiste', 'reveur', 'mystique', 'spirituel', 'creatif', 'voyageur'] },
+    entries: [
+      E('Livre', 'Pedro Páramo', ['hallucine', 'perturbe'], 'Un pueblo de muertos que hablan. Así se siente Oaxaca de noche.'),
+      E('Livre', 'Cien años de soledad', ['hallucine', 'mavie'], 'Lo mágico es normal. Mi abuela pensaba así.'),
+      E('Film', 'Coco', ['console', 'mavie'], 'Por fin el mundo vio nuestros altares como los vemos nosotros.'),
+      E('Musique', 'Natalia Lafourcade', ['calme', 'console'], 'Su voz huele a lluvia en la sierra.'),
+      E('Lieu', 'Hierve el Agua', ['hallucine', 'calme'], 'Cascadas de piedra. El tiempo se detiene.'),
+      E('Souvenir', 'Las limpias de mi abuela', ['vecu', 'nostalgie'], 'Hierbas, humo, una oración en zapoteco. Salía ligero, sin saber por qué.')] },
+
+  /* portugais */
+  { from: ['RuiCompasso'], create: true,
+    p: { name: 'Rui', lastName: 'Demo', pseudo: 'RuiCompasso', g: 'm', accord: 'm', city: 'Coimbra', npa: '', intent: ['parler', 'passion'], textLang: 'pt', langs: ['pt', 'fr', 'en'], av: 'c',
+      types: { list: ['mental'], show: true },
+      facts: { age: '52 anos', langs: 'português, francês, inglês', sign: 'Gémeos', work: 'Professor de filosofia no liceu', roots: 'Viseu, um pai alfaiate que lia Eça de Queirós', pets: 'Nenhum, mas alimento os pombos da praça' },
+      now: 'Estou a reler os estoicos com os meus alunos. Discutimos mais do que lemos.',
+      avail: { wants: ['parler', 'decouvrir'], note: 'Uma boa discussão, com respeito e argumentos.', until: LATER() },
+      chinois: [H('Socrate', 'Sagesse et spiritualité', 'Só sei que nada sei, e isso basta para começar.'), F('Don Quichotte', 'Don Quichotte', 'Littérature', 'Lutar contra moinhos por uma ideia.'), H('Baruch Spinoza', 'Sagesse et spiritualité')],
+      invest: ['lecture', 'lecture:romans', 'histoire', 'sciences', 'jeux', 'jeux:echecs', 'devperso', 'devperso:psychologie', 'langues', 'sorties', 'sorties:expositions'],
+      rep: ['philosophe', 'intellectuel', 'mentor', 'principes', 'sage', 'solitaire'] },
+    entries: [
+      E('Livre', 'Ensaio sobre a Cegueira', ['perturbe', 'reflechir'], 'Saramago tira-nos a visão para nos fazer ver. Fiquei dias a pensar nele.'),
+      E('Livre', 'Livro do Desassossego', ['reflechir', 'mavie'], 'Pessoa escreveu o que eu penso às três da manhã.'),
+      E('Film', 'Oppenheimer', ['reflechir', 'perturbe'], 'O génio e a culpa. Discutimo-lo nas aulas durante um mês.'),
+      E('Musique', 'Bach', ['calme', 'reflechir'], 'As suites para violoncelo, ao domingo de manhã.'),
+      E('Activité', 'Xadrez no café', ['passion', 'vital'], 'Todas as quartas, o mesmo adversário, a mesma bica.'),
+      E('Lieu', 'A Biblioteca Joanina', ['epate', 'calme'], 'Ouro, madeira e morcegos que protegem os livros. Mágico e lógico ao mesmo tempo.')] },
+
+  { from: ['BeatrizOnda'], create: true,
+    p: { name: 'Beatriz', lastName: 'Demo', pseudo: 'BeatrizOnda', g: 'f', accord: 'f', city: 'Peniche', npa: '', intent: ['amis', 'amour'], textLang: 'pt', langs: ['pt', 'en', 'es'], av: 'b',
+      types: { list: ['phys'], show: true },
+      facts: { age: '27 anos', langs: 'português, inglês, espanhol', sign: 'Carneiro', work: 'Instrutora de surf e enfermeira a meio tempo', roots: 'Ericeira, um pai pescador e muito sal', pets: 'Um cão de água português, Maré' },
+      now: 'Acordo às seis para apanhar as ondas antes do turno. Estou a aprender a fazer pranchas.',
+      avail: { wants: ['proposer', 'rire', 'decouvrir'], note: 'Uma sessão de surf e um peixe grelhado.', until: LATER() },
+      chinois: [H('Jacques-Yves Cousteau', 'Explorateurs et aventuriers', 'O mar como casa.'), F('Vaiana', 'Vaiana', 'Dessins animés', 'O oceano chama-a, e ela vai.'), H('Usain Bolt', 'Sport')],
+      invest: ['sport', 'sport:surf-et-kitesurf', 'sport:natation', 'sport:yoga', 'sport:course-a-pied', 'pleinair', 'pleinair:plongee', 'nature', 'nature:etre-dehors', 'nature:ecologie', 'mains', 'mains:bricolage'],
+      rep: ['sportif', 'aventurier', 'nature', 'joyeux', 'competitif', 'bricoleur'] },
+    entries: [
+      E('Activité', 'Surfar no Supertubos', ['vital', 'force'], 'Quando a onda fecha por cima de mim, o mundo desaparece.'),
+      E('Film', 'Into the Wild', ['courage', 'perturbe'], 'Vi-o aos dezoito e quis fugir para o mato. Fui para o mar.'),
+      E('Film', 'Free Solo', ['scotche', 'force'], 'Não escalo, mas percebo aquela calma no meio do perigo.'),
+      E('Musique', 'Jack Johnson', ['calme', 'adore'], 'Música de carrinha, de pés na areia.'),
+      E('Lieu', 'A Nazaré no inverno', ['scotche', 'vital'], 'As ondas gigantes. Um dia hei de lá entrar.'),
+      E('Souvenir', 'A primeira onda aos sete anos', ['vecu', 'nostalgie'], 'O meu pai empurrou a prancha e gritou: rema! Nunca mais saí da água.')] },
+
+  { from: ['JoanaAzulejo'], create: true,
+    p: { name: 'Joana', lastName: 'Demo', pseudo: 'JoanaAzulejo', g: 'f', accord: 'f', city: 'Porto', npa: '', intent: ['parler', 'amis'], textLang: 'pt', langs: ['pt', 'es', 'it'], av: 'd',
+      types: { list: ['sens'], show: true },
+      facts: { age: '45 anos', langs: 'português, espanhol, italiano', sign: 'Peixes', work: 'Ceramista, pinto azulejos à mão', roots: 'Ribeira, uma avó que lia as borras do café', pets: 'Duas gatas, Luz e Sombra' },
+      now: 'Trabalho numa série de azulejos inspirada nos meus sonhos. Acordo e desenho antes de falar.',
+      avail: { wants: ['ecoute', 'parler'], note: 'Falar de sonhos, de cores ou do que se sente sem palavras.', until: LATER() },
+      chinois: [F('Le Petit Prince', 'la Rose', 'Littérature', 'Frágil e orgulhosa, como eu às vezes.'), H('Claude Monet', 'Arts et lettres', 'Pintar a luz em vez das coisas.'), F('Mythologie grecque', 'Orphée', 'Mythologie et contes')],
+      invest: ['arts', 'arts:ceramique', 'arts:peinture', 'esoterisme', 'esoterisme:reves', 'esoterisme:tarot', 'conscience', 'conscience:meditation', 'maison', 'maison:plantes-d-interieur', 'nature', 'nature:cueillir-et-cultiver'],
+      rep: ['artiste', 'reveur', 'mystique', 'creatif', 'spirituel', 'artisan'] },
+    entries: [
+      E('Musique', 'Madredeus', ['calme', 'hallucine'], 'A voz da Teresa Salgueiro parece vir de outro tempo.'),
+      E('Film', 'Spirited Away', ['hallucine', 'mavie'], 'Os espíritos do banho. Sonhei com eles durante semanas.'),
+      E('Livre', 'O Alquimista', ['console', 'reflechir'], 'Simples, talvez demais, mas li-o no momento certo.'),
+      E('Activité', 'Pintar azulejos de madrugada', ['calme', 'vital'], 'O azul cobalto acalma-me como o mar.'),
+      E('Lieu', 'A Livraria Lello', ['hallucine', 'epate'], 'Antes dos turistas, de manhã cedo, parece um sonho de madeira.'),
+      E('Souvenir', 'A minha avó a ler as borras do café', ['vecu', 'perturbe'], 'Disse-me que eu ia trabalhar com as mãos e com o fogo. Eu tinha nove anos.')] }
 ];
+
+/* genres d'histoires préférés (Mes histoires) : comptent dans les résonances, un point par genre commun */
+const GENRES = {
+  ElioOcre: 'aventure histo saga', NoraLys: 'amour humour drame', PaulPlume: 'histo litt docu polar', ClaireAube: 'litt amour drame', 'AndréSol': 'bio quete litt',
+  LenaFirn: 'drame amour litt', OwenTide: 'polar sf docu', GiuliaAlba: 'fantasy anim quete', MateoBrisa: 'aventure heros humour', 'InêsMaré': 'amour drame bio',
+  MatthiasGrau: 'sf science polar docu', JonasGrat: 'aventure docu heros', AnnaMoos: 'spi quete fantasy anim',
+  SiobhanKelp: 'aventure humour heros', GraceHearth: 'amour humour saga drame', CallumMist: 'fantasy anim quete',
+  LorenzoTorre: 'histo polar litt science', ChiaraRoccia: 'aventure docu humour', FrancoSole: 'humour drame saga',
+  'LucíaPrisma': 'sf science litt polar', CarmenAzahar: 'amour humour drame saga', DiegoNiebla: 'litt fantasy spi anim',
+  RuiCompasso: 'litt histo bio science', BeatrizOnda: 'aventure docu heros', JoanaAzulejo: 'anim spi fantasy quete' };
+for (const x of ALL) x.p.genres = (GENRES[x.p.pseudo] || '').split(' ').filter(Boolean).map(k => ({ k, works: [], free: [] }));
+module.exports = ALL;

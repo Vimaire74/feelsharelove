@@ -225,6 +225,26 @@ async function putThread(me, other, body) {
 }
 async function myThreads(me) { return (await listDocs('threads', "AND (data->>'a'=$2 OR data->>'b'=$2)", [me])).map(t => threadView(t, me)); }
 
+/* ---------- profils de démonstration : ils répondent toujours la même chose et acceptent d'entrer dans la tribu ---------- */
+const DEMO_MSG = {
+  fr: 'Bonjour ! Je suis un profil de démonstration : un personnage inventé pour que tu puisses essayer FeelShareLove. Je ne peux pas vraiment te répondre, mais si tu m\'invites dans ta tribu, j\'accepte tout de suite. Tu verras alors tout mon portrait et tu comprendras mieux ce que les autres voient, ou pas.',
+  de: 'Hallo! Ich bin ein Demo-Profil: eine erfundene Figur, damit du FeelShareLove ausprobieren kannst. Ich kann dir nicht wirklich antworten, aber wenn du mich in deine Tribe einlädst, nehme ich sofort an. Dann siehst du mein ganzes Porträt und verstehst besser, was die anderen sehen und was nicht.',
+  en: 'Hello! I\'m a demo profile: an invented character so you can try FeelShareLove. I can\'t really answer you, but if you invite me into your tribe, I\'ll accept straight away. You\'ll then see my whole portrait and understand better what others can see, and what they can\'t.',
+  it: 'Ciao! Sono un profilo dimostrativo: un personaggio inventato per farti provare FeelShareLove. Non posso risponderti davvero, ma se mi inviti nella tua tribù accetto subito. Vedrai allora tutto il mio ritratto e capirai meglio che cosa vedono gli altri, e che cosa no.',
+  es: '¡Hola! Soy un perfil de demostración: un personaje inventado para que puedas probar FeelShareLove. No puedo responderte de verdad, pero si me invitas a tu tribu, acepto enseguida. Verás entonces todo mi retrato y entenderás mejor lo que ven los demás, y lo que no.',
+  pt: 'Olá! Sou um perfil de demonstração: uma personagem inventada para poderes experimentar o FeelShareLove. Não te posso responder a sério, mas se me convidares para a tua tribo, aceito logo. Verás então todo o meu retrato e perceberás melhor o que os outros veem, e o que não veem.' };
+async function isDemo(id) { const p = await getDoc('profiles', id); return !!(p && p.fake); }
+/* toute approche d'un profil de démonstration (message, invitation, « moi aussi ») reçoit le même message, au plus une fois par minute */
+async function demoReply(user, demo) {
+  const id = pair(user, demo); let t = await getDoc('threads', id);
+  if (!t) { t = { a: demo, b: user, state: 'open', firstAt: Date.now(), free: true }; await putDoc('threads', id, null, t); }
+  else if (t.state !== 'open') { t.state = 'open'; delete t.decliner; await putDoc('threads', id, null, t); }
+  const last = (await listDocs('messages', "AND data->>'pairId'=$2 AND data->>'from'=$3", [id, demo])).reduce((m, x) => Math.max(m, x.ts || 0), 0);
+  if (Date.now() - last < 6e4) return;
+  const mid = 'dm-' + uid(); const lang = mailLang(await getDoc('profiles', user));
+  await putDoc('messages', mid, demo, { id: mid, from: demo, to: user, kind: 'text', text: DEMO_MSG[lang], pairId: id, ts: Date.now() + 1 });
+  notify(user, 'Nouveau message de ' + (await pseudoOf(demo)), '/app#messages/' + demo);
+}
 /* messages : rangés par paire ; chacun voit le champ thread = l'autre personne */
 function msgView(m, me) { const other = m.from === me ? m.to : m.from; const { pairId, reactions, ...rest } = m;
   const r = reactions || {}; if (r[me] || r[other]) rest.rx = { me: r[me] || '', them: r[other] || '' }; // réactions : la mienne et celle de l'autre
@@ -257,6 +277,7 @@ async function putMessage(me, id, body, old) {
   const m = { ...body, id, pairId: pair(me, other), ts: Date.now() };
   delete m.thread; await putDoc('messages', id, me, m);
   if (!(t.state === 'pending' && t.a === me)) notify(other, (body.kind === 'decline' ? 'Réponse de ' : 'Nouveau message de ') + (await pseudoOf(me)), '/app#messages/' + me);
+  if (body.kind !== 'decline' && await isDemo(other)) await demoReply(me, other);
   return msgView(m, me);
 }
 
@@ -386,6 +407,7 @@ async function writeOne(store, me, id, body) {
   const saved = await putDoc(store, id, me, data);
   if (store === 'reports' && !old && data.target) autoPause(data.target).catch(() => {});
   /* cercle intime : quand l'autre m'avait déjà mis dans sa tribu, on le dit à tous les deux */
+  if (store === 'nods' && data.target && !old && await isDemo(data.target)) await demoReply(me, data.target);
   if (store === 'nods' && data.target && !old) { try { notify(data.target, (await pseudoOf(me)) + ' aime aussi « ' + String(data.title || '').slice(0, 60) + ' »', '/app#portrait'); } catch (e) {} }
   if (store === 'lists' && data.type === 'tribe' && data.target && !old) {
     try { const back = (await listDocs('lists')).some(l => l.type === 'tribe' && l.owner === data.target && l.target === me);
@@ -403,6 +425,7 @@ async function putInvite(me, body) {
     if (old && (old.state === 'pending' || old.state === 'yes')) return old;
     if (old && old.state === 'no' && old.from === me && now - (old.answeredAt || 0) < 30 * DAY) throw err(429, 'Tu pourras proposer à nouveau dans un mois.');
     const inv = { id, from: me, to: other, state: 'pending', ts: now };
+    if (await isDemo(other)) { inv.state = 'yes'; inv.answeredAt = now; await putDoc('invites', id, me, inv); await demoReply(me, other); notify(me, (await pseudoOf(other)) + ' a accepté : vous êtes dans la même tribu', '/app#tribu'); return inv; }
     await putDoc('invites', id, me, inv);
     notify(other, (await pseudoOf(me)) + ' t\'invite dans sa tribu', '/app#tribu');
     return inv;

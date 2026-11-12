@@ -629,3 +629,10 @@ body.paused #prop-foot{display:none}
 .pw-eye{display:block;margin:-6px 0 12px;font-size:13px;text-align:left}
 .acc-id{margin-bottom:0}.acc-id .s{word-break:break-all;text-align:right}
 .pw-box{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.pw-box .in{margin:6px 0 12px;width:100%}
+/* Mon portrait : prénom et nom sur une ligne, code postal et ville sur la suivante, en plus discret */
+.fact.id-mini{padding:8px 12px;gap:3px 10px}
+.id-mini .k{font-size:10px}.id-mini .k .muted{text-transform:none;letter-spacing:0}
+.id-row{display:flex;gap:10px}.id-row .in{flex:1 1 0;min-width:0}
+.fact .id-row .in{font-size:13px;padding-top:3px;padding-bottom:3px}
+.id-row #f-npa{flex:0 0 64px}
+.fact.id-mini p.vis-note{font-size:11px;line-height:1.4;margin:4px 0 0}
