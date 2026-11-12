@@ -17,6 +17,8 @@ const DEBUG_KEY = process.env.DEBUG_KEY || ''; // outil de vérification pendant
 const LOG = []; // dernières erreurs (serveur et téléphones), pour le débogage
 function logErr(where, msg, extra) { LOG.push({ at: new Date().toISOString(), where, msg: String(msg).slice(0, 2000), extra }); if (LOG.length > 200) LOG.shift(); }
 const PUBLIC = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
+/* numéro de version du site : lu dans app/js/version.js (une seule source pour l'app, l'admin et le rapport) */
+const VERSION = (() => { try { return (fs.readFileSync(path.join(PUBLIC, 'js', 'version.js'), 'utf8').match(/FSL_VERSION\s*=\s*'([^']+)'/) || [])[1] || '?'; } catch (e) { return '?'; } })();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 const FIRST_PER_DAY = 3;
 const STORES = new Set(['profiles','entries','questions','threads','messages','voices','lists','reports','circles','circlePosts','settings','nods','invites','notices','proposals']);
@@ -147,13 +149,13 @@ async function geocode(city, npa) {
   try {
     const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=fr&format=json&name=' + encodeURIComponent(name));
     const res = ((await r.json()).results || []); const x = (cc && res.find(y => y.country_code === cc)) || res[0];
-    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20 } : null; geoCache.set(k, v); return v;
+    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20, cc: String(x.country_code || '').toUpperCase() } : null; // cc : pays de la ville, affiché avant la conversation geoCache.set(k, v); return v;
   } catch (e) { return null; }
 }
-async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; } } else if (!p.city) { delete p.geo; delete p.geoCity; } return p; }
+async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; } } else if (!p.city) { delete p.geo; delete p.geoCity; } return p; }
 function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
-async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
+async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
 /* questions ouvertes : même question, réponses qui se ressemblent. Seul le nombre de concordances sort du serveur, jamais le texte. */
 const QSTOP = new Set(['dans', 'avec', 'pour', 'sans', 'sous', 'chez', 'vers', 'mais', 'donc', 'puis', 'quand', 'comme', 'cette', 'cela', 'celui', 'celle', 'ceux', 'elle', 'elles', 'nous', 'vous', 'leur', 'leurs', 'mon', 'ma', 'mes', 'ton', 'tes', 'son', 'ses', 'notre', 'votre', 'tout', 'tous', 'toute', 'toutes', 'plus', 'moins', 'tres', 'bien', 'fois', 'etre', 'avoir', 'fait', 'faire', 'suis', 'etais', 'etait', 'quelque', 'chose', 'jamais', 'toujours', 'encore', 'aussi', 'meme', 'alors', 'parce', 'lorsque', 'that', 'this', 'with', 'from', 'when', 'what', 'have', 'been', 'were', 'they', 'them', 'their', 'your', 'there', 'where', 'which', 'about', 'nicht', 'aber', 'auch', 'dass', 'wenn', 'eine', 'einer', 'einem', 'einen', 'mein', 'meine', 'dein', 'deine', 'sein', 'seine', 'ihre', 'noch', 'immer', 'sehr', 'oder', 'como', 'pero', 'para', 'cuando', 'donde', 'esta', 'este', 'esto', 'esos', 'esas', 'todo', 'toda', 'todos', 'nunca', 'siempre', 'anche', 'come', 'quando', 'dove', 'questo', 'questa', 'sempre', 'tutto', 'tutti', 'della', 'delle', 'dello', 'degli', 'nella', 'nelle', 'sono', 'essere', 'mais', 'quando', 'onde', 'esse', 'essa', 'isso', 'tudo', 'todos', 'sempre', 'nunca']);
 const qFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -177,8 +179,8 @@ function publicProfile(p, intimate, opened, myGeo, qmatch, myIntent, nEntries) {
   const lonely = (p.intent || []).includes('seul') && (myIntent || []).includes('seul');
   const hp = Math.min(12, 6 * (qmatch || 0)) + (lonely ? 5 : 0); if (hp) rest.hp = hp;
   if (Array.isArray(rest.intent)) rest.intent = rest.intent.filter(k => k !== 'seul');
-  /* pays seulement, au début : code à deux lettres de la ville, sinon Suisse si le code postal est suisse */
-  rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
+  /* pays seulement, au début : code à deux lettres écrit après la ville, sinon le pays trouvé pour la ville, sinon Suisse si le code postal est suisse */
+  rest.country = ((p.city || '').match(/\s([A-Z]{2})$/) || [])[1] || (geo && geo.cc) || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
   /* avant que la conversation soit ouverte : pas de « Qui il est » (âge, langues, métier…) */
   if (opened && !opened.has(p.id)) { rest.limited = true; delete rest.now;
     const f = {}; if (rest.facts) { if (rest.facts.sign) f.sign = rest.facts.sign; if (rest.facts.langs) f.langs = rest.facts.langs; } rest.facts = f; } // signe et langues seulement
@@ -806,12 +808,12 @@ async function siteCheck() {
 }
 const CHECK_TITLES = [['files', 'Fichiers illisibles ou vides'], ['links', 'Fichiers appelés mais absents'], ['routes', 'Liens internes vers un écran qui n\'existe pas'], ['ext', 'Liens vers d\'autres sites qui ne répondent pas'], ['lang', 'Dictionnaires de traduction incomplets'], ['js', 'Erreurs survenues dans le navigateur des membres'], ['i18n', 'Textes restés en français dans une autre langue (vus par les membres)']];
 function checkText(r) {
-  const out = ['FeelShareLove — vérification du site', 'Faite le ' + fmtDT(r.at) + ' en ' + r.ms + ' ms · ' + r.nFiles + ' fichiers, ' + r.nKeys + ' phrases par langue, ' + r.nExt + ' liens extérieurs', r.total ? r.total + ' point(s) à regarder' : 'Rien à signaler', ''];
+  const out = ['FeelShareLove ' + VERSION + ' — vérification du site', 'Faite le ' + fmtDT(r.at) + ' en ' + r.ms + ' ms · ' + r.nFiles + ' fichiers, ' + r.nKeys + ' phrases par langue, ' + r.nExt + ' liens extérieurs', r.total ? r.total + ' point(s) à regarder' : 'Rien à signaler', ''];
   for (const [k, t] of CHECK_TITLES) { const L = r.sec[k] || []; out.push('== ' + t + ' : ' + (L.length || 'aucun') + ' =='); for (const x of L.slice(0, 200)) out.push('- ' + x); if (L.length > 200) out.push('… et ' + (L.length - 200) + ' autres'); out.push(''); }
   return out.join('\n'); }
 async function checkMail(r, to) {
   const day = new Date(r.at).toISOString().slice(0, 10);
-  await getMailer().sendMail({ from: `FeelShareLove <${SMTP.from}>`, to: to || SMTP.from, subject: 'FeelShareLove · vérification du ' + day + ' : ' + (r.total ? r.total + ' point(s) à regarder' : 'rien à signaler'),
+  await getMailer().sendMail({ from: `FeelShareLove <${SMTP.from}>`, to: to || SMTP.from, subject: 'FeelShareLove ' + VERSION + ' · vérification du ' + day + ' : ' + (r.total ? r.total + ' point(s) à regarder' : 'rien à signaler'),
     text: 'Le rapport complet est joint.\n\n' + CHECK_TITLES.map(([k, t]) => t + ' : ' + ((r.sec[k] || []).length || 'aucun')).join('\n'), attachments: [{ filename: 'verification-feelsharelove-' + day + '.txt', content: checkText(r) }] });
 }
 /* une fois par jour ; l'e-mail part au plus une fois par 20 heures, sauf si un redéploiement vient de casser un fichier ou un lien */
@@ -1195,7 +1197,7 @@ async function admin(req, res, url) {
   const tabs = [['dash', 'Tableau de bord'], ['reports', 'Signalements', reports.length], ['alerts', 'Alertes', alertsOpen.length], ['proposals', 'Propositions', (await listDocs('proposals')).filter(r => r.status === 'open').length], ['verif', 'Vérifications', pend.length], ['accounts', 'Comptes'], ['mail', 'E-mails'], ['redlist', 'Liste rouge', Object.values(profiles).filter(p => p.redlistCheck).length], ['check', 'Vérification', ((await getDoc('admin', 'check')) || {}).total || 0], ['log', 'Journal'], ['settings', 'Réglages']];
   const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FeelShareLove · admin</title>
 <link rel="stylesheet" href="/fonts/fonts.css"><style>${ADMIN_CSS}</style>
-<header><h1>FeelShareLove · <em>administration</em></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
+<header><h1>FeelShareLove · <em>administration</em> <small style="font-size:13px;opacity:.6">version ${H(VERSION)}</small></h1><nav>${tabs.map(([t, l, n]) => `<a href="/admin?key=${K}&tab=${t}" class="${t === tab || (tab === 'account' && t === 'accounts') ? 'on' : ''}">${l}${n ? `<span class="n">${n}</span>` : ''}</a>`).join('')}</nav></header>
 <main>${flash ? `<div class="flash">${H(flash)}</div>` : ''}${body}</main></html>`;
   send(res, 200, html, 'text/html; charset=utf-8');
 }
@@ -1246,7 +1248,7 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   secure(res, url.pathname);
   try {
-    if (url.pathname === '/health') return send(res, 200, { ok: true });
+    if (url.pathname === '/health') return send(res, 200, { ok: true, version: VERSION });
     if (url.pathname === '/unsub') return await unsub(res, url);
     if (url.pathname === '/compte/supprimer') return await delPage(req, res, url);
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
