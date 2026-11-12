@@ -20,7 +20,7 @@ Pages.portrait=async function(S){
     <div class="fact id-mini"><div class="k">Prénom et nom <span class="muted">(privés : servent à ton pseudo, à la liste rouge et à la vérification)</span></div>
       <div class="v id-row"><input class="in" id="f-name" placeholder="Prénom"><input class="in" id="f-last" placeholder="Nom de famille"></div>
       <div class="k" style="margin-top:6px">Ville et code postal</div><div class="v id-row"><input class="in" id="f-npa" placeholder="NPA"><input class="in" id="f-place" placeholder="Ville"></div>
-      <p class="muted small vis-note">La ville est visible par les autres, sans adresse ; la grande ville la plus proche suffit. Le code postal reste privé : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
+      <p class="muted small vis-note">Écris ta ville exacte : elle reste privée. Les autres voient la ville de 20 000 habitants ou plus la plus proche. Le code postal reste privé aussi : il sert seulement à calculer les distances, arrondies à 5 km.</p><p class="muted small city-shown" id="city-shown"></p></div>
   </div>
   <div id="travel-box" style="margin:8px 4px 0"></div>
   <h2>Ce qui <em>m'amène</em></h2><p class="muted small" style="margin:-4px 0 10px">Visible sur ton portrait, sauf ce qui est marqué « Privé ».</p>
@@ -59,7 +59,9 @@ Pages.portrait=async function(S){
     if(m.length){B.dataset.was='todo';B.innerHTML=`<div class="sec todo"><p class="exp"><b>Ton portrait n'apparaît pas encore dans les Résonances.</b></p><p class="exp">Les autres te verront dans leurs résonances dès qu'il sera complet. Il te reste à remplir :</p><ul class="todo-list">${m.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;}
     else if(B.dataset.was==='todo'||B.dataset.was==='ok'){B.dataset.was='ok';B.innerHTML=`<div class="sec todo ok"><p class="exp"><b>Ton portrait est complet.</b></p><p class="exp">Tu apparais maintenant dans les Résonances des autres.</p></div>`;}
     else B.innerHTML='';}
-  let t=null;function saveMe(){renderTodo();clearTimeout(t);t=setTimeout(async()=>{await DB.put('profiles',me);if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
+  /* ville affichée aux autres, calculée par le serveur */
+  const showCity=x=>{const e=$('city-shown');if(!e)return;const v=x&&x.cityShown;e.textContent=v&&DB.remote?I18N.t('Affiché aux autres : {v}',{v}):'';};showCity(me);
+  let t=null;function saveMe(){renderTodo();clearTimeout(t);t=setTimeout(async()=>{const r=await DB.put('profiles',me);if(r&&r.cityShown!==undefined){me.cityShown=r.cityShown;showCity(r);}if($('saved'))$('saved').textContent='Enregistré · '+new Date().toLocaleTimeString(I18N.locale(),{hour:'2-digit',minute:'2-digit'});},300);}
   /* langues : app, portrait, portraits que je veux voir */
   function renderLangs(){const B=$('lang-box');if(!me.textLang)me.textLang=I18N.lang;if(!me.readLangs||!me.readLangs.length)me.readLangs=App.readLangsOf(me);
     const name=c=>I18N.name(c);const pool=[...new Set([I18N.lang,...I18N.available(),...(me.langs||[]),me.textLang,...me.readLangs])];

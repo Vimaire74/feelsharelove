@@ -142,6 +142,18 @@ async function hiddenFor(me) {
 /* ce que les autres voient d'un portrait : jamais le prénom, le nom ni le code postal ; les infos cachées restent cachées */
 /* distance : coordonnées de la ville (service gratuit Open-Meteo), arrondies à environ 5 km ; jamais envoyées aux autres, seulement la distance */
 const geoCache = new Map();
+/* ville affichée aux autres : la ville de 20 000 habitants ou plus la plus proche de la ville exacte, qui reste privée.
+   Liste des villes : GeoNames (CC BY 4.0), dans app/data/villes.json — [nom, latitude, longitude, pays, identifiant GeoNames]. */
+let BIG = null;
+function bigCities() { if (!BIG) { try { BIG = JSON.parse(fs.readFileSync(path.join(PUBLIC, 'data', 'villes.json'), 'utf8')); } catch (e) { BIG = []; } } return BIG; }
+function nearestBig(lat, lon) { let best = null, bd = Infinity; const k = Math.cos(lat * Math.PI / 180);
+  for (const c of bigCities()) { const dy = c[1] - lat, dx = (c[2] - lon) * k, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = c; } } return best; }
+const nameCache = new Map();
+async function bigName(id, lang) { // nom de la ville dans la langue du portrait (Open-Meteo utilise les mêmes identifiants que GeoNames)
+  const c = bigCities().find(x => x[4] === id); if (!c) return ''; const k = id + '|' + lang; if (nameCache.has(k)) return nameCache.get(k); let n = c[0];
+  try { const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=20&format=json&language=' + lang + '&name=' + encodeURIComponent(c[0]));
+    const x = ((await r.json()).results || []).find(y => y.id === id); if (x && x.name) n = x.name; } catch (e) {}
+  nameCache.set(k, n); return n; }
 async function geocode(city, npa) {
   const name = String(city || '').replace(/\s+[A-Z]{2}$/, '').trim(); if (!name) return null;
   const cc = (String(city).match(/\s([A-Z]{2})$/) || [])[1] || (/^\d{4}$/.test(String(npa || '').trim()) ? 'CH' : '');
@@ -149,13 +161,16 @@ async function geocode(city, npa) {
   try {
     const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=fr&format=json&name=' + encodeURIComponent(name));
     const res = ((await r.json()).results || []); const x = (cc && res.find(y => y.country_code === cc)) || res[0];
-    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20, cc: String(x.country_code || '').toUpperCase() } : null; // cc : pays de la ville, affiché avant la conversation geoCache.set(k, v); return v;
+    const b = x ? nearestBig(x.latitude, x.longitude) : null;
+    const v = x ? { lat: Math.round(x.latitude * 20) / 20, lon: Math.round(x.longitude * 20) / 20, cc: String(x.country_code || '').toUpperCase(), big: b ? b[4] : 0, self: !!(b && b[4] === x.id) } : null; // cc : pays de la ville, affiché avant la conversation
+    geoCache.set(k, v); return v;
   } catch (e) { return null; }
 }
-async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; } } else if (!p.city) { delete p.geo; delete p.geoCity; } return p; }
+async function withGeo(p) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined)) { const g = await geocode(p.city, p.npa); if (g) { p.geo = g; p.geoCity = p.city; delete p.cityShown; } }
+  if (p.city && p.geo && p.geoCity === p.city && !p.cityShown) p.cityShown = p.geo.self || !p.geo.big ? p.city : (await bigName(p.geo.big, ['fr', 'de', 'en', 'it', 'es', 'pt'].includes(p.textLang) ? p.textLang : 'fr')) || p.city; else if (!p.city) { delete p.geo; delete p.geoCity; delete p.cityShown; } return p; }
 function km(a, b) { if (!a || !b) return null; const R = 6371, r = x => x * Math.PI / 180, dLa = r(b.lat - a.lat), dLo = r(b.lon - a.lon);
   const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
-async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
+async function backfillGeo() { for (const p of await listDocs('profiles')) { if (p.city && (!p.geo || p.geoCity !== p.city || !p.geo.cc || p.geo.big === undefined || !p.cityShown)) { await withGeo(p); if (p.geo) await putDoc('profiles', p.id, p.id, p); } } }
 /* questions ouvertes : même question, réponses qui se ressemblent. Seul le nombre de concordances sort du serveur, jamais le texte. */
 const QSTOP = new Set(['dans', 'avec', 'pour', 'sans', 'sous', 'chez', 'vers', 'mais', 'donc', 'puis', 'quand', 'comme', 'cette', 'cela', 'celui', 'celle', 'ceux', 'elle', 'elles', 'nous', 'vous', 'leur', 'leurs', 'mon', 'ma', 'mes', 'ton', 'tes', 'son', 'ses', 'notre', 'votre', 'tout', 'tous', 'toute', 'toutes', 'plus', 'moins', 'tres', 'bien', 'fois', 'etre', 'avoir', 'fait', 'faire', 'suis', 'etais', 'etait', 'quelque', 'chose', 'jamais', 'toujours', 'encore', 'aussi', 'meme', 'alors', 'parce', 'lorsque', 'that', 'this', 'with', 'from', 'when', 'what', 'have', 'been', 'were', 'they', 'them', 'their', 'your', 'there', 'where', 'which', 'about', 'nicht', 'aber', 'auch', 'dass', 'wenn', 'eine', 'einer', 'einem', 'einen', 'mein', 'meine', 'dein', 'deine', 'sein', 'seine', 'ihre', 'noch', 'immer', 'sehr', 'oder', 'como', 'pero', 'para', 'cuando', 'donde', 'esta', 'este', 'esto', 'esos', 'esas', 'todo', 'toda', 'todos', 'nunca', 'siempre', 'anche', 'come', 'quando', 'dove', 'questo', 'questa', 'sempre', 'tutto', 'tutti', 'della', 'delle', 'dello', 'degli', 'nella', 'nelle', 'sono', 'essere', 'mais', 'quando', 'onde', 'esse', 'essa', 'isso', 'tudo', 'todos', 'sempre', 'nunca']);
 const qFold = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -169,8 +184,9 @@ const selfView = p => { const { redlisted, redlistCheck, ...rest } = p; return r
 function portraitDone(p, nEntries) { return !!(p.fake || (p.photo && p.types && p.types.list && p.types.list.length && p.facts && p.facts.birth && p.facts.birth.v && (p.langs || []).length && (p.rep || []).length && (p.invest || []).length && (p.genres || []).length && nEntries >= 3)); }
 function publicProfile(p, intimate, opened, myGeo, qmatch, myIntent, nEntries) {
   const done = portraitDone(p, nEntries || 0);
-  const { name, lastName, npa, email, phone, photoReal, photoSrc, photoCrop, geo, geoCity, tribeColor, readLangs, redlisted, redlistCheck, ...rest } = p; // couleur de tribu et langues de lecture restent privées
+  const { name, lastName, npa, email, phone, photoReal, photoSrc, photoCrop, geo, geoCity, cityShown, tribeColor, readLangs, redlisted, redlistCheck, ...rest } = p; // couleur de tribu et langues de lecture restent privées
   if (!rest.textLang) rest.textLang = 'fr'; // anciens portraits : écrits en français
+  if (p.city) rest.city = cityShown || p.city; // la ville exacte reste privée : les autres voient la ville de 20 000 habitants ou plus la plus proche
   const d = km(myGeo, geo); if (d != null) rest.km = Math.max(5, Math.round(d / 5) * 5);
   rest.intimate = !!(intimate && intimate.has(p.id));
   rest.done = done;
@@ -382,11 +398,11 @@ async function writeOne(store, me, id, body) {
   if (store === 'profiles') {
     if (id !== me) throw err(403, 'portrait');
     /* champs que seul le serveur ou l'équipe décide */
-    for (const k of ['km', 'hp', 'intimate', 'limited', 'country', 'fake', 'autoPaused']) delete data[k];
+    for (const k of ['km', 'hp', 'intimate', 'limited', 'country', 'fake', 'autoPaused', 'cityShown']) delete data[k];
     if (old && old.fake) data.fake = true;
     if (old && old.autoPaused) { data.paused = old.paused; data.autoPaused = true; } // pause après signalements : seule l'équipe la lève
     if (data.pseudo) { const r = await q("SELECT 1 FROM docs WHERE store='profiles' AND id<>$1 AND lower(data->>'pseudo')=lower($2)", [me, data.pseudo]); if (r.rowCount) throw err(409, 'Ce pseudo est déjà pris.'); }
-    if (old && old.geo && old.geoCity === data.city && !data.geo) { data.geo = old.geo; data.geoCity = old.geoCity; }
+    if (old && old.geo && old.geoCity === data.city) { data.geo = old.geo; data.geoCity = old.geoCity; if (old.cityShown) data.cityShown = old.cityShown; }
     await withGeo(data);
     /* liste rouge : numéro de mobile ou prénom + nom ; la pause ne peut pas être levée par la personne */
     const ru = (await q('SELECT redlisted FROM users WHERE id=$1', [me])).rows[0];
@@ -1141,7 +1157,7 @@ async function admin(req, res, url) {
       <div class="card"><b>Accès perdu</b><p class="muted" style="font-size:13px;margin:6px 0">Si la personne n'a plus son mot de passe ni accès à son adresse e-mail : vérifie que le numéro de mobile qu'elle t'écrit est bien celui de la ligne « Mobile » ci-dessous, puis remplace son adresse. Elle fera ensuite « Mot de passe oublié ? » avec la nouvelle adresse.</p>
         ${btn('set-mail', id, 'Changer l\'adresse e-mail', '<input name="mail" type="email" placeholder="nouvelle adresse e-mail" style="min-width:240px"> ' + sure('J\'ai vérifié le mobile'))}</div>
       <h2>Identité</h2><table>${row('Prénom et nom', H([p.name, p.lastName].filter(Boolean).join(' ')))}${row('E-mail', H(u.email) + (u.no_mail ? ' <span class="tag">ne veut pas d\'e-mails</span>' : ''))}${row('Mobile', H(p.phone || '') || '<span class="muted">non indiqué</span>')}${row('Accord', H({ m: 'masculin', f: 'féminin', n: 'neutre' }[p.accord] || ''))}
-        ${row('Ville', H([p.npa, p.city].filter(Boolean).join(' ')) + (p.travel ? ' <small>(en voyage)</small>' : ''))}${row('Inscription', fmtDT(u.created))}${row('Dernière visite', fmtDT(u.last_seen))}${row('Invité par', u.invited_by ? who(u.invited_by) : '')}
+        ${row('Ville', H([p.npa, p.city].filter(Boolean).join(' ')) + (p.cityShown && p.cityShown !== p.city ? ' <small>(affiché : ' + H(p.cityShown) + ')</small>' : '') + (p.travel ? ' <small>(en voyage)</small>' : ''))}${row('Inscription', fmtDT(u.created))}${row('Dernière visite', fmtDT(u.last_seen))}${row('Invité par', u.invited_by ? who(u.invited_by) : '')}
         ${row('Vérification', H(p.verified ? p.verified.status : 'non demandée'))}</table>
       <h2>Portrait</h2><table>${row('Langue du portrait', H(p.textLang || 'fr'))}${row('Intention', H((p.intent || []).map(k => INTENT_NAME[k] || k).join(', ')))}${row('En ce moment', H(p.now))}
         ${row('Fonctionnement', H((p.types && p.types.list || []).map(k => TYPE_NAME[k] || k).join(', ')))}

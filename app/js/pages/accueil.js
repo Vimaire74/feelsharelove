@@ -68,7 +68,7 @@ Pages.accueil=async function(S){
       <p class="muted small" style="margin:8px 0 10px">Visible sur ton portrait, sauf ce qui est marqué « Privé ».</p>
       <div id="intent">${App.intentHtml(me.intent)}</div>
       <div class="fact" style="margin-top:14px"><div class="k">Ville et code postal</div><div class="v" style="display:flex;gap:10px"><input class="in" id="a-npa" placeholder="NPA" style="max-width:80px"><input class="in" id="a-city" placeholder="Ville"></div>
-        <p class="muted small vis-note">La ville est visible par les autres, sans adresse ; la grande ville la plus proche suffit. Le code postal reste privé : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
+        <p class="muted small vis-note">Écris ta ville exacte : elle reste privée. Les autres voient la ville de 20 000 habitants ou plus la plus proche. Le code postal reste privé aussi : il sert seulement à calculer les distances, arrondies à 5 km.</p></div>
       <div class="now"><p class="eyebrow">En ce moment</p><textarea class="ta" id="a-now" rows="2" placeholder="Ce que je traverse, ce dont j'ai envie…"></textarea><p class="muted small" style="margin:6px 0 0">Visible seulement une fois une conversation ouverte.</p></div>
       <p class="muted small" style="margin:12px 0 0">Tu pourras tout modifier ensuite dans ton portrait.</p>
       <div class="row" style="justify-content:space-between;margin-top:14px"><button class="linkbtn" type="button" id="back">← Retour</button><button class="btn" type="button" id="next">Continuer</button></div>`;

@@ -61,6 +61,7 @@
       const id=name==='threads'?body.id:body.id;
       const saved=await call('PUT','/api/'+name+'/'+enc(id),body);
       if(name==='threads'||name==='messages')Object.assign(obj,fromServer(name,saved));
+      if(name==='profiles'&&saved)obj.cityShown=saved.cityShown; // ville affichée aux autres, calculée par le serveur
       return obj;},
     del:(name,id)=>call('DELETE','/api/'+name+'/'+enc(sid(name,id))),
     clear:async()=>{},

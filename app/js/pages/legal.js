@@ -12,6 +12,7 @@ Pages.legal=async function(S){
   ${sec('Éditeur du site',p(`FeelShareLove (feelsharelove.com) est édité par ${EDITEUR}${ADRESSE?', '+ADRESSE:''}.<br>Contact : <a href="mailto:contact@feelsharelove.com" style="color:var(--saffron)">contact@feelsharelove.com</a>`))}
   ${sec('Hébergement',p('OVH SAS, 2 rue Kellermann, 59100 Roubaix, France. Les serveurs de FeelShareLove sont situés dans l\'Union européenne.'))}
   ${sec('Propriété intellectuelle',p('Le nom FeelShareLove, le logo, les textes et le code du site appartiennent à leur éditeur. Les textes, photos et enregistrements publiés par les membres restent leur propriété ; ils accordent à FeelShareLove le droit de les afficher aux autres membres, dans le seul but de faire fonctionner le service.'))}
+  ${sec('Données',p('Liste des villes : GeoNames (geonames.org), sous licence Creative Commons Attribution 4.0.'))}
 
   <h2>Politique de <em>confidentialité</em></h2>
   ${sec('Qui est responsable de tes données',p(`Le responsable du traitement est ${EDITEUR} (contact@feelsharelove.com). Nous appliquons le règlement général sur la protection des données (RGPD) et les lois applicables en matière de protection des données.`))}
